@@ -37,6 +37,7 @@ void main() {
             const RetentionData(offsets: [1, 3, 7, 14, 30], lastDataDay: null, cohorts: [], average: [null, null, null, null, null])),
         progressionProvider.overrideWith((ref, f) async => const ProgressionData(stages: [])),
         countsProvider.overrideWith((ref, q) async => const <EventCount>[]),
+        savedFunnelsProvider.overrideWith((ref) async => const <SavedFunnel>[]),
       ],
       child: const MaterialApp(home: AppShell()),
     ));
@@ -46,7 +47,7 @@ void main() {
   testWidgets('sidebar navigates between pages', (t) async {
     await pumpShell(t);
     expect(find.text('DAU (avg)'), findsOneWidget);
-    for (final label in ['Overview', 'Retention', 'Progression', 'EXPLORE', 'Events', 'Parameters', 'Funnel', 'Data health', 'Settings']) {
+    for (final label in ['Overview', 'Retention', 'Progression', 'EXPLORE', 'Funnels', 'Events', 'Parameters', 'Data health', 'Settings']) {
       expect(find.text(label), findsWidgets, reason: label);
     }
     await t.tap(find.text('Retention'));

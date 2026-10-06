@@ -53,10 +53,6 @@ final paramProvider =
         (ref, q) => ref.watch(apiClientProvider).param(q.name, q.key, q.filters.from, q.filters.to,
             platform: q.filters.platform, version: q.filters.version));
 
-/// `steps` is comma-joined on purpose: records holding a List never compare equal.
-final funnelProvider = FutureProvider.family<List<FunnelStep>, ({Filters filters, String steps})>(
-    (ref, q) => ref.watch(apiClientProvider).funnel(q.steps, q.filters.from, q.filters.to,
-        platform: q.filters.platform, version: q.filters.version));
 
 final savedFunnelsProvider =
     FutureProvider<List<SavedFunnel>>((ref) => ref.watch(apiClientProvider).funnels());
