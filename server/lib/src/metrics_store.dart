@@ -177,6 +177,70 @@ class MetricsStore {
     );
     return (kpis, daily);
   }
+
+  ProgressionData progression(Filters f) {
+    final (where, args) = _where(f);
+    final rows = _db.select('''
+      SELECT event_name, user_pseudo_id AS uid, json_extract(params_json, '\$.stg') AS stg
+      FROM events
+      WHERE $where AND event_name IN ('stg_start', 'stg_cmp', 'stg_fail')
+      ORDER BY ts_micros, id;
+    ''', args);
+
+    final acc = <int, _StageAcc>{};
+    for (final r in rows) {
+      final stage = _stageOf(r['stg']);
+      if (stage == null) continue;
+      final a = acc.putIfAbsent(stage, _StageAcc.new);
+      final uid = r['uid'] as String;
+      switch (r['event_name'] as String) {
+        case 'stg_start':
+          a.starts++;
+          a.startsByUser[uid] = (a.startsByUser[uid] ?? 0) + 1;
+        case 'stg_cmp':
+          a.completes++;
+          a.completers.add(uid);
+        case 'stg_fail':
+          a.fails++;
+      }
+    }
+
+    final stages = acc.keys.toList()..sort();
+    final out = <StageRow>[];
+    for (var i = 0; i < stages.length; i++) {
+      final a = acc[stages[i]]!;
+      final players = a.startsByUser.length;
+      final nextPlayers = i + 1 < stages.length ? acc[stages[i + 1]]!.startsByUser.length : null;
+      final clearStarts = a.completers.fold<int>(0, (s, u) => s + (a.startsByUser[u] ?? 0));
+      out.add(StageRow(
+        stage: stages[i],
+        players: players,
+        starts: a.starts,
+        completes: a.completes,
+        fails: a.fails,
+        winRate: a.completes + a.fails == 0 ? null : a.completes / (a.completes + a.fails),
+        attemptsPerClear: a.completers.isEmpty ? null : clearStarts / a.completers.length,
+        dropOff: (nextPlayers == null || players == 0) ? null : 1 - nextPlayers / players,
+      ));
+    }
+    return ProgressionData(stages: out);
+  }
+}
+
+class _StageAcc {
+  int starts = 0;
+  int completes = 0;
+  int fails = 0;
+  final startsByUser = <String, int>{};
+  final completers = <String>{};
+}
+
+/// `stg` param -> stage number; null for missing or non-numeric values.
+int? _stageOf(Object? v) {
+  if (v is int) return v;
+  if (v is double && v == v.roundToDouble()) return v.toInt();
+  if (v is String) return int.tryParse(v.trim());
+  return null;
 }
 
 /// Numeric-aware version compare: 1.10.0 > 1.9.1 > 1.2.0.
@@ -193,3 +257,4 @@ int _compareVersions(String a, String b) {
   }
   return 0;
 }
+
