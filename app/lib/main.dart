@@ -4,28 +4,33 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'src/providers.dart';
 import 'src/shell/app_shell.dart';
+import 'src/state/style.dart';
+import 'src/theme/app_style.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
-  final saved = prefs.getString(baseUrlPrefKey) ?? defaultBaseUrl;
+  final savedUrl = prefs.getString(baseUrlPrefKey) ?? defaultBaseUrl;
+  final savedStyle = parseStyle(prefs.getString(stylePrefKey));
   runApp(ProviderScope(
-    overrides: [baseUrlProvider.overrideWith(() => BaseUrlNotifier(saved))],
+    overrides: [
+      baseUrlProvider.overrideWith(() => BaseUrlNotifier(savedUrl)),
+      styleProvider.overrideWith(() => StyleNotifier(savedStyle)),
+    ],
     child: const AnalyticApp(),
   ));
 }
 
-class AnalyticApp extends StatelessWidget {
+class AnalyticApp extends ConsumerWidget {
   const AnalyticApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
-      title: 'AnalyticTracker',
-      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
-      darkTheme: ThemeData(colorSchemeSeed: Colors.indigo, brightness: Brightness.dark, useMaterial3: true),
+      title: 'PVM Analytics',
+      debugShowCheckedModeBanner: false,
+      theme: buildTheme(ref.watch(styleProvider)),
       home: const AppShell(),
     );
   }
 }
-
