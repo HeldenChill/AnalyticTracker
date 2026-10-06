@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../providers.dart';
+import '../state/style.dart';
+import '../theme/analytics_tokens.dart';
+import '../theme/app_style.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -38,20 +41,105 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final current = ref.watch(styleProvider);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       children: [
-        TextField(
-          controller: _ctrl,
-          decoration: InputDecoration(labelText: 'Server URL', errorText: _error),
-          keyboardType: TextInputType.url,
+        Text('Appearance', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Text('Applies on this PC only.', style: theme.textTheme.bodySmall),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            for (final s in AppStyle.values)
+              _StyleCard(
+                style: s,
+                selected: s == current,
+                onTap: () => ref.read(styleProvider.notifier).select(s),
+              ),
+          ],
+        ),
+        const SizedBox(height: 28),
+        Text('Server', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: 480,
+          child: TextField(
+            controller: _ctrl,
+            decoration: InputDecoration(labelText: 'Server URL', errorText: _error),
+            keyboardType: TextInputType.url,
+          ),
         ),
         const SizedBox(height: 12),
-        FilledButton(onPressed: _save, child: const Text('Save')),
-        const SizedBox(height: 16),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton(onPressed: _save, child: const Text('Save')),
+        ),
+        const SizedBox(height: 12),
         const Text('Phones must be on the same Wi-Fi as the server PC. '
             'Use the PC LAN IP, not localhost.'),
       ],
+    );
+  }
+}
+
+class _StyleCard extends StatelessWidget {
+  const _StyleCard({required this.style, required this.selected, required this.onTap});
+
+  final AppStyle style;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final tokens = AnalyticsTokens.of(context);
+    final p = palettes[style]!;
+    final radius = BorderRadius.circular(tokens.radius);
+    return SizedBox(
+      width: 250,
+      child: Card(
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(color: selected ? scheme.primary : scheme.outlineVariant, width: selected ? 2 : 1),
+        ),
+        child: InkWell(
+          borderRadius: radius,
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  for (final c in [p.background, p.card, p.accent, p.chart[1], p.text])
+                    Container(
+                      width: 22,
+                      height: 22,
+                      margin: const EdgeInsets.only(right: 4),
+                      decoration: BoxDecoration(
+                        color: c,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: scheme.outlineVariant),
+                      ),
+                    ),
+                ]),
+                const SizedBox(height: 10),
+                Row(children: [
+                  Expanded(child: Text(style.label, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
+                  if (selected) Icon(Icons.check_circle, color: scheme.primary, size: 18),
+                ]),
+                const SizedBox(height: 4),
+                Text(style.description, style: theme.textTheme.bodySmall),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

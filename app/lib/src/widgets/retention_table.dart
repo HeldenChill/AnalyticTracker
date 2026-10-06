@@ -1,6 +1,7 @@
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
 
+import '../theme/analytics_tokens.dart';
 import 'format.dart';
 
 /// Cohort table. A null cell (day not observable yet) is blank, never 0%.
@@ -10,13 +11,16 @@ class RetentionTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
+    final color = AnalyticsTokens.of(context).chart.first;
 
     Widget pctCell(double? rate) {
       if (rate == null) return const SizedBox.shrink();
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        color: color.withValues(alpha: 0.08 + 0.6 * rate.clamp(0.0, 1.0)),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08 + 0.6 * rate.clamp(0.0, 1.0)),
+          borderRadius: BorderRadius.circular(6),
+        ),
         child: Text(fmtPct(rate)),
       );
     }

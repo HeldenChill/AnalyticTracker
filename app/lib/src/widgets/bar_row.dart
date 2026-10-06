@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/analytics_tokens.dart';
+
 /// One horizontal bar: label, proportional bar, trailing text.
 class BarRow extends StatelessWidget {
   const BarRow({super.key, required this.label, required this.value, required this.max, required this.trailing});
@@ -10,6 +12,7 @@ class BarRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = AnalyticsTokens.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Column(
@@ -20,7 +23,13 @@ class BarRow extends StatelessWidget {
             Text(trailing),
           ]),
           const SizedBox(height: 4),
-          LinearProgressIndicator(value: max <= 0 ? 0 : value / max, minHeight: 8),
+          LinearProgressIndicator(
+            value: max <= 0 ? 0 : value / max,
+            minHeight: 8,
+            color: tokens.chart.first,
+            backgroundColor: tokens.grid,
+            borderRadius: BorderRadius.circular(4),
+          ),
         ],
       ),
     );
