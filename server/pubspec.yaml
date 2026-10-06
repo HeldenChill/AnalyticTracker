@@ -1,0 +1,17 @@
+name: analytic_server
+publish_to: none
+resolution: workspace
+environment:
+  sdk: ^3.6.0
+dependencies:
+  analytic_shared:
+    path: ../shared
+  googleapis: ^13.2.0
+  googleapis_auth: ^1.6.0
+  path: ^1.9.0
+  shelf: ^1.4.1
+  shelf_router: ^1.1.4
+  sqlite3: ^2.5.0
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.25.0
