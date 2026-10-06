@@ -98,5 +98,74 @@ class EventStore {
   String journalMode() =>
       (_db.select('PRAGMA journal_mode;').first.values.first as String).toLowerCase();
 
+  List<String> eventNames() => [
+        for (final r in _db.select('SELECT DISTINCT event_name FROM events ORDER BY event_name;'))
+          r['event_name'] as String,
+      ];
+
+  List<EventCount> counts(String from, String to, {String? name}) {
+    final filter = name == null ? '' : ' AND event_name = ?';
+    final rows = _db.select(
+      'SELECT day, event_name, COUNT(*) AS c FROM events '
+      'WHERE day BETWEEN ? AND ?$filter '
+      'GROUP BY day, event_name ORDER BY day, event_name;',
+      [from, to, if (name != null) name],
+    );
+    return [
+      for (final r in rows)
+        EventCount(day: r['day'] as String, eventName: r['event_name'] as String, count: r['c'] as int),
+    ];
+  }
+
+  List<ParamBucket> paramBreakdown(String eventName, String key, String from, String to,
+      {int limit = 50}) {
+    if (!_keyRe.hasMatch(key)) {
+      throw ArgumentError('param key must match [A-Za-z0-9_]+');
+    }
+    final rows = _db.select(
+      'SELECT CAST(json_extract(params_json, ?) AS TEXT) AS v, COUNT(*) AS c FROM events '
+      'WHERE event_name = ? AND day BETWEEN ? AND ? '
+      'GROUP BY v ORDER BY c DESC, v LIMIT ?;',
+      [r'$.' + key, eventName, from, to, limit],
+    );
+    return [
+      for (final r in rows)
+        ParamBucket(value: (r['v'] as String?) ?? '(none)', count: r['c'] as int),
+    ];
+  }
+
+  /// Ordered funnel: a user reaches step k only after reaching steps 1..k-1
+  /// earlier (by ts_micros) within [from, to].
+  List<FunnelStep> funnel(List<String> steps, String from, String to) {
+    if (steps.isEmpty) throw ArgumentError('steps must not be empty');
+    final distinct = steps.toSet().toList();
+    final marks = List.filled(distinct.length, '?').join(', ');
+    final rows = _db.select(
+      'SELECT user_pseudo_id, event_name FROM events '
+      'WHERE day BETWEEN ? AND ? AND event_name IN ($marks) '
+      'ORDER BY user_pseudo_id, ts_micros, id;',
+      [from, to, ...distinct],
+    );
+    final byUser = <String, List<String>>{};
+    for (final r in rows) {
+      byUser.putIfAbsent(r['user_pseudo_id'] as String, () => []).add(r['event_name'] as String);
+    }
+    final reached = List.filled(steps.length, 0);
+    for (final names in byUser.values) {
+      var next = 0;
+      for (final name in names) {
+        if (next < steps.length && name == steps[next]) {
+          reached[next]++;
+          next++;
+        }
+      }
+    }
+    return [
+      for (var i = 0; i < steps.length; i++) FunnelStep(eventName: steps[i], users: reached[i]),
+    ];
+  }
+
   void close() => _db.dispose();
 }
+
+final _keyRe = RegExp(r'^[A-Za-z0-9_]+$');
