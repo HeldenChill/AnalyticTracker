@@ -10,7 +10,7 @@ const _maxFunnelSteps = 10;
 
 const _corsHeaders = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, OPTIONS',
+  'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'access-control-allow-headers': 'content-type',
 };
 
@@ -47,6 +47,32 @@ Filters _filters(Map<String, String> q) {
   return Filters(from: from, to: to, platform: _optional(q, 'platform'), version: _optional(q, 'version'));
 }
 
+Future<Map<String, dynamic>> _jsonBody(Request req) async {
+  final text = await req.readAsString();
+  try {
+    final v = jsonDecode(text);
+    if (v is Map<String, dynamic>) return v;
+  } on FormatException {
+    // fall through to the error below
+  }
+  throw _BadRequest('Request body must be a JSON object');
+}
+
+FunnelDef _parseDef(Object? j) {
+  if (j is! Map<String, dynamic>) throw _BadRequest('Malformed funnel definition');
+  final FunnelDef def;
+  try {
+    def = FunnelDef.fromJson(j);
+  } catch (_) {
+    throw _BadRequest('Malformed funnel definition');
+  }
+  final error = def.validate();
+  if (error != null) throw _BadRequest(error);
+  return def;
+}
+
+Response _notFound(String what) => _json({'error': '$what not found'}, status: 404);
+
 Middleware _cors() => (inner) => (req) async {
       if (req.method == 'OPTIONS') return Response.ok('', headers: _corsHeaders);
       final res = await inner(req);
@@ -67,6 +93,34 @@ Handler buildHandler(EventStore store) {
   final r = Router()
     ..get('/days', (Request req) => _json([for (final d in store.days()) d.toJson()]))
     ..get('/events/names', (Request req) => _json(store.eventNames()))
+    ..get('/events/param-keys', (Request req) {
+      final q = req.url.queryParameters;
+      final name = _required(q, 'name');
+      final f = _filters(q);
+      return _json(store.paramKeys(name, f.from, f.to, platform: f.platform, version: f.version));
+    })
+    ..get('/funnels', (Request req) => _json([for (final s in store.funnels.list()) s.toJson()]))
+    ..post('/funnels/run', (Request req) async {
+      final body = await _jsonBody(req);
+      final def = _parseDef(body['def']);
+      final f = _filters({
+        for (final k in const ['from', 'to', 'platform', 'version'])
+          if (body[k] is String) k: body[k] as String,
+      });
+      return _json(store.funnelEngine.run(def, f).toJson());
+    })
+    ..post('/funnels', (Request req) async {
+      final def = _parseDef(await _jsonBody(req));
+      return _json(store.funnels.create(def).toJson(), status: 201);
+    })
+    ..put('/funnels/<id>', (Request req, String id) async {
+      final def = _parseDef(await _jsonBody(req));
+      final saved = store.funnels.update(int.tryParse(id) ?? -1, def);
+      return saved == null ? _notFound('Funnel $id') : _json(saved.toJson());
+    })
+    ..delete('/funnels/<id>', (Request req, String id) {
+      return store.funnels.delete(int.tryParse(id) ?? -1) ? Response(204) : _notFound('Funnel $id');
+    })
     ..get('/filters', (Request req) => _json(store.metrics.filterOptions().toJson()))
     ..get('/overview', (Request req) =>
         _json(store.metrics.overview(_filters(req.url.queryParameters)).toJson()))
