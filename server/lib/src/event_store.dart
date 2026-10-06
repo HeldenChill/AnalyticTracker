@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import 'funnel_store.dart';
 import 'metrics_store.dart';
 import 'raw_event.dart';
 
@@ -46,6 +47,9 @@ class EventStore {
 
   /// Dashboard metrics over the same connection.
   late final MetricsStore metrics = MetricsStore(_db);
+
+  /// Saved funnels table over the same connection.
+  late final FunnelStore funnels = FunnelStore(_db);
 
   /// Atomically replaces every row of [day] with [events].
   void replaceDay(String day, List<RawEvent> events, {DateTime? now}) {
@@ -115,6 +119,18 @@ class EventStore {
       args.add(version);
     }
     return (sql.toString(), args);
+  }
+
+  /// Distinct top-level parameter keys seen on [eventName] in the range.
+  List<String> paramKeys(String eventName, String from, String to,
+      {String? platform, String? version}) {
+    final (extra, extraArgs) = _extraFilters(platform, version);
+    final rows = _db.select(
+      'SELECT DISTINCT j.key AS k FROM events, json_each(events.params_json) AS j '
+      'WHERE event_name = ? AND day BETWEEN ? AND ?$extra ORDER BY k;',
+      [eventName, from, to, ...extraArgs],
+    );
+    return [for (final r in rows) r['k'] as String];
   }
 
   List<String> eventNames() => [
