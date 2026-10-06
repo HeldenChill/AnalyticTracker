@@ -19,7 +19,11 @@ class BaseUrlNotifier extends Notifier<String> {
 final baseUrlProvider =
     NotifierProvider<BaseUrlNotifier, String>(() => BaseUrlNotifier(defaultBaseUrl));
 
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient(ref.watch(baseUrlProvider)));
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final client = ApiClient(ref.watch(baseUrlProvider));
+  ref.onDispose(client.close);
+  return client;
+});
 
 final daysProvider = FutureProvider<List<DayStat>>((ref) => ref.watch(apiClientProvider).days());
 

@@ -28,6 +28,7 @@
 - Granularity: **raw events kept forever** (own archive outlives BQ 60-day expiry).
 - Consequence: daily job MUST succeed within 60 days of each table or that day is lost — needs retry + gap detection.
 - **Stack APPROVED (round 3):** Flutter client (all platforms) + local Dart server (shelf) + SQLite raw events + Windows Task Scheduler daily pull with oldest-first gap fill. Spec: `.cursor/plans/flutter-local-server-stack.md`. VPS/auth deferred.
+- **Platform order (2026-10-06):** Windows build first; Android/iOS/Web only after Windows settles. v1 implemented by Gemini from `.cursor/plans/flutter-local-server-implementation.md`, reviewed by Claude.
 
 ## Architecture constraints learned (hold regardless of stack)
 

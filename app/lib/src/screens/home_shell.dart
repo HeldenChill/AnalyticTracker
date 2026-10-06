@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../providers.dart';
 
 import 'counts_screen.dart';
 import 'days_screen.dart';
@@ -6,20 +9,36 @@ import 'funnel_screen.dart';
 import 'param_screen.dart';
 import 'settings_screen.dart';
 
-class HomeShell extends StatefulWidget {
+class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
   @override
-  State<HomeShell> createState() => _HomeShellState();
+  ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
   static const _titles = ['Days', 'Counts', 'Params', 'Funnel', 'Settings'];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_titles[_index])),
+      appBar: AppBar(
+        title: Text(_titles[_index]),
+        actions: [
+          // Desktop has no mouse pull-to-refresh; reload every tab's cached data.
+          IconButton(
+            tooltip: 'Refresh',
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              ref.invalidate(daysProvider);
+              ref.invalidate(eventNamesProvider);
+              ref.invalidate(countsProvider);
+              ref.invalidate(paramProvider);
+              ref.invalidate(funnelProvider);
+            },
+          ),
+        ],
+      ),
       body: IndexedStack(
         index: _index,
         children: const [DaysScreen(), CountsScreen(), ParamScreen(), FunnelScreen(), SettingsScreen()],

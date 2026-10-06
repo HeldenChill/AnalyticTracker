@@ -18,6 +18,14 @@ class ApiClient {
 
   final Uri _base;
   final http.Client _http;
+  bool _closed = false;
+
+  bool get isClosed => _closed;
+
+  void close() {
+    _closed = true;
+    _http.close();
+  }
 
   Future<List<dynamic>> _getList(String path, [Map<String, String> query = const {}]) async {
     final resolved = _base.resolve(path);

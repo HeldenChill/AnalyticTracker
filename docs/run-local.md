@@ -1,4 +1,4 @@
-# Run AnalyticTracker locally
+﻿# Run AnalyticTracker locally
 
 ```mermaid
 flowchart LR
@@ -14,7 +14,9 @@ flowchart LR
 1. Firebase console → Project settings → Integrations → BigQuery → link, enable **Daily** export.
 2. Google Cloud console → IAM & Admin → Service accounts → create one with roles **BigQuery Data Viewer** and **BigQuery Job User** → Keys → add JSON key → save as `server/secrets/service-account.json`.
 3. Copy `server/config.example.json` to `server/config.json`; set `projectId`, `datasetId` (`analytics_<number>`, see BigQuery console) and `location` (dataset Details).
-4. From repo root: `flutter pub get`.
+4. Add the Flutter SDK `bin` folder (e.g. `D:\flutter\bin`) to your **user PATH** — the scheduled pull calls `dart`.
+5. Windows build only: enable **Developer Mode** (`start ms-settings:developers`) — Flutter plugins need symlinks.
+6. From repo root: `flutter pub get`.
 
 ## 2. Pull data
 
