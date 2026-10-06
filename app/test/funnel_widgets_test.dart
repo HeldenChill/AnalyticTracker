@@ -1,0 +1,131 @@
+import 'package:analytic_app/src/providers.dart';
+import 'package:analytic_app/src/widgets/format.dart';
+import 'package:analytic_app/src/widgets/funnel_chart.dart';
+import 'package:analytic_app/src/widgets/funnel_editor.dart';
+import 'package:analytic_app/src/widgets/funnel_step_table.dart';
+import 'package:analytic_shared/analytic_shared.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+const result = FunnelResult(steps: [
+  FunnelStepResult(index: 0, event: 'first_open', paramKey: null, paramValue: null, players: 214, fromPrevious: null, fromFirst: 1.0, dropped: null, medianSeconds: null),
+  FunnelStepResult(index: 1, event: 'tut', paramKey: 'step', paramValue: '1', players: 198, fromPrevious: 198 / 214, fromFirst: 198 / 214, dropped: 16, medianSeconds: 40),
+  FunnelStepResult(index: 2, event: 'tut', paramKey: 'step', paramValue: '3', players: 160, fromPrevious: 160 / 198, fromFirst: 160 / 214, dropped: 38, medianSeconds: 130),
+], totalConversion: 160 / 214, biggestDropIndex: 2);
+
+void setSize(WidgetTester t) {
+  t.view.physicalSize = const Size(1400, 1000);
+  t.view.devicePixelRatio = 1.0;
+  addTearDown(t.view.reset);
+}
+
+void main() {
+  test('fmtDuration', () {
+    expect(fmtDuration(null), '—');
+    expect(fmtDuration(20), '20s');
+    expect(fmtDuration(65), '1m 05s');
+    expect(fmtDuration(43215), '12h 00m');
+    expect(fmtDuration(90000), '1d 1h');
+  });
+
+  testWidgets('chart and table show conversion, filters and biggest drop', (t) async {
+    setSize(t);
+    await t.pumpWidget(const MaterialApp(home: Scaffold(body: Column(children: [
+      FunnelChart(result: result),
+      FunnelStepTable(result: result),
+    ]))));
+    expect(find.text('100%'), findsWidgets);
+    expect(find.text('3. tut'), findsOneWidget);
+    expect(find.text('step = 3'), findsWidgets);
+    expect(find.text('−38'), findsOneWidget);
+    expect(find.text('2m 10s'), findsOneWidget);
+    expect(find.text('81%'), findsOneWidget); // step 3 from previous: 160/198
+  });
+
+  group('editor dialog', () {
+    late FunnelEditorOutcome? outcome;
+    late List<FunnelDef> saved;
+
+    Future<void> open(WidgetTester t, {FunnelDef? initial, String? saveError}) async {
+      setSize(t);
+      outcome = null;
+      saved = [];
+      await t.pumpWidget(ProviderScope(
+        overrides: [
+          eventNamesProvider.overrideWith((ref) async => const ['first_open', 'tut']),
+          paramKeysProvider.overrideWith((ref, q) async => const ['step']),
+          paramValuesProvider.overrideWith((ref, q) async => const ['1', '3']),
+        ],
+        child: MaterialApp(home: Scaffold(body: Builder(builder: (context) => TextButton(
+              onPressed: () async {
+                outcome = await showFunnelEditor(context, initial: initial, onSave: (d) async {
+                  saved.add(d);
+                  return saveError;
+                });
+              },
+              child: const Text('open'),
+            )))),
+      ));
+      await t.tap(find.text('open'));
+      await t.pumpAndSettle();
+    }
+
+    ButtonStyleButton buttonWithText(WidgetTester t, String text) => t.widget<ButtonStyleButton>(
+        find.ancestor(of: find.text(text), matching: find.byWidgetPredicate((w) => w is ButtonStyleButton)));
+
+    testWidgets('Add step disabled at 10 steps', (t) async {
+      await open(t, initial: FunnelDef(name: 'F', windowMinutes: 60, steps: List.filled(10, const FunnelStepDef(event: 'tut'))));
+      expect(find.text('Edit funnel'), findsOneWidget);
+      expect(buttonWithText(t, 'Add step').enabled, isFalse);
+    });
+
+    testWidgets('empty name shows error and stays open', (t) async {
+      await open(t, initial: const FunnelDef(name: '', windowMinutes: 1440, steps: [FunnelStepDef(event: 'first_open')]));
+      await t.tap(find.text('Save'));
+      await t.pumpAndSettle();
+      expect(find.text('Funnel name is required'), findsOneWidget);
+      expect(saved, isEmpty);
+      expect(find.text('Edit funnel'), findsOneWidget);
+    });
+
+    testWidgets('server error keeps dialog open', (t) async {
+      await open(t, initial: const FunnelDef(name: 'F', windowMinutes: 1440, steps: [FunnelStepDef(event: 'first_open')]), saveError: 'Name taken');
+      await t.tap(find.text('Save'));
+      await t.pumpAndSettle();
+      expect(saved.length, 1);
+      expect(find.text('Name taken'), findsOneWidget);
+      expect(find.text('Edit funnel'), findsOneWidget);
+      expect(outcome, isNull);
+    });
+
+    testWidgets('successful save closes with saved outcome', (t) async {
+      const def = FunnelDef(name: 'F', windowMinutes: 1440, steps: [FunnelStepDef(event: 'first_open')]);
+      await open(t, initial: def);
+      await t.tap(find.text('Save'));
+      await t.pumpAndSettle();
+      expect(find.text('Edit funnel'), findsNothing);
+      expect(outcome!.saved, isTrue);
+      expect(outcome!.def, def);
+    });
+
+    testWidgets('Run closes without saving', (t) async {
+      await open(t, initial: const FunnelDef(name: 'F', windowMinutes: null, steps: [FunnelStepDef(event: 'tut', paramKey: 'step', paramValue: '1')]));
+      expect(find.text('Whole range'), findsOneWidget);
+      await t.tap(find.text('Run'));
+      await t.pumpAndSettle();
+      expect(saved, isEmpty);
+      expect(outcome!.saved, isFalse);
+      expect(outcome!.def.steps.single.paramValue, '1');
+    });
+
+    testWidgets('new funnel: add and remove steps', (t) async {
+      await open(t);
+      expect(find.text('New funnel'), findsOneWidget);
+      expect(find.byTooltip('Remove step'), findsOneWidget);
+      await t.tap(find.text('Add step'));
+      await t.pumpAndSettle();
+      expect(find.byTooltip('Remove step'), findsNWidgets(2));
+    });
+  });
+}
