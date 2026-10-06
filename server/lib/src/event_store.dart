@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import 'metrics_store.dart';
 import 'raw_event.dart';
 
 class EventStore {
@@ -42,6 +43,9 @@ class EventStore {
   factory EventStore.inMemory() => EventStore._(sqlite3.openInMemory());
 
   final Database _db;
+
+  /// Dashboard metrics over the same connection.
+  late final MetricsStore metrics = MetricsStore(_db);
 
   /// Atomically replaces every row of [day] with [events].
   void replaceDay(String day, List<RawEvent> events, {DateTime? now}) {
