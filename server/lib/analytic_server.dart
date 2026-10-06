@@ -1,3 +1,4 @@
+export 'src/api.dart';
 export 'src/bigquery_source.dart';
 export 'src/config.dart';
 export 'src/event_source.dart';
