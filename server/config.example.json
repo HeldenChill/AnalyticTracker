@@ -1,0 +1,8 @@
+{
+  "projectId": "your-firebase-project-id",
+  "datasetId": "analytics_123456789",
+  "location": "US",
+  "keyFile": "secrets/service-account.json",
+  "dbPath": "data/events.db",
+  "port": 8080
+}

@@ -1,3 +1,5 @@
+export 'src/bigquery_source.dart';
+export 'src/config.dart';
 export 'src/event_source.dart';
 export 'src/event_store.dart';
 export 'src/flatten.dart';
