@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import 'funnel_engine.dart';
 import 'funnel_store.dart';
 import 'metrics_store.dart';
 import 'raw_event.dart';
@@ -50,6 +51,9 @@ class EventStore {
 
   /// Saved funnels table over the same connection.
   late final FunnelStore funnels = FunnelStore(_db);
+
+  /// Funnel computation over the same connection.
+  late final FunnelEngine funnelEngine = FunnelEngine(_db);
 
   /// Atomically replaces every row of [day] with [events].
   void replaceDay(String day, List<RawEvent> events, {DateTime? now}) {
