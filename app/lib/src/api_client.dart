@@ -27,39 +27,51 @@ class ApiClient {
     _http.close();
   }
 
-  Future<Object?> _get(String path, [Map<String, String> query = const {}]) async {
+  static const _jsonHeaders = <String, String>{'content-type': 'application/json'};
+
+  Future<Object?> _send(String method, String path,
+      {Map<String, String> query = const {}, Object? body}) async {
     final resolved = _base.resolve(path);
     final uri = query.isEmpty ? resolved : resolved.replace(queryParameters: query);
+    final encoded = body == null ? null : jsonEncode(body);
     final http.Response res;
     try {
-      res = await _http.get(uri).timeout(const Duration(seconds: 15));
+      final Future<http.Response> call = switch (method) {
+        'POST' => _http.post(uri, headers: _jsonHeaders, body: encoded),
+        'PUT' => _http.put(uri, headers: _jsonHeaders, body: encoded),
+        'DELETE' => _http.delete(uri),
+        _ => _http.get(uri),
+      };
+      res = await call.timeout(const Duration(seconds: 15));
     } catch (e) {
       throw ApiException('Cannot reach server at $_base ($e)');
     }
-    Object? body;
+    Object? decoded;
     try {
-      body = res.body.isEmpty ? null : jsonDecode(res.body);
+      decoded = res.body.isEmpty ? null : jsonDecode(res.body);
     } on FormatException {
-      body = null;
+      decoded = null;
     }
-    if (res.statusCode != 200) {
-      if (body is Map && body['error'] is String) throw ApiException(body['error'] as String);
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      if (decoded is Map && decoded['error'] is String) throw ApiException(decoded['error'] as String);
       throw ApiException('HTTP ${res.statusCode}');
     }
-    return body;
+    return decoded;
   }
 
   Future<List<dynamic>> _getList(String path, [Map<String, String> query = const {}]) async {
-    final body = await _get(path, query);
+    final body = await _send('GET', path, query: query);
     if (body is! List) throw ApiException('Unexpected response from $path');
     return body;
   }
 
-  Future<Map<String, dynamic>> _getMap(String path, [Map<String, String> query = const {}]) async {
-    final body = await _get(path, query);
+  Future<Map<String, dynamic>> _map(Object? body, String path) async {
     if (body is! Map<String, dynamic>) throw ApiException('Unexpected response from $path');
     return body;
   }
+
+  Future<Map<String, dynamic>> _getMap(String path, [Map<String, String> query = const {}]) async =>
+      _map(await _send('GET', path, query: query), path);
 
   Map<String, String> _extra(String? platform, String? version) => {
         if (platform != null) 'platform': platform,
@@ -119,4 +131,23 @@ class ApiClient {
 
   Future<ProgressionData> progression(Filters f) async =>
       ProgressionData.fromJson(await _getMap('progression', f.toQuery()));
+
+  Future<List<String>> paramKeys(String eventName, Filters f) async =>
+      [for (final j in await _getList('events/param-keys', {'name': eventName, ...f.toQuery()})) j as String];
+
+  Future<List<SavedFunnel>> funnels() async =>
+      [for (final j in await _getList('funnels')) SavedFunnel.fromJson(j as Map<String, dynamic>)];
+
+  Future<SavedFunnel> createFunnel(FunnelDef def) async =>
+      SavedFunnel.fromJson(await _map(await _send('POST', 'funnels', body: def.toJson()), 'funnels'));
+
+  Future<SavedFunnel> updateFunnel(int id, FunnelDef def) async =>
+      SavedFunnel.fromJson(await _map(await _send('PUT', 'funnels/$id', body: def.toJson()), 'funnels/$id'));
+
+  Future<void> deleteFunnel(int id) async {
+    await _send('DELETE', 'funnels/$id');
+  }
+
+  Future<FunnelResult> runFunnel(FunnelDef def, Filters f) async => FunnelResult.fromJson(
+      await _map(await _send('POST', 'funnels/run', body: {'def': def.toJson(), ...f.toQuery()}), 'funnels/run'));
 }

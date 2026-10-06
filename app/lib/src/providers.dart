@@ -57,3 +57,20 @@ final paramProvider =
 final funnelProvider = FutureProvider.family<List<FunnelStep>, ({Filters filters, String steps})>(
     (ref, q) => ref.watch(apiClientProvider).funnel(q.steps, q.filters.from, q.filters.to,
         platform: q.filters.platform, version: q.filters.version));
+
+final savedFunnelsProvider =
+    FutureProvider<List<SavedFunnel>>((ref) => ref.watch(apiClientProvider).funnels());
+
+/// FunnelDef and Filters compare by value, so equal queries share one fetch.
+final funnelResultProvider = FutureProvider.family<FunnelResult, ({FunnelDef def, Filters filters})>(
+    (ref, q) => ref.watch(apiClientProvider).runFunnel(q.def, q.filters));
+
+final paramKeysProvider = FutureProvider.family<List<String>, ({String event, Filters filters})>(
+    (ref, q) => ref.watch(apiClientProvider).paramKeys(q.event, q.filters));
+
+final paramValuesProvider =
+    FutureProvider.family<List<String>, ({String event, String key, Filters filters})>((ref, q) async {
+  final buckets = await ref.watch(apiClientProvider).param(q.event, q.key, q.filters.from, q.filters.to,
+      platform: q.filters.platform, version: q.filters.version);
+  return [for (final b in buckets) if (b.value != '(none)') b.value];
+});
