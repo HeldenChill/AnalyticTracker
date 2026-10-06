@@ -4,11 +4,15 @@
 
 ## Project
 
-Cross-platform (Windows, Android, iOS, Web) team dashboard that pulls game analytics (Firebase -> BigQuery export) daily and shows basic analysis. First consumer: PetVsMonster tracking events. Stack approved: Flutter app + local Dart server + SQLite raw events + daily scheduled pull (spec `.cursor/plans/flutter-local-server-stack.md`).
+Cross-platform (Windows, Android, iOS, Web) team dashboard that pulls game analytics (Firebase -> BigQuery export) daily and shows basic analysis. First consumer: PetVsMonster tracking events. Built (v1–v3, implemented by Gemini, reviewed by Claude): Flutter app (Windows first) + local Dart shelf server + SQLite raw events + daily pull / manual BigQuery export import; GameAnalytics-style Overview, Retention, Progression, Funnels; four switchable styles.
 
 ## Memory index
 
 | Topic | File |
 |---|---|
-| Bug ledger — BUG-NNNN ids, status lifecycle | `mem-known-bugs-index.md` |
-| Project intent, origin session, open stack decision, Firebase/GA4/BigQuery facts, PVM tracking keys | `mem-project-intent-and-origin.md` |
+| Bug ledger — BUG-NNNN ids, status lifecycle, review findings | `mem-known-bugs-index.md` |
+| Project intent, owner decisions timeline, roles (Claude plans/reviews, Gemini implements), status, open decisions | `mem-project-intent-and-origin.md` |
+| System architecture as built — packages, SQLite tables, API routes, metric/funnel rules, styles, theme tokens | `mem-system-architecture.md` |
+| Firebase BigQuery data playbook — sandbox 60 days, service account 403 IAM roles, manual export import query, real PVM data shape, tut, debug_event | `mem-lessons-firebase-bigquery-data.md` |
+| Windows Flutter Dart environment playbook — PATH, Developer Mode, Visual Studio C++, build, stale server port 8080, screenshots, riverpod fl_chart traps | `mem-lessons-windows-flutter-environment.md` |
+| Spec plan Gemini review workflow playbook — writing plans for Gemini, review checklist, Gemini habits | `mem-lessons-gemini-plan-review-workflow.md` |

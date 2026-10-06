@@ -1,75 +1,57 @@
-# Memory: AnalyticTracker — intent, origin session, open decisions
+# Memory: AnalyticTracker — intent, decision history, current status
 
 **ID:** `mem-project-intent-and-origin`
 **Parent:** `mem-project-index`
 **Last updated:** 2026-10-06
+**Related:** `mem-system-architecture` (what exists now), `mem-lessons-firebase-bigquery-data`, `mem-lessons-windows-flutter-environment`, `mem-lessons-gemini-plan-review-workflow`, `mem-known-bugs-index`
 
 ## Intent (owner-stated)
 
-- **Standalone app**, separate from any game. Cross-platform: **PC (Windows), mobile (Android/iOS), web**.
-- **Users:** small team (designer, PM, dev) viewing shared dashboards — not a solo tool.
-- **Job:** pull game analytics data from Firebase **automatically every day**, then offer **basic analytic functions** (charts, filters, funnels, per-event parameter breakdown).
-- First data source: PetVsMonster (PVM) tracking events. This workspace is where the app is developed first.
+- **Standalone app**, separate from any game. Targets: **Windows first**, then Android / iOS / Web.
+- **Users:** small team (designer, PM, dev) reading shared dashboards — not a power-user query tool (query builder deferred).
+- **Job:** pull game analytics from Firebase (via BigQuery export) **daily**, keep own copy, show **GameAnalytics-style** analysis.
+- First data source: PetVsMonster (PVM). Repo: `D:\Projects\AnalyticTracker`, branch `feature/flutter-local-server`.
 
-## Status: stack decided (see Owner decisions)
+## Roles in this project (2026-10-06 session)
 
-- Brainstorming path: **architectural** (new project). Stages done: purpose (team dashboard), platforms (PC/mobile/web).
-- **Blocking next step:** owner wants a research doc comparing every candidate stack BEFORE choosing → [docs/research/stack-comparison.md](../../docs/research/stack-comparison.md).
-- Candidates: Flutter (Dart), Web PWA (React/TS), Rust Tauri 2, Rust Dioxus/egui, .NET MAUI, Avalonia, Unity.
-- Assistant leaning (NOT approved): Flutter app + Firebase Auth + Firestore daily summaries + Python Cloud Function on Cloud Scheduler. Alternative raised: Dart backend (one language).
-- After stack choice: approaches → sectioned design → spec in `.cursor/plans/` → owner review → writing-plans.
+| Who | Does |
+|---|---|
+| Owner | Decides every design fork; runs Gemini; performs IAM/OS/installer steps |
+| Claude | Research, brainstorming, specs, step-by-step plans, code review, runtime verification, small fixes on request |
+| Gemini 3.8 | Implements the plans task-by-task (v1, v2, v3), commits per task |
 
-## Owner decisions (2026-10-06, debate round 2)
+## Decision timeline (all 2026-10-06)
 
-- iOS: **web link enough** — no App Store app. Tilts PWA over Flutter.
-- Language: **new language OK** — C# not required.
-- BigQuery: **stay sandbox** (no billing). App is **independent of Firebase**; Firebase = source only.
-- Data home: **own small server** — daily job pulls BigQuery, writes own DB, serves API; key stays server-side.
-- Granularity: **raw events kept forever** (own archive outlives BQ 60-day expiry).
-- Consequence: daily job MUST succeed within 60 days of each table or that day is lost — needs retry + gap detection.
-- **Stack APPROVED (round 3):** Flutter client (all platforms) + local Dart server (shelf) + SQLite raw events + Windows Task Scheduler daily pull with oldest-first gap fill. Spec: `.cursor/plans/flutter-local-server-stack.md`. VPS/auth deferred.
-- **Platform order (2026-10-06):** Windows build first; Android/iOS/Web only after Windows settles.
-- **v1 Completed (2026-10-06):** Implemented all 10 tasks in `.cursor/plans/flutter-local-server-implementation.md` on branch `feature/flutter-local-server` (commits f1f5cbd..414d562). 75/75 tests passing across shared, server, app. Verified on Windows release build.
-- **v2 Dashboards Designed (2026-10-06):** GameAnalytics-style redesign approved in `.cursor/plans/gameanalytics-dashboard-design.md`, implementation plan ready in `.cursor/plans/gameanalytics-dashboard-implementation.md` (Overview / Retention / Progression dashboards with sidebar and global filter bar).
+| Round | Owner decision | Result |
+|---|---|---|
+| Stack research | Compare every stack before choosing → `docs/research/stack-comparison.md` (Flutter vs PWA tied 26) | — |
+| Debate 2 | iOS web link enough; new language OK; **BigQuery stays sandbox**; app independent of Firebase | own data copy |
+| Debate 3 | **Local server first**, simple save/load; Flutter client; **Dart server** (over Python) | spec `.cursor/plans/flutter-local-server-stack.md` |
+| Data | **Raw events kept forever** in own SQLite (outlives 60-day sandbox expiry) | — |
+| Platform | **Windows build first**, other platforms after Windows settles | — |
+| v1 | Implemented by Gemini (plan `flutter-local-server-implementation.md`), reviewed by Claude | BUG-0001..0004 |
+| Data access | SA key lacks BigQuery roles, owner cannot grant IAM now → **manual BigQuery console export + `bin/import.dart`** | 5,002 real events imported |
+| v2 | "Do like GameAnalytics": dashboards first (designer/PM), Overview + Retention + Progression, sidebar, global filters (date + platform + version), server-side SQL per page; Progression reads **`stg_*` only**; retention cohort = **`first_open`** | spec `gameanalytics-dashboard-design.md`, plan `gameanalytics-dashboard-implementation.md` |
+| v3 | Funnels like GameAnalytics: **strict order + time window**, **saved on server, shared**, **one param filter per step**; styles: owner asked for a **live web demo**, then chose **all four** with a Settings switch | spec `funnels-and-styles-design.md`, plan `funnels-and-styles-implementation.md`, demo https://claude.ai/artifact/Y3Qpmvo8jHbpuupEfWioDS |
 
-## v3 decisions (2026-10-06)
+## Status (end of 2026-10-06 session)
 
-- v2 dashboards (Overview/Retention/Progression, sidebar, global filters) implemented by Gemini.
-- v3 spec `.cursor/plans/funnels-and-styles-design.md`: GameAnalytics-style funnels (strict order + time window, server-saved shared, one param filter per step) + four switchable styles (Tremor Light default, shadcn Neutral, Midnight Game, Material 3 Soft) via Settings. Style demo artifact: https://claude.ai/artifact/Y3Qpmvo8jHbpuupEfWioDS
+- v1 + v2 + v3 implemented by Gemini, all committed (32 commits on the branch). Gates: shared 33, server 113, app 62 tests passing; analyze clean.
+- Windows release build verified by Claude at runtime against real data, including screenshots of all four styles and the Funnels page.
+- Real saved funnel in DB: "Level 1-2 progression" (first_open → level_1_start → level_1_complete → level_2_start → level_2_complete): 79 entered, 4% total, biggest drop level 1 start → complete (−72%).
 
-## Real data status (2026-10-06)
+## Open owner decisions
 
-- BigQuery IS linked for `pet-vs-monster`. Only SA key on hand = `firebase-adminsdk-fbsvc` → 403 `bigquery.jobs.create` (no BigQuery roles). Owner can't grant IAM yet → automatic pull blocked.
-- Workaround: manual console export (query in `docs/run-local.md`-style flow) → `server/imports/*.json` → `dart run bin/import.dart config.json <files>`. Imported days count as pulled.
-- First import: 5,002 events, 57 days 2026-08-07..2026-10-05 (sandbox 60-day cutoff). Days 09-23/24/27 absent (no table = likely zero events).
-- Live data uses OLD naming (`level_N_start`, `level_N_complete`, `ftu_pet_buy`, `tut`, plus Firebase auto events) — 146 distinct names; Mode A `stg_*` names barely present. Funnels/params must use these names.
+| Item | Question | Assistant recommendation |
+|---|---|---|
+| BUG-0007 | Test-device events (`debug_event: 1`, 15% of events) counted everywhere | Exclude by default + "Include test devices" toggle in filter bar |
+| BUG-0008 | `tut` needs two param filters (`id` + `step`) per funnel step | Allow 2+ filters per step (spec §3 change) |
+| BUG-0005/0006/0009 | Tooltip contrast, tooltip decimals, KPI row wrap | Small fixes; Claude or one Gemini plan |
+| IAM | Grant a read-only SA (BigQuery Data Viewer + Job User) to enable the automatic daily pull | Dedicated `analytic-tracker-pull` SA, not the Admin SDK key |
 
-## Architecture constraints learned (hold regardless of stack)
-
-- **Frontend ≠ backend.** Flutter (or any client) cannot do the daily pull: mobile/web OS kill background jobs. Daily pull must run as a **cloud job** (scheduler + function).
-- **Client must not query BigQuery directly:** would ship a service-account secret in the app + per-open query cost/latency. Job writes small pre-computed summaries; app reads via auth + security rules.
-- Three parts: (1) daily job, (2) summary storage, (3) cross-platform app.
-
-## Firebase / GA4 / BigQuery facts gathered this session
-
-- GA4 dashboard hides event parameters until registered as **custom definitions** (Admin → Data display → Custom definitions). Event-scoped limit 50 dims + 50 metrics (free); no backfill; 24–48 h delay. DebugView shows all params live, no registration.
-- Firebase per-event limits: 25 params, 40-char names, 100-char values.
-- GA4 aggregated reports kept indefinitely; Explorations retention 2 or 14 months (set 14).
-- **BigQuery export** (Firebase → Project settings → Integrations): one row per event in `events_YYYYMMDD`, all params in `event_params` (repeated key/value). Starts from link day, no history.
-  - **Sandbox (no billing): each daily table auto-deletes after 60 days.** No scheduled queries / streaming.
-  - Billing on: no expiry; free tier 10 GB storage + 1 TB query/month; ~$0.02/GB/month after. Switching from sandbox: remove dataset default table expiration AND per-table expirations or old tables still die.
-  - Rough size ~1 KB/event row.
-- Local daily-pull prototype idea (not built): Python `google-cloud-bigquery` + service account (BigQuery Data Viewer + Job User) + Windows Task Scheduler, CSV per day with `TO_JSON_STRING(event_params)`. Superseded by cloud-job design for a team app.
-
-## PVM tracking data shape (first source)
-
-- PVM uses `com.hung.services.analytics` 0.5.1, **Mode A**: abbreviated fixed event names + full payload with abbreviated keys. Source of truth: PVM `Assets/Resources/PvmTrackingNameSettings.asset` + `.task_tracking/GD/csv/MessageTracking/{Events,FTU,Tutorial}.csv`.
-- Event names e.g. `stg_start`, `stg_cmp`, `stg_fail`, `cp`, `pet_buy`, `sup_buy`, `skl_pick`, `trd_use`, `trn_use`, `gacha`, `dg_rwd`, `ds_buy`, `pet_upg`, `hero_upg`, `item_upg`, `tut`, `app_blur`, `app_focus`; `ftu_` prefix = first-session scope.
-- Wire keys (21): dims `stg wa id type replay day pool cost_type target_id pet_id current_stg step ftu skipped in_stg`; metrics `count cost time_min gap_min heat away_min min`. `id` meaning varies per event — always pair with event name. User properties: `ftu`, `days_since_install`, `current_stage`.
-- `app_blur`/`app_focus` exist only in PVM code (`PvmTrackingRules.cs`), not in the CSVs.
-
-## Workspace setup history (2026-10-06)
+## Workspace setup history
 
 - Copied from PVM (PVM untouched): 12 generic rules, `/debug-bug`, `/find-bug`, skills caveman+cavecrew, keyword-matching memory hook, 19 user auto-memory files. Unity/MCP/asmdef/AutoTest rules, layer agents, PVM memories NOT copied.
-- Plugins caveman, superpowers, ponytail are enabled globally (`~/.claude/settings.json` `enabledPlugins`) → active in every workspace, no per-project install.
+- Plugins caveman, superpowers, ponytail are enabled globally (`~/.claude/settings.json` `enabledPlugins`).
 - Memory hook keyword-matches the prompt against `mem-project-index.md` `## Memory index` (max 15 rows) — full-table injection overflowed the ~10 KB hook cap in PVM.
+- Gemini adds its own `AGENTS.md`, `GEMINI.md`, `.agents/` (owner's files; leave untracked unless owner commits).
