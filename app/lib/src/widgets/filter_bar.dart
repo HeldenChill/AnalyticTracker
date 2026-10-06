@@ -98,9 +98,12 @@ class _OptionDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButton<String?>(
-      value: options.contains(value) ? value : null,
+      // Keep an active filter visible even before /filters loads (or if it lacks it).
+      value: value,
       items: [
         DropdownMenuItem<String?>(value: null, child: Text('$label: All')),
+        if (value != null && !options.contains(value))
+          DropdownMenuItem<String?>(value: value, child: Text(value!)),
         for (final o in options) DropdownMenuItem<String?>(value: o, child: Text(o)),
       ],
       onChanged: onChanged,

@@ -88,8 +88,9 @@ class MetricsStore {
     final activeDays = <String, Set<String>>{};
     for (final r in _db.select('''
       SELECT DISTINCT user_pseudo_id AS uid, day FROM events
-      WHERE user_pseudo_id IN (SELECT user_pseudo_id FROM events WHERE event_name = 'first_open');
-    ''')) {
+      WHERE day BETWEEN ? AND ?
+        AND user_pseudo_id IN (SELECT user_pseudo_id FROM events WHERE event_name = 'first_open');
+    ''', [f.from, addDays(f.to, retentionOffsets.last)])) {
       activeDays.putIfAbsent(r['uid'] as String, () => <String>{}).add(r['day'] as String);
     }
 
@@ -210,7 +211,9 @@ class MetricsStore {
     for (var i = 0; i < stages.length; i++) {
       final a = acc[stages[i]]!;
       final players = a.startsByUser.length;
-      final nextPlayers = i + 1 < stages.length ? acc[stages[i + 1]]!.startsByUser.length : null;
+      // Spec: drop-off vs stage N+1; a skipped stage counts as 0 players.
+      final nextPlayers =
+          i + 1 < stages.length ? (acc[stages[i] + 1]?.startsByUser.length ?? 0) : null;
       final clearStarts = a.completers.fold<int>(0, (s, u) => s + (a.startsByUser[u] ?? 0));
       out.add(StageRow(
         stage: stages[i],

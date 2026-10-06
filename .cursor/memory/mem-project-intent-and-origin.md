@@ -32,6 +32,11 @@
 - **v1 Completed (2026-10-06):** Implemented all 10 tasks in `.cursor/plans/flutter-local-server-implementation.md` on branch `feature/flutter-local-server` (commits f1f5cbd..414d562). 75/75 tests passing across shared, server, app. Verified on Windows release build.
 - **v2 Dashboards Designed (2026-10-06):** GameAnalytics-style redesign approved in `.cursor/plans/gameanalytics-dashboard-design.md`, implementation plan ready in `.cursor/plans/gameanalytics-dashboard-implementation.md` (Overview / Retention / Progression dashboards with sidebar and global filter bar).
 
+## v3 decisions (2026-10-06)
+
+- v2 dashboards (Overview/Retention/Progression, sidebar, global filters) implemented by Gemini.
+- v3 spec `.cursor/plans/funnels-and-styles-design.md`: GameAnalytics-style funnels (strict order + time window, server-saved shared, one param filter per step) + four switchable styles (Tremor Light default, shadcn Neutral, Midnight Game, Material 3 Soft) via Settings. Style demo artifact: https://claude.ai/artifact/Y3Qpmvo8jHbpuupEfWioDS
+
 ## Real data status (2026-10-06)
 
 - BigQuery IS linked for `pet-vs-monster`. Only SA key on hand = `firebase-adminsdk-fbsvc` → 403 `bigquery.jobs.create` (no BigQuery roles). Owner can't grant IAM yet → automatic pull blocked.

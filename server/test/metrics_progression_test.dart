@@ -61,4 +61,15 @@ void main() {
     expect(store.metrics.progression(const Filters(from: d1, to: d1, platform: 'IOS')).stages, isEmpty);
     expect(store.metrics.progression(const Filters(from: '2026-10-02', to: '2026-10-03')).stages, isEmpty);
   });
+
+  test('drop-off treats a skipped stage as 0 players', () {
+    var ts = 0;
+    final s = EventStore.inMemory();
+    s.replaceDay(d1, [
+      evx(d1, ++ts, 'stg_start', 'u1', params: {'stg': 1}),
+      evx(d1, ++ts, 'stg_start', 'u1', params: {'stg': 3}),
+    ]);
+    final stages = s.metrics.progression(const Filters(from: d1, to: d1)).stages;
+    expect(stages.map((r) => r.dropOff), [1.0, null]);
+  });
 }
