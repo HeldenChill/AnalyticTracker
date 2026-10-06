@@ -37,6 +37,16 @@ String _required(Map<String, String> q, String key) {
   return (from, to);
 }
 
+String? _optional(Map<String, String> q, String key) {
+  final v = q[key]?.trim();
+  return (v == null || v.isEmpty) ? null : v;
+}
+
+Filters _filters(Map<String, String> q) {
+  final (from, to) = _range(q);
+  return Filters(from: from, to: to, platform: _optional(q, 'platform'), version: _optional(q, 'version'));
+}
+
 Middleware _cors() => (inner) => (req) async {
       if (req.method == 'OPTIONS') return Response.ok('', headers: _corsHeaders);
       final res = await inner(req);
@@ -57,12 +67,19 @@ Handler buildHandler(EventStore store) {
   final r = Router()
     ..get('/days', (Request req) => _json([for (final d in store.days()) d.toJson()]))
     ..get('/events/names', (Request req) => _json(store.eventNames()))
+    ..get('/filters', (Request req) => _json(store.metrics.filterOptions().toJson()))
+    ..get('/overview', (Request req) =>
+        _json(store.metrics.overview(_filters(req.url.queryParameters)).toJson()))
+    ..get('/retention', (Request req) =>
+        _json(store.metrics.retention(_filters(req.url.queryParameters)).toJson()))
+    ..get('/progression', (Request req) =>
+        _json(store.metrics.progression(_filters(req.url.queryParameters)).toJson()))
     ..get('/events/count', (Request req) {
       final q = req.url.queryParameters;
-      final (from, to) = _range(q);
-      final name = q['name']?.trim();
+      final f = _filters(q);
       return _json([
-        for (final c in store.counts(from, to, name: (name == null || name.isEmpty) ? null : name))
+        for (final c in store.counts(f.from, f.to,
+            name: _optional(q, 'name'), platform: f.platform, version: f.version))
           c.toJson(),
       ]);
     })
@@ -70,8 +87,12 @@ Handler buildHandler(EventStore store) {
       final q = req.url.queryParameters;
       final name = _required(q, 'name');
       final key = _required(q, 'key');
-      final (from, to) = _range(q);
-      return _json([for (final b in store.paramBreakdown(name, key, from, to)) b.toJson()]);
+      final f = _filters(q);
+      return _json([
+        for (final b in store.paramBreakdown(name, key, f.from, f.to,
+            platform: f.platform, version: f.version))
+          b.toJson(),
+      ]);
     })
     ..get('/funnel', (Request req) {
       final q = req.url.queryParameters;
@@ -84,9 +105,13 @@ Handler buildHandler(EventStore store) {
       if (steps.length > _maxFunnelSteps) {
         throw _BadRequest('"steps" allows at most $_maxFunnelSteps events');
       }
-      final (from, to) = _range(q);
-      return _json([for (final f in store.funnel(steps, from, to)) f.toJson()]);
+      final f = _filters(q);
+      return _json([
+        for (final s in store.funnel(steps, f.from, f.to, platform: f.platform, version: f.version))
+          s.toJson(),
+      ]);
     });
 
   return const Pipeline().addMiddleware(_cors()).addMiddleware(_errors()).addHandler(r.call);
 }
+
