@@ -50,6 +50,90 @@ class MetricsStore {
     return OverviewData(kpis: kpis, previous: previous, daily: daily);
   }
 
+  static const List<int> retentionOffsets = [1, 3, 7, 14, 30];
+
+  RetentionData retention(Filters f) {
+    final last = _db.select('SELECT MAX(day) AS d FROM pulled_days;').first['d'] as String?;
+
+    final filterSql = StringBuffer();
+    final args = <Object?>[f.from, f.to];
+    if (f.platform != null) {
+      filterSql.write(' AND e.platform = ?');
+      args.add(f.platform);
+    }
+    if (f.version != null) {
+      filterSql.write(' AND e.app_version = ?');
+      args.add(f.version);
+    }
+
+    // Each player's earliest first_open; kept only if that event is in range
+    // and matches the platform/version filters.
+    final cohortRows = _db.select('''
+      WITH firsts AS (
+        SELECT user_pseudo_id AS uid, MIN(ts_micros) AS ts FROM events
+        WHERE event_name = 'first_open' AND user_pseudo_id <> ''
+        GROUP BY user_pseudo_id
+      )
+      SELECT e.user_pseudo_id AS uid, MIN(e.day) AS day
+      FROM events e JOIN firsts fo ON e.user_pseudo_id = fo.uid AND e.ts_micros = fo.ts
+      WHERE e.event_name = 'first_open' AND e.day BETWEEN ? AND ?$filterSql
+      GROUP BY e.user_pseudo_id;
+    ''', args);
+
+    final usersByCohort = <String, List<String>>{};
+    for (final r in cohortRows) {
+      usersByCohort.putIfAbsent(r['day'] as String, () => []).add(r['uid'] as String);
+    }
+
+    final activeDays = <String, Set<String>>{};
+    for (final r in _db.select('''
+      SELECT DISTINCT user_pseudo_id AS uid, day FROM events
+      WHERE user_pseudo_id IN (SELECT user_pseudo_id FROM events WHERE event_name = 'first_open');
+    ''')) {
+      activeDays.putIfAbsent(r['uid'] as String, () => <String>{}).add(r['day'] as String);
+    }
+
+    final cohortDays = usersByCohort.keys.toList()..sort((a, b) => b.compareTo(a));
+    final cohorts = <RetentionCohort>[];
+    for (final day in cohortDays) {
+      final users = usersByCohort[day]!;
+      cohorts.add(RetentionCohort(
+        day: day,
+        size: users.length,
+        retained: [
+          for (final n in retentionOffsets)
+            _observable(addDays(day, n), last)
+                ? users.where((u) => activeDays[u]?.contains(addDays(day, n)) ?? false).length
+                : null,
+        ],
+      ));
+    }
+
+    final average = <double?>[];
+    for (var i = 0; i < retentionOffsets.length; i++) {
+      var retained = 0;
+      var size = 0;
+      for (final c in cohorts) {
+        final r = c.retained[i];
+        if (r == null) continue;
+        retained += r;
+        size += c.size;
+      }
+      average.add(size == 0 ? null : retained / size);
+    }
+
+    return RetentionData(
+      offsets: retentionOffsets,
+      lastDataDay: last,
+      cohorts: cohorts,
+      average: average,
+    );
+  }
+
+  bool _observable(String target, String? lastDay) =>
+      lastDay != null && target.compareTo(lastDay) <= 0;
+
+
   (Kpis, List<DailyMetrics>) _overviewFor(Filters f) {
     final (where, args) = _where(f);
     final rows = _db.select('''
