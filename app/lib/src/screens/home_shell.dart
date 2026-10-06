@@ -29,12 +29,21 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           IconButton(
             tooltip: 'Refresh',
             icon: const Icon(Icons.refresh),
-            onPressed: () {
+            onPressed: () async {
               ref.invalidate(daysProvider);
               ref.invalidate(eventNamesProvider);
               ref.invalidate(countsProvider);
               ref.invalidate(paramProvider);
               ref.invalidate(funnelProvider);
+              // Data often comes back identical in <1 ms, so confirm visibly.
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await ref.read(daysProvider.future);
+                messenger.showSnackBar(const SnackBar(
+                    content: Text('Refreshed'), duration: Duration(seconds: 1)));
+              } catch (_) {
+                // Error is already shown by the tab's ErrorRetry view.
+              }
             },
           ),
         ],

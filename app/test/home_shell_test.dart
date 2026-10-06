@@ -26,5 +26,6 @@ void main() {
     await t.pumpAndSettle();
     expect(calls, 2);
     expect(find.text('2026-10-02'), findsOneWidget);
+    expect(find.text('Refreshed'), findsOneWidget);
   });
 }

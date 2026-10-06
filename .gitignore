@@ -8,3 +8,4 @@ server/logs/
 *.db
 *.db-wal
 *.db-shm
+server/imports/

@@ -28,7 +28,16 @@
 - Granularity: **raw events kept forever** (own archive outlives BQ 60-day expiry).
 - Consequence: daily job MUST succeed within 60 days of each table or that day is lost — needs retry + gap detection.
 - **Stack APPROVED (round 3):** Flutter client (all platforms) + local Dart server (shelf) + SQLite raw events + Windows Task Scheduler daily pull with oldest-first gap fill. Spec: `.cursor/plans/flutter-local-server-stack.md`. VPS/auth deferred.
-- **Platform order (2026-10-06):** Windows build first; Android/iOS/Web only after Windows settles. v1 implemented by Gemini from `.cursor/plans/flutter-local-server-implementation.md`, reviewed by Claude.
+- **Platform order (2026-10-06):** Windows build first; Android/iOS/Web only after Windows settles.
+- **v1 Completed (2026-10-06):** Implemented all 10 tasks in `.cursor/plans/flutter-local-server-implementation.md` on branch `feature/flutter-local-server` (commits f1f5cbd..414d562). 75/75 tests passing across shared, server, app. Verified on Windows release build.
+- **v2 Dashboards Designed (2026-10-06):** GameAnalytics-style redesign approved in `.cursor/plans/gameanalytics-dashboard-design.md`, implementation plan ready in `.cursor/plans/gameanalytics-dashboard-implementation.md` (Overview / Retention / Progression dashboards with sidebar and global filter bar).
+
+## Real data status (2026-10-06)
+
+- BigQuery IS linked for `pet-vs-monster`. Only SA key on hand = `firebase-adminsdk-fbsvc` → 403 `bigquery.jobs.create` (no BigQuery roles). Owner can't grant IAM yet → automatic pull blocked.
+- Workaround: manual console export (query in `docs/run-local.md`-style flow) → `server/imports/*.json` → `dart run bin/import.dart config.json <files>`. Imported days count as pulled.
+- First import: 5,002 events, 57 days 2026-08-07..2026-10-05 (sandbox 60-day cutoff). Days 09-23/24/27 absent (no table = likely zero events).
+- Live data uses OLD naming (`level_N_start`, `level_N_complete`, `ftu_pet_buy`, `tut`, plus Firebase auto events) — 146 distinct names; Mode A `stg_*` names barely present. Funnels/params must use these names.
 
 ## Architecture constraints learned (hold regardless of stack)
 
