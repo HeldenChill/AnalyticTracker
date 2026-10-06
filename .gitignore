@@ -1,0 +1,10 @@
+.dart_tool/
+build/
+**/pubspec_overrides.yaml
+server/config.json
+server/secrets/
+server/data/
+server/logs/
+*.db
+*.db-wal
+*.db-shm
