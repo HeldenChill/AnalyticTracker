@@ -38,12 +38,13 @@
 
 ## Status (end of 2026-10-07 session) — START HERE
 
-- Branch `feature/flutter-local-server`, v1–v4 committed, nothing pushed (owner pushes). **v5 funnel upgrade: spec + wave 1 plan committed, waiting for Gemini to implement wave 1.**
+- Branch `feature/flutter-local-server`, HEAD `4e73a39` (plan commit), v1–v4 code committed, nothing pushed (owner pushes). **v5 funnel upgrade: spec + wave 1 plan committed, waiting for Gemini to implement wave 1.** Details: section "v5 funnel upgrade — handoff" below.
 - Gates (before wave 1): shared **34**, server **140**, app **65**; after wave 1 the plan expects **42 / 158 / 75**.
 - v5 = `funnel-upgrade-design.md` (4 waves: 1 richer matching + point-and-click editor, 2 compare segments, 3 trend, 4 who dropped + timeline + CSV). Wave 1 plan `funnel-wave1-implementation.md` (Tasks 0–7); code pre-verified task by task in a throwaway worktree. Next: owner runs Gemini → Claude reviews (playbook checklist) → wave 2 plan.
 - API server on :8080 was restarted by Claude with v4 code (has `POST /import`). If a new session finds 404 on `/import`, it is a stale server.
 - Saved funnel id 1 "Level 1-2 progression" (first_open → level_1_start → level_1_complete → level_2_start → level_2_complete): last 30 days, test devices off = 75 → 22 → 7 → 4 → 3, 4% total. (2026-10-06 figure 79 included test devices.)
-- Owner-side pending: (1) approve `analytic-tracker` project MCP in Claude Code → then Claude can call the 14 tools directly; (2) visual check of BUG-0005..0009 in the Windows app (build release, screenshots of all 4 styles: tooltip contrast/ints, KPI row of six at 1440 px, "Test devices" chip, two-filter funnel step) → move to RESOLVED.
+- `analytic-tracker` MCP: the 14 `mcp__analytic-tracker__*` tools were listed in the 2026-10-07 session (approval done; not called yet).
+- Owner-side pending: visual check of BUG-0005..0009 in the Windows app (build release, screenshots of all 4 styles: tooltip contrast/ints, KPI row of six at 1440 px, "Test devices" chip, two-filter funnel step) → move to RESOLVED.
 
 ## Next-step candidates (owner picks)
 
@@ -55,6 +56,23 @@
 | `pull_now` MCP tool | Only after IAM fixed |
 | Other platforms (Android/iOS/Web) | Owner said after Windows settles |
 
+## v5 funnel upgrade — handoff (2026-10-07)
+
+| Item | Where / value |
+|---|---|
+| Spec (all 4 waves, approved) | `.cursor/plans/funnel-upgrade-design.md` — §3 wave 1 (+ §3.4 editor UX, "Amended" notes), §4 segments, §5 trend, §6 who dropped, §7 errors, §8 tests, §9 wave → files |
+| Wave 1 plan (approved for Gemini) | `.cursor/plans/funnel-wave1-implementation.md` — Tasks 0–7; code byte-identical to a worktree run that passed |
+| Commits this session | `1641a87` spec · `60fce69` editor UX amendment · `4e73a39` plan + spec amendments + memory |
+| Expected after wave 1 | 6 commits (Tasks 1–6); gates shared **42** / server **158** / app **75**; funnel 1 still 75 → 22 → 7 → 4 → 3 (2026-09-08..10-07) |
+
+Wave 1 design facts to check at review (all in the plan):
+- JSON: a step keeps v4 `event` + `params` and adds `or` (≤2 extra matchers) + `exclude` (≤3, strict order only, not step 1); `ParamFilter.op` (`eq ne in contains gt gte lt lte`, wire `in` = Dart `FilterOp.isIn`), `in` uses `values` (≤20); `FunnelDef.order` `strict`/`any`. Defaults omitted on write → v4 JSON byte-identical.
+- Engine: `paths()` → `PlayerPath(uid, stepTs)`, `summarize()`; strict = step match checked before exclusion on each row; any order = each step takes first unused row after entry, reached = prefix, median measured from step 1. Missing param never matches (even `ne`).
+- App: `MatcherSlot` addresses own / or / exclusion matchers in `FunnelDraft`; `paramValuesProvider` returns `List<ParamBucket>`; Run/Save disabled while invalid (two old widget tests deliberately rewritten); operator words `is, is not, is one of, contains, greater than, at least, less than, at most`; number words only when all seen values parse as numbers; switching to Any order removes exclusions with notice.
+- Review: run the playbook checklist (`mem-lessons-gemini-plan-review-workflow`), plus `grep` that new test files equal the plan, and Task 7 report (restart server, funnel 1 numbers, bad `op` → 400 `Malformed funnel definition`, release build, 8-point editor checklist, screenshots in Tremor Light + Midnight Game).
+
+Later waves — defaults the owner has not confirmed (spec §1 Assumptions): breakdown top 5 + "Other", missing value "(none)"; trend by entry day / ISO week, incomplete buckets dashed; CSV = copy to clipboard; timeline = 1 h before entry .. 24 h after last matched step, ≤300 rows. Write each wave's plan only after the previous wave is reviewed.
+
 ## History 2026-10-06
 
 - v1 + v2 + v3 implemented by Gemini (32 commits). Windows release build verified at runtime with screenshots of all four styles and the Funnels page. Review found BUG-0005..0009.
@@ -65,6 +83,7 @@
 - v4 MCP (brainstorm → spec → plan, same day): owner chose **analysis + manage funnels + data ops**, **owner now / team later**, approach **A = Dart stdio MCP (`dart_mcp`) calling the HTTP API** (not direct SQLite, not `/mcp` in shelf). No `pull_now` until IAM; no raw SQL; API token required before team use. Spec `mcp-server-design.md`, plan `mcp-server-implementation.md` (5 tasks, for Gemini).
 - v4 implemented by Gemini (commits b4f2f59..b7889b3), reviewed by Claude: all 7 new files byte-identical to plan; gates shared 34 / server 140 / app 65; runtime via `cmd /c dart run server/bin/mcp.dart` against live server OK (overview == API, funnel 1 = 75 → 3, 4%; import dry run 57 days all match; save/delete; server-down hint). Pending owner: approve `analytic-tracker` in Claude Code (`claude mcp list`). Risk BUG-0010 (no API auth) deferred.
 
+- Session start: owner asked for status → chose "upgrade funnel + add missing functions first" over verifying BUG-0005..0009 / API token.
 - v5 funnel upgrade (brainstorm → spec → plan, same day): owner chose **all four** gaps (richer matching, segments, trend, who dropped) in **waves**; matching = operators + or-events + exclusions + any order; breakdown by platform / version / step-1 param / user property; drill-down = player list + in-app timeline + CSV; architecture **A = paths core** (walk once → `PlayerPath`, aggregators on top, matching in Dart). Owner asked for a **point-and-click editor, no typed syntax** (spec §3.4). Data reality: platform only ANDROID, user props only Firebase automatic keys.
 
 ## Open owner decisions

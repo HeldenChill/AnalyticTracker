@@ -42,6 +42,7 @@ ORDER BY event_timestamp
 - New Mode A `stg_*` events: ~6 rows → Progression page empty until new builds ship (expected).
 - `tut` exists **only from 2 test devices on 2026-10-01**; params `id` (Tut_1, Tut_2…) + `step` (`start` / `end` / `abort`) — string values, not numbers. A tutorial funnel needs both filters — supported since 2026-10-07 (BUG-0008: `id = Tut_1, step = end`). Because all `tut` rows are test-device events, tutorial funnels show 0 unless "Test devices" / `include_test` is on.
 - **Test devices**: 730 events (15%) from 7 users carry `debug_event: 1`. Since 2026-10-07 (BUG-0007) excluded from every metric by default; app chip "Test devices" / API `test=1` / MCP `include_test` brings them back. Real DB 09-01..10-07: 2434 events with, 1704 without.
+- Breakdown dimensions (checked 2026-10-07): `platform` is only `ANDROID`; ~20 `app_version` values (0.0.2 … 0.3.2); `user_props_json` holds only Firebase automatic keys (`first_open_time`, `ga_session_id`, `ga_session_number`) — no custom user properties until PVM sets them.
 - Days 09-23, 09-24, 09-27 absent → no table = no events (not an import error).
 - Before calling a metric wrong, query the DB read-only (`sqlite3 file:data/events.db?mode=ro`) for who sends the event, which params/values, and whether those users have `first_open` — two "funnel shows 0" suspicions this session were data facts, not engine bugs.
 

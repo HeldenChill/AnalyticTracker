@@ -3,7 +3,7 @@
 **ID:** `mem-system-architecture`
 **Parent:** `mem-project-index`
 **Last updated:** 2026-10-07
-**Source of truth for definitions:** specs in `.cursor/plans/` (v1 `flutter-local-server-stack.md`, v2 `gameanalytics-dashboard-design.md` §5 metrics, v3 `funnels-and-styles-design.md` §3 funnel (amended 10-07) + §6 style tokens, v4 `mcp-server-design.md`). Verify against code before edits.
+**Source of truth for definitions:** specs in `.cursor/plans/` (v1 `flutter-local-server-stack.md`, v2 `gameanalytics-dashboard-design.md` §5 metrics, v3 `funnels-and-styles-design.md` §3 funnel (amended 10-07) + §6 style tokens, v4 `mcp-server-design.md`, **v5 `funnel-upgrade-design.md` — planned, wave 1 not yet implemented as of 2026-10-07**). Verify against code before edits.
 
 ## Shape
 
@@ -55,6 +55,12 @@ Pull re-fetches last **3** days (late events) and fills missing days **oldest fi
 - `AppStyle` {tremor (default), shadcn, midnight, material} → `buildTheme()` → `ThemeData` + `AnalyticsTokens` ThemeExtension (sidebar, activeNav, good/bad, grid, chart[4], radius, displayFont). Widgets read `AnalyticsTokens.of(context)` (falls back to green/red when no extension → old tests pass).
 - Style saved per device: shared_preferences key `appStyle` (file `%APPDATA%\com.hung\analytic_app\shared_preferences.json`, stored as `flutter.appStyle`).
 - Fonts bundled (static TTF per weight): Inter, Geist, ChakraPetch, Manrope in `app/assets/fonts/`.
+
+## Planned v5 funnel (not built yet — update this file at wave 1 review)
+
+- Models: `FilterOp`, `StepMatcher`, `FunnelOrder`; step = own `event`/`params` + `or` + `exclude`; `FunnelStepResult` gains `or`/`exclude`, `text`, `eventsLabel`.
+- Engine: `FunnelEngine.paths` → `PlayerPath`; `summarize`; `run` = both. Waves 2–4 add aggregators over paths (segments, trend buckets, player lists) + routes `GET /events/user-prop-keys`, `POST /funnels/players`, `GET /players/<uid>/events`; MCP tools `user_prop_keys`, `funnel_players`, `player_events` (→ 17 tools).
+- App: `MatcherSlot` + richer `FunnelDraft`; editor rebuilt (step cards, operator dropdown, value control per operator, summary line); table shows one plain-language Event column.
 
 ## Run / build
 
