@@ -64,9 +64,10 @@ final funnelResultProvider = FutureProvider.family<FunnelResult, ({FunnelDef def
 final paramKeysProvider = FutureProvider.family<List<String>, ({String event, Filters filters})>(
     (ref, q) => ref.watch(apiClientProvider).paramKeys(q.event, q.filters));
 
+/// Seen values of one event parameter with counts, most frequent first (server keeps the top 50).
 final paramValuesProvider =
-    FutureProvider.family<List<String>, ({String event, String key, Filters filters})>((ref, q) async {
+    FutureProvider.family<List<ParamBucket>, ({String event, String key, Filters filters})>((ref, q) async {
   final buckets = await ref.watch(apiClientProvider).param(q.event, q.key, q.filters.from, q.filters.to,
       platform: q.filters.platform, version: q.filters.version, includeTest: q.filters.includeTest);
-  return [for (final b in buckets) if (b.value != '(none)') b.value];
+  return [for (final b in buckets) if (b.value != '(none)') b];
 });

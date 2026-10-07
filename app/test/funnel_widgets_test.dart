@@ -55,7 +55,8 @@ void main() {
         overrides: [
           eventNamesProvider.overrideWith((ref) async => const ['first_open', 'tut']),
           paramKeysProvider.overrideWith((ref, q) async => const ['step']),
-          paramValuesProvider.overrideWith((ref, q) async => const ['1', '3']),
+          paramValuesProvider.overrideWith(
+              (ref, q) async => const [ParamBucket(value: '1', count: 9), ParamBucket(value: '3', count: 4)]),
         ],
         child: MaterialApp(home: Scaffold(body: Builder(builder: (context) => TextButton(
               onPressed: () async {
@@ -80,13 +81,16 @@ void main() {
       expect(buttonWithText(t, 'Add step').enabled, isFalse);
     });
 
-    testWidgets('empty name shows error and stays open', (t) async {
+    testWidgets('empty name: hint shown, Save and Run disabled until a name is typed', (t) async {
       await open(t, initial: const FunnelDef(name: '', windowMinutes: 1440, steps: [FunnelStepDef(event: 'first_open')]));
-      await t.tap(find.text('Save'));
-      await t.pumpAndSettle();
       expect(find.text('Funnel name is required'), findsOneWidget);
+      expect(buttonWithText(t, 'Save').enabled, isFalse);
+      expect(buttonWithText(t, 'Run').enabled, isFalse);
+      await t.enterText(find.widgetWithText(TextField, 'Funnel name'), 'Onboarding');
+      await t.pumpAndSettle();
+      expect(find.text('Funnel name is required'), findsNothing);
+      expect(buttonWithText(t, 'Save').enabled, isTrue);
       expect(saved, isEmpty);
-      expect(find.text('Edit funnel'), findsOneWidget);
     });
 
     testWidgets('server error keeps dialog open', (t) async {
@@ -119,16 +123,14 @@ void main() {
       expect(outcome!.def.steps.single.params, const [ParamFilter('step', '1')]);
     });
 
-    testWidgets('second parameter filter: added row must be filled before Run', (t) async {
+    testWidgets('second condition: Run disabled until the added row is filled or removed', (t) async {
       await open(t, initial: const FunnelDef(name: 'F', windowMinutes: null, steps: [FunnelStepDef(event: 'tut', params: [ParamFilter('step', '1')])]));
       expect(find.byTooltip('Remove filter'), findsOneWidget);
-      await t.tap(find.text('And parameter'));
+      await t.tap(find.text('And condition'));
       await t.pumpAndSettle();
       expect(find.byTooltip('Remove filter'), findsNWidgets(2));
-      await t.tap(find.text('Run'));
-      await t.pumpAndSettle();
       expect(find.text('Step 1: set both parameter and value, or remove the filter'), findsOneWidget);
-      expect(outcome, isNull);
+      expect(buttonWithText(t, 'Run').enabled, isFalse);
       await t.tap(find.byTooltip('Remove filter').last);
       await t.pumpAndSettle();
       await t.tap(find.text('Run'));
