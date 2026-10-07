@@ -21,6 +21,7 @@
 - Task 0 = verify gates + commit leftover work; last task = **runtime verification checklist** that cannot be ticked from tests alone.
 - Avoid broken intermediate states: add new providers first, remove old ones in the task that deletes their last user.
 - For a plan using a **new package**, read its source (download the pub archive to scratchpad) and **compile + run the plan's code in a throwaway `git worktree`** (HEAD + `git diff | git apply`) before writing the plan. v4 caught `Tool.toolAnnotations` (not `annotations`) and the `dart.bat` spawn issue this way.
+- **Replay per task** (v5 wave 1): after the full change is green, back up the final files, reset the worktree and re-apply them task by task, running the gates and the "expect FAIL" steps at each stage → exact counts per task and proof no intermediate state is broken. Generate the plan from a template with `@@FILE:path@@` markers filled from the verified files, so plan code is byte-identical to what ran.
 - Verify external facts before putting them in a plan (e.g. curl the Google Fonts CSS to get real TTF URLs).
 - Self-review catches real plan bugs: List-in-record family key, chart axis label colliding with asserted text, `...?` on non-null (analyzer warning), a "tie" test that wasn't a tie, missing spec copy ("No values in this range").
 

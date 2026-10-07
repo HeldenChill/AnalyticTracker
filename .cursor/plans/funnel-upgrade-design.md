@@ -75,9 +75,11 @@ classDiagram
 
 ### 3.1 Definition (shared models)
 
+> **Amended 2026-10-07 (plan pre-verification):** the step keeps its v4 `event` + `params` as its own matcher and adds `or` (extra matchers) instead of a `match` list, so v4 JSON is a valid v5 step unchanged. Defaults (`op` eq, `order` strict, empty `or`/`exclude`) are omitted when writing, so stored v4 funnels stay byte-identical.
+
 ```text
-FunnelDef      = { name, windowMinutes: int or null, order: "strict" | "any", steps: [Step] }
-Step           = { match: [Matcher] (1..3, ORed), exclude: [Matcher] (0..3) }
+FunnelDef      = { name, windowMinutes: int or null, order?: "strict" | "any", steps: [Step] }
+Step           = { event, params: [ParamFilter], or?: [Matcher] (0..2), exclude?: [Matcher] (0..3) }   own event + or = up to 3 ORed matchers
 Matcher        = { event, params: [ParamFilter] (0..5, ANDed) }
 ParamFilter    = { key, op, value } | { key, op: "in", values: [string] (1..20) }
 op             = eq | ne | gt | gte | lt | lte | in | contains
@@ -85,8 +87,8 @@ op             = eq | ne | gt | gte | lt | lte | in | contains
 
 | Rule | Detail |
 |---|---|
-| Legacy read | Step JSON `{event, params}` (v3/v4) reads as `match: [{event, params}]`; `paramKey/paramValue` still reads as one filter; filter without `op` reads as `eq`; missing `order` reads as `strict`. Saved funnels keep working without a migration. |
-| Write | Always the new shape. |
+| Legacy read | v3/v4 step JSON is already a valid step; `paramKey/paramValue` still reads as one filter; filter without `op` reads as `eq`; missing `order` reads as `strict`. Saved funnels keep working without a migration. |
+| Write | Defaults omitted (`op` eq, `order` strict, empty `or` / `exclude`); `in` writes `values` instead of `value`. |
 | `eq`, `ne`, `contains` | Compare the param's text form (same `_paramText` as today), case-sensitive. |
 | `gt gte lt lte` | Both sides parsed as numbers; if either is not a number the filter does not match. Value must parse as a number at validation. |
 | `in` | Text form equals any of `values`. |
@@ -114,9 +116,9 @@ Metrics (players, from previous, from first, dropped, total conversion, biggest 
 
 | Layer | Change |
 |---|---|
-| API | `POST /funnels`, `PUT`, `/funnels/run` accept the new def; 400 with the first validation message. `FunnelResult.steps[]` carries `match` and `exclude` instead of `event` and `params` (the app reads both shapes during the transition). |
+| API | `POST /funnels`, `PUT`, `/funnels/run` accept the new def; 400 with the first validation message (unknown `op` / `order` → `Malformed funnel definition`). `FunnelResult.steps[]` keeps `event` + `params` and adds `or` / `exclude` when present. |
 | Editor | Funnel row: **Strict order / Any order** toggle next to the window. Step card: alternative rows separated by an "or" label; "Or event" button (max 3). Filter row: key, **operator dropdown**, value (multi-select chips for `in`). Strict mode, step ≥ 2: "Exclude if between" section with the same matcher rows (max 3). |
-| Page | Step label = alternatives joined by " or ", filters rendered with their operator; exclusions shown as "not: ad_shown". |
+| Page | Chart column label = events joined by " or " plus the compact filter (`lvl ≥ 5`), full text in a tooltip. Step table: one **Event** column with the plain sentence ("tut where step is 1 or tut_skip (unless tut where step is abort first)"); the separate Filter column is removed. Order chip shows Strict order / Any order. |
 | MCP | `_defSchema` description updated to the new shape (legacy shape still accepted). |
 
 ### 3.4 Editor UX — point and click, no syntax (owner 2026-10-07)
@@ -151,16 +153,17 @@ Summary: tut (id is Tut_1, step is start) or tut_skip → level_start (lvl ≥ 5
 
 | Control | Behaviour |
 |---|---|
-| Event | Searchable dropdown of event names in range (existing `/events/names`), with event count. |
+| Event | Searchable dropdown of event names (existing `/events/names`). *(Amended: no event counts — would need a new call; add if asked.)* |
 | Parameter | Dropdown of keys seen on the chosen event (existing `/events/param-keys`). Disabled until an event is picked. |
 | Operator | Dropdown of plain words, not symbols: **is, is not, is one of, contains**, and for numeric params also **greater than, at least, less than, at most**. Numeric = every observed value of that key parses as a number; then numeric words are listed and "is one of"/"contains" stay available. Default: **is**. |
 | Value — is / is not | Dropdown of observed values with their counts, most frequent first, searchable when more than 15 values (existing `/events/param` breakdown). |
-| Value — is one of | Checklist popup of the same values; selected shown as chips (max 20). |
+| Value — is one of | Checklist popup of the same values with counts (max 20); the picked values are shown on the button, comma-separated. |
 | Value — greater than / at least / less than / at most | Number field with +/− buttons, prefilled with the median observed value, hint "seen min – max". Non-numbers cannot be entered. |
 | Value — contains | Text field with the observed values as suggestions. |
 | Changing event | Clears that matcher's conditions (keys may not exist on the new event), with a one-line notice. |
 | Changing parameter | Resets operator to "is" and clears the value. |
-| Errors | Shown inline under the row in plain words ("Pick a value"); Run and Save are disabled while any row is incomplete. No raw validation codes. |
+| Errors | *(Amended: one live hint line under the steps showing the first problem in plain words, e.g. `Step 2: pick at least one value for "id"`, instead of a message under each row.)* Run and Save are disabled while anything is incomplete, including an empty name. |
+| Order switch | Switching to Any order removes all exclusions and shows "Exclusions removed: they need strict order". |
 | Summary line | One plain-language sentence for the whole funnel under the editor, updated live, using the same words as the operator dropdown. The funnel page and step table use the same wording (`≥` etc. only in the compact chart labels). |
 | Breakdown key (wave 2) | Same pattern: dropdown of step-1 param keys or user-property keys; never typed. |
 

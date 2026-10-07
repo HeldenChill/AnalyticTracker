@@ -38,8 +38,9 @@
 
 ## Status (end of 2026-10-07 session) — START HERE
 
-- Branch `feature/flutter-local-server`, HEAD `b7889b3`, tree clean, nothing pushed (owner pushes). v1–v4 committed.
-- Gates: shared **34**, server **140**, app **65** tests passing; analyze clean.
+- Branch `feature/flutter-local-server`, v1–v4 committed, nothing pushed (owner pushes). **v5 funnel upgrade: spec + wave 1 plan committed, waiting for Gemini to implement wave 1.**
+- Gates (before wave 1): shared **34**, server **140**, app **65**; after wave 1 the plan expects **42 / 158 / 75**.
+- v5 = `funnel-upgrade-design.md` (4 waves: 1 richer matching + point-and-click editor, 2 compare segments, 3 trend, 4 who dropped + timeline + CSV). Wave 1 plan `funnel-wave1-implementation.md` (Tasks 0–7); code pre-verified task by task in a throwaway worktree. Next: owner runs Gemini → Claude reviews (playbook checklist) → wave 2 plan.
 - API server on :8080 was restarted by Claude with v4 code (has `POST /import`). If a new session finds 404 on `/import`, it is a stale server.
 - Saved funnel id 1 "Level 1-2 progression" (first_open → level_1_start → level_1_complete → level_2_start → level_2_complete): last 30 days, test devices off = 75 → 22 → 7 → 4 → 3, 4% total. (2026-10-06 figure 79 included test devices.)
 - Owner-side pending: (1) approve `analytic-tracker` project MCP in Claude Code → then Claude can call the 14 tools directly; (2) visual check of BUG-0005..0009 in the Windows app (build release, screenshots of all 4 styles: tooltip contrast/ints, KPI row of six at 1440 px, "Test devices" chip, two-filter funnel step) → move to RESOLVED.
@@ -48,6 +49,7 @@
 
 | Item | Note |
 |---|---|
+| Review v5 wave 1 after Gemini | Then write wave 2 (segments) plan from the same spec |
 | Verify BUG-0005..0009 in app | Release build + screenshots; recipe in `mem-lessons-windows-flutter-environment` |
 | API token (BUG-0010) | Prerequisite before teammates use MCP/API; own spec |
 | `pull_now` MCP tool | Only after IAM fixed |
@@ -62,6 +64,8 @@
 - Owner: "apply fix for all bug, except IAM" → Claude applied its recommendations for BUG-0005..0009 directly (no Gemini plan): test devices excluded by default + "Test devices" chip; 2+ ANDed param filters per funnel step (spec §3 amended). All VERIFY_PENDING until seen in the Windows app.
 - v4 MCP (brainstorm → spec → plan, same day): owner chose **analysis + manage funnels + data ops**, **owner now / team later**, approach **A = Dart stdio MCP (`dart_mcp`) calling the HTTP API** (not direct SQLite, not `/mcp` in shelf). No `pull_now` until IAM; no raw SQL; API token required before team use. Spec `mcp-server-design.md`, plan `mcp-server-implementation.md` (5 tasks, for Gemini).
 - v4 implemented by Gemini (commits b4f2f59..b7889b3), reviewed by Claude: all 7 new files byte-identical to plan; gates shared 34 / server 140 / app 65; runtime via `cmd /c dart run server/bin/mcp.dart` against live server OK (overview == API, funnel 1 = 75 → 3, 4%; import dry run 57 days all match; save/delete; server-down hint). Pending owner: approve `analytic-tracker` in Claude Code (`claude mcp list`). Risk BUG-0010 (no API auth) deferred.
+
+- v5 funnel upgrade (brainstorm → spec → plan, same day): owner chose **all four** gaps (richer matching, segments, trend, who dropped) in **waves**; matching = operators + or-events + exclusions + any order; breakdown by platform / version / step-1 param / user property; drill-down = player list + in-app timeline + CSV; architecture **A = paths core** (walk once → `PlayerPath`, aggregators on top, matching in Dart). Owner asked for a **point-and-click editor, no typed syntax** (spec §3.4). Data reality: platform only ANDROID, user props only Firebase automatic keys.
 
 ## Open owner decisions
 
