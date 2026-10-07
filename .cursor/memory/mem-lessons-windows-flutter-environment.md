@@ -22,7 +22,9 @@ Then `flutter build windows --release` (~25–40 s). Ship the **whole** `Release
 
 ## Running the local server
 
-- `cd server; dart run bin/server.dart config.json` — first `dart run` after code changes compiles for 60–90 s; probes must wait that long.
+- `cd server; dart run bin/server.dart config.json` — first `dart run` after code changes compiles for 60–90 s, **sometimes longer** (v5 wave 1 restart: a 90 s poll timed out, server answered right after). Poll longer, and give every probe `-TimeoutSec` — a plain `Invoke-RestMethod` against a not-yet-listening server can hang the tool call.
+- PowerShell 5.1 `Set-Content -Encoding utf8` writes a **BOM** → noisy diffs in Dart files. Edit files with the Edit tool or Python (`newline=''` keeps CRLF/LF as found).
+- `flutter build windows --release` succeeds while the old `analytic_app.exe` is running (it rewrote `data\app.so`); the running app keeps old code until restarted. A 5 s "Built" with unchanged timestamps = nothing to rebuild.
 - **Stale server trap:** an older server left running keeps port 8080 → new process dies with `errno = 10048`, and requests hit OLD code (`Route not found` for new routes). Check with `Get-CimInstance Win32_Process -Filter "Name='dartvm.exe' OR Name='dart.exe'"` (CommandLine shows `bin\server.dart`) and kill before restarting.
 - In the agent's PowerShell tool, `Start-Process … -RedirectStandardOutput` + wait loops tend to hang until timeout; starting via bash `nohup … &` and polling with `curl -s -m 2` is reliable. PowerShell 5.1 `Invoke-WebRequest` to localhost sometimes fails where `curl` works.
 - `sqlite3` Dart package (2.x) loads Windows' built-in `winsqlite3`; JSON1 (`json_extract`, `json_each`) available — no dll download needed on this PC.

@@ -13,7 +13,7 @@ const _values = {
 void main() {
   late FunnelEditorOutcome? outcome;
 
-  Future<void> open(WidgetTester t, FunnelDef initial) async {
+  Future<void> open(WidgetTester t, FunnelDef initial, {List<String> keys = const ['id', 'lvl']}) async {
     t.view.physicalSize = const Size(1600, 1200);
     t.view.devicePixelRatio = 1.0;
     addTearDown(t.view.reset);
@@ -21,7 +21,7 @@ void main() {
     await t.pumpWidget(ProviderScope(
       overrides: [
         eventNamesProvider.overrideWith((ref) async => const ['first_open', 'level_start', 'tut']),
-        paramKeysProvider.overrideWith((ref, q) async => const ['id', 'lvl']),
+        paramKeysProvider.overrideWith((ref, q) async => keys),
         paramValuesProvider.overrideWith((ref, q) async => _values[q.key] ?? const <ParamBucket>[]),
       ],
       child: MaterialApp(home: Scaffold(body: Builder(builder: (context) => TextButton(
@@ -44,6 +44,15 @@ void main() {
     await t.tap(find.text(to).last);
     await t.pumpAndSettle();
   }
+
+  testWidgets('event with no parameters in range: condition row explains why', (t) async {
+    await open(t, const FunnelDef(name: 'F', windowMinutes: null, steps: [FunnelStepDef(event: 'tut')]), keys: const []);
+    expect(find.textContaining('No parameters for tut'), findsNothing); // no hint before a condition is added
+    await t.tap(find.text('Add condition'));
+    await t.pumpAndSettle();
+    expect(find.text('No parameters for tut in this date range. Turn on "Test devices" to include test-device events.'),
+        findsOneWidget);
+  });
 
   testWidgets('number words offered for a parameter whose values are all numbers', (t) async {
     await open(t, const FunnelDef(name: 'F', windowMinutes: null, steps: [

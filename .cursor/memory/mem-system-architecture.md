@@ -3,7 +3,7 @@
 **ID:** `mem-system-architecture`
 **Parent:** `mem-project-index`
 **Last updated:** 2026-10-07
-**Source of truth for definitions:** specs in `.cursor/plans/` (v1 `flutter-local-server-stack.md`, v2 `gameanalytics-dashboard-design.md` §5 metrics, v3 `funnels-and-styles-design.md` §3 funnel (amended 10-07) + §6 style tokens, v4 `mcp-server-design.md`, **v5 `funnel-upgrade-design.md` — planned, wave 1 not yet implemented as of 2026-10-07**). Verify against code before edits.
+**Source of truth for definitions:** specs in `.cursor/plans/` (v1 `flutter-local-server-stack.md`, v2 `gameanalytics-dashboard-design.md` §5 metrics, v3 `funnels-and-styles-design.md` §3 funnel (amended 10-07) + §6 style tokens, v4 `mcp-server-design.md`, **v5 `funnel-upgrade-design.md` — wave 1 built + reviewed 2026-10-07; waves 2–4 planned**). Verify against code before edits.
 
 ## Shape
 
@@ -50,17 +50,22 @@ Pull re-fetches last **3** days (late events) and fills missing days **oldest fi
 - Funnel: strict order, entry = first step-1 event, greedy next match, window counted from step-1 time (≤ edge counts), step `params` = 0–5 ANDed `{key, value}` filters compared as text (legacy `paramKey/paramValue` JSON still read), median gap per step, biggest drop = lowest from-previous (earliest on tie).
 - Test devices: `Filters.includeTest` (query `test=1`, default off) — server `testEventsClause` drops events with `debug_event` = 1 on every metric/explore route (per event, json_extract per row).
 
+## Planned v6 Analytic tab (spec draft, not built)
+
+- Spec `.cursor/plans/analytic-tab-design.md`. Server module `server/lib/src/analysis/` (features, kmeans, churn, tree, levels, survival, bootstrap, version_impact, associations, anomalies); pure units take plain lists and are unit-tested like `FunnelEngine.summarize`. Models `shared/lib/src/analysis_models.dart`. App `app/lib/src/pages/analytic/` one tab per wave. Routes `/analysis/*`, MCP tools `analysis_*` + prompt `weekly_insights`.
+- Level data truth: real PVM levels are `level_N_start/complete/fail` event names (`stg_*` nearly empty → Progression page shows little); v6 Levels tab parses names.
+
 ## App styling
 
 - `AppStyle` {tremor (default), shadcn, midnight, material} → `buildTheme()` → `ThemeData` + `AnalyticsTokens` ThemeExtension (sidebar, activeNav, good/bad, grid, chart[4], radius, displayFont). Widgets read `AnalyticsTokens.of(context)` (falls back to green/red when no extension → old tests pass).
 - Style saved per device: shared_preferences key `appStyle` (file `%APPDATA%\com.hung\analytic_app\shared_preferences.json`, stored as `flutter.appStyle`).
 - Fonts bundled (static TTF per weight): Inter, Geist, ChakraPetch, Manrope in `app/assets/fonts/`.
 
-## Planned v5 funnel (not built yet — update this file at wave 1 review)
+## v5 funnel (wave 1 built 2026-10-07; waves 2–4 planned)
 
-- Models: `FilterOp`, `StepMatcher`, `FunnelOrder`; step = own `event`/`params` + `or` + `exclude`; `FunnelStepResult` gains `or`/`exclude`, `text`, `eventsLabel`.
-- Engine: `FunnelEngine.paths` → `PlayerPath`; `summarize`; `run` = both. Waves 2–4 add aggregators over paths (segments, trend buckets, player lists) + routes `GET /events/user-prop-keys`, `POST /funnels/players`, `GET /players/<uid>/events`; MCP tools `user_prop_keys`, `funnel_players`, `player_events` (→ 17 tools).
-- App: `MatcherSlot` + richer `FunnelDraft`; editor rebuilt (step cards, operator dropdown, value control per operator, summary line); table shows one plain-language Event column.
+- Models (built): `FilterOp`, `StepMatcher`, `FunnelOrder`; step = own `event`/`params` + `or` + `exclude`; `FunnelStepResult` gains `or`/`exclude`, `text`, `eventsLabel`.
+- Engine (built): `FunnelEngine.paths` → `PlayerPath`; `summarize`; `run` = both. Planned: waves 2–4 add aggregators over paths (segments, trend buckets, player lists) + routes `GET /events/user-prop-keys`, `POST /funnels/players`, `GET /players/<uid>/events`; MCP tools `user_prop_keys`, `funnel_players`, `player_events` (→ 17 tools).
+- App (built): `MatcherSlot` + richer `FunnelDraft`; editor rebuilt (step cards, operator dropdown, value control per operator, summary line); table shows one plain-language Event column. Parameter keys/values come from `/events/param-keys` + `/events/param` **with the page filters** (test devices hidden by default) while the event list `/events/names` is unfiltered → a test-only event (e.g. `tut`) has no keys; the editor shows a "No parameters for <event> in this date range." hint (BUG-0011).
 
 ## Run / build
 

@@ -304,9 +304,9 @@ class _MatcherEditor extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final m = draft.matcher(step, slot);
-    final keys = m.event.isEmpty
-        ? const <String>[]
-        : ref.watch(paramKeysProvider((event: m.event, filters: filters))).valueOrNull ?? const <String>[];
+    final loaded = m.event.isEmpty ? null : ref.watch(paramKeysProvider((event: m.event, filters: filters))).valueOrNull;
+    final keys = loaded ?? const <String>[];
+    final theme = Theme.of(context);
     final eventOptions = {...names, if (m.event.isNotEmpty) m.event}.toList()..sort();
 
     return Column(
@@ -353,6 +353,16 @@ class _MatcherEditor extends ConsumerWidget {
               onValue: (v) => edit(() => draft.setParamValue(step, p, v, slot: slot)),
               onValues: (vs) => edit(() => draft.setParamValues(step, p, vs, slot: slot)),
               onRemove: () => edit(() => draft.removeParam(step, p, slot: slot)),
+            ),
+          ),
+        // An empty item list disables the Parameter dropdown; say why instead of failing silently.
+        if (m.params.isNotEmpty && loaded != null && loaded.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 168, top: 4),
+            child: Text(
+              'No parameters for ${m.event} in this date range.'
+              '${filters.includeTest ? '' : ' Turn on "Test devices" to include test-device events.'}',
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
         Padding(

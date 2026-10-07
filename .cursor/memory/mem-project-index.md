@@ -11,8 +11,8 @@ Cross-platform (Windows, Android, iOS, Web) team dashboard that pulls game analy
 | Topic | File |
 |---|---|
 | Bug ledger — BUG-NNNN ids, status lifecycle, review findings | `mem-known-bugs-index.md` |
-| Project intent, owner decisions timeline, roles (Claude plans/reviews, Gemini implements), status, next steps, open decisions, session handoff, v5 funnel upgrade waves segments trend drill-down, wave 1 plan review | `mem-project-intent-and-origin.md` |
-| System architecture as built — packages, SQLite tables, API routes, import route, MCP server tools, test devices filter, metric/funnel rules, styles, theme tokens, planned v5 funnel engine paths operators | `mem-system-architecture.md` |
+| Project intent, owner decisions timeline, roles (Claude plans/reviews, Gemini implements), status, next steps, open decisions, session handoff, v5 funnel upgrade waves segments trend drill-down, wave 1 plan review, v6 Analytic tab AI data science clusters kmeans churn survival level difficulty weekly insights research | `mem-project-intent-and-origin.md` |
+| System architecture as built — packages, SQLite tables, API routes, import route, MCP server tools, test devices filter, metric/funnel rules, styles, theme tokens, planned v5 funnel engine paths operators, planned v6 analysis module routes | `mem-system-architecture.md` |
 | Firebase BigQuery data playbook — sandbox 60 days, service account 403 IAM roles, manual export import query, real PVM data shape, tut, debug_event, platforms versions user properties | `mem-lessons-firebase-bigquery-data.md` |
 | Windows Flutter Dart environment playbook — PATH, Developer Mode, Visual Studio C++, build, stale server port 8080, screenshots, riverpod fl_chart traps | `mem-lessons-windows-flutter-environment.md` |
-| Spec plan Gemini review workflow playbook — writing plans for Gemini, review checklist, Gemini habits | `mem-lessons-gemini-plan-review-workflow.md` |
+| Spec plan Gemini review workflow playbook — writing plans for Gemini, review checklist, plan-vs-repo identity diff, Task 7 runtime checks, owner UI report debugging, Gemini habits | `mem-lessons-gemini-plan-review-workflow.md` |
