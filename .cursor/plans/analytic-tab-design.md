@@ -69,6 +69,7 @@ flowchart LR
 |---|---|---|---|
 | `FeatureExtractor` | `server/lib/src/analysis/features.dart` | `EventStore` SQL | No (reads DB) |
 | `kmeans`, `silhouette`, `standardize` | `server/lib/src/analysis/kmeans.dart` | nothing | Yes |
+| `clusterPlayers` (features → `ClusterResult`) | `server/lib/src/analysis/clusters.dart` | `PlayerFeatures`, kmeans | Yes |
 | `churnDrivers` | `server/lib/src/analysis/churn.dart` | `PlayerFeatures` | Yes |
 | `cart` (decision tree) | `server/lib/src/analysis/tree.dart` | nothing | Yes |
 | `levelStats`, `exits`, `transitions` | `server/lib/src/analysis/levels.dart` | per-player event lists | Yes |
@@ -77,7 +78,7 @@ flowchart LR
 | `versionImpact` | `server/lib/src/analysis/version_impact.dart` | survival, levels, bootstrap | Yes |
 | `associations` | `server/lib/src/analysis/associations.dart` | per-player event sets | Yes |
 | `anomalies` | `server/lib/src/analysis/anomalies.dart` | daily series | Yes |
-| `weekly_insights` prompt | `server/lib/src/mcp_server.dart` | registered `analysis_*` tools | n/a |
+| `weekly_insights` prompt | `server/lib/src/mcp_prompts.dart` (registered in `mcp_server.dart`) | registered `analysis_*` tools | Yes |
 | Result models | `shared/lib/src/analysis_models.dart` | nothing | Yes (JSON) |
 
 Pure units take plain lists/maps and are unit-tested without SQLite, like `FunnelEngine.summarize`.
@@ -102,6 +103,8 @@ Auto blocklist (never a feature): `screen_view`, `user_engagement`, `session_sta
 
 Clustering preprocessing: `log1p` then z-score per feature. Features with zero variance are dropped and listed in the response as `droppedFeatures`.
 
+**Amended 2026-10-07 (wave 1 plan pre-verification on real data):** an auto event must be done by **≥ 10 players** (`minAutoReach`), and z-scores are **clipped to ±3** before k-means. Without these two rules, events done by 1–3 players made k-means split off a single player ("107 vs 1", silhouette 0.90, meaningless). With them, real data 2026-09-08..10-07 gives 108 players → 88 "one-and-done" (3 min, 1 day) vs 20 engaged (≈100 min, 5-day span), silhouette 0.65. With today's data no auto event reaches 10 players, so only core features are used.
+
 ## 4. Wave 1 — Player clusters
 
 ```mermaid
@@ -119,7 +122,7 @@ sequenceDiagram
 ```
 
 - k-means++ init, **fixed seed 42**, 10 restarts, max 100 iterations, so the same data always gives the same clusters (stable tests and screenshots).
-- `k=auto` (default) tries 2..6 and picks the best mean silhouette. `k=2..8` forces a value. If there are fewer than 20 players, the result is `{clusters: [], reason: "too_few_players"}`.
+- `k=auto` (default) tries 2..6 and picks the best mean silhouette (smaller k on tie). `k=2..8` forces a value. The reported `k` = number of **non-empty** groups, which can be below a forced k when players have fewer distinct feature combinations (amended 2026-10-07). If there are fewer than 20 players, the result is `{clusters: [], reason: "too_few_players"}`.
 - Each cluster shows: size `n` and %, the **top 3 distinguishing features** (largest |cluster mean z|) with direction and raw means vs overall (e.g. "level_fails 6.1 vs 1.4 avg"), and an auto label made from the top 2 features ("High level_fails · High sessions").
 - Response also includes `silhouette`, `k`, `features` used, `droppedFeatures`, and per cluster the raw mean of every feature (for the heat table).
 
@@ -286,7 +289,7 @@ flowchart TD
 
 | Wave | Shared | Server | App | MCP |
 |---|---|---|---|---|
-| 1 | `analysis_models.dart` (cluster part) | `analysis/features.dart`, `analysis/kmeans.dart`, route | sidebar item, `analytic_page.dart`, `clusters_tab.dart`, provider, api call | `analysis_clusters` + prompt `weekly_insights` |
+| 1 | `analysis_models.dart` (cluster part) | `analysis/features.dart`, `analysis/kmeans.dart`, `analysis/clusters.dart`, `mcp_prompts.dart`, route | sidebar item, `analytic_page.dart`, `clusters_tab.dart`, provider, api call | `analysis_clusters` + prompt `weekly_insights` |
 | 2 | churn models (drivers + rules) | `analysis/churn.dart`, `analysis/tree.dart`, first-24h feature variant, route | `churn_tab.dart` | `analysis_churn` |
 | 3 | level models | `analysis/levels.dart` (difficulty, hazard, exits, transitions), route | `levels_tab.dart` | `analysis_levels` |
 | 4 | survival + version-impact models | `analysis/survival.dart`, `analysis/bootstrap.dart`, `analysis/version_impact.dart`, 2 routes | `survival_tab.dart` | `analysis_survival`, `analysis_version_impact` |

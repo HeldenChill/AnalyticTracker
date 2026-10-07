@@ -39,7 +39,8 @@
 
 ## Status (end of 2026-10-07 session) — START HERE
 
-- **v6 Analytic tab (newest thread):** spec draft `.cursor/plans/analytic-tab-design.md` + research `docs/research/analytic-ml-methods.md`, both **uncommitted** (left so while Gemini committed v5 wave 1 — commit them first next session). Waiting for owner spec review + 2 open defaults. Details: section "v6 Analytic tab — handoff" below.
+- **v6 Analytic tab (newest thread):** spec + research committed by owner in `b8829f5`. **Wave 1 plan written 2026-10-07: `.cursor/plans/analytic-wave1-implementation.md` (Tasks 0–7, clusters + MCP tool `analysis_clusters` + prompt `weekly_insights`), pre-verified + replayed per task in a throwaway worktree; gates shared 42→44, server 158→167→176→180→184, app 76→80; plan identity check 42/42.** Plan + spec amendment (§3/§4 + file tables) are **uncommitted** (repo now on `main`; Claude did not commit on main unasked). Next: owner commits docs → runs Gemini → Claude reviews. Details: section "v6 Analytic tab — handoff" below.
+- **Branch change (seen 2026-10-07 evening):** owner merged `feature/flutter-local-server` into `main` and pushed; `main` = `origin/main` = `b8829f5`. Lines below that say "branch feature/..." are history.
 - Branch `feature/flutter-local-server`, HEAD `0f25689`, v1–v5 wave 1 committed, nothing pushed (owner pushes). **v5 funnel upgrade: wave 1 implemented by Gemini (6 commits, Tasks 1–6) and reviewed by Claude 2026-10-07 — 11 whole files byte-identical to plan + all exact edits verbatim, gates 42/158/75, Task 7 API checks pass (funnel 1 = 75 → 22 → 7 → 4 → 3; any-order `first_open` → `level_1_start` or `level_2_start` = 75 → 24, median 80 s; op `">="` → 400). Owner is doing the manual UI walkthrough (Task 7 Step 4); first owner finding = BUG-0011, fixed by Claude, uncommitted (`app/lib/src/widgets/funnel_editor.dart` + `app/test/funnel_editor_matching_test.dart`, app gates 76). Release exe rebuilt 16:20 with the fix.** Details: section "v5 funnel upgrade — handoff" below.
 - Gates: before wave 1 34 / 140 / 65; after wave 1 (verified) shared **42**, server **158**, app **75**; + BUG-0011 test → app **76**.
 - v5 = `funnel-upgrade-design.md` (4 waves: 1 richer matching + point-and-click editor, 2 compare segments, 3 trend, 4 who dropped + timeline + CSV). Wave 1 plan `funnel-wave1-implementation.md` (Tasks 0–7); code pre-verified task by task in a throwaway worktree. Done: Gemini implemented, Claude reviewed. Next: owner finishes Task 7 Step 4 checklist (8 items) → commit BUG-0011 fix → wave 2 plan.
@@ -52,7 +53,7 @@
 
 | Item | Note |
 |---|---|
-| v6 Analytic spec review | Owner reviews spec + answers §13 defaults → commit spec + research → write wave 1 (clusters + `weekly_insights` prompt) plan for Gemini |
+| v6 Analytic wave 1 | Owner commits plan + spec amendment → Gemini runs `analytic-wave1-implementation.md` → Claude reviews (identity check script pattern, Task 7 numbers); §13 defaults (first-24h churn features, sequencing vs v5 waves 2–4) still open, needed before wave 2 |
 | v5 wave 1 manual UI check (Task 7 Step 4) | **Owner doing it now** in the 16:20 release build. `tut` needs the "Test devices" chip on (test-only event). Owner reports PASS/FAIL per item → verify BUG-0011 → commit fix → wave 2 (segments) plan |
 | Verify BUG-0005..0009 in app | Release build + screenshots; recipe in `mem-lessons-windows-flutter-environment` |
 | API token (BUG-0010) | Prerequisite before teammates use MCP/API; own spec |
@@ -72,7 +73,7 @@ Owner ask: new sidebar tab "Analytic" (owner typed "Analystic") with lightweight
 | Out of scope | Predictive per-player models (churn score, XGBoost, Cox, LTV, deep) — data too small; research §4 lists revisit triggers (~1,000+ multi-day players) |
 | Honesty rule | Every finding shows `n`; groups < 10 players get "small sample" badge, ranked lower |
 | Open defaults (spec §13) | (1) churn drivers/rules use **first 24 h** features only (leakage guard); churn = `app_remove` or 7 days inactive. (2) Sequencing vs v5 funnel waves 2–4 — default: start after v5 wave 1 review, then alternate or finish funnels first. Others: tab name Analytic vs "Insights", wall = hazard > 2× median, version impact vs previous version with ≥ 20 players |
-| Process state | Brainstorming skill, architectural path: spec written + self-reviewed; next = owner review → commit → writing-plans for wave 1 (plan for Gemini, pre-verified like v5) |
+| Process state | Owner approved spec by asking for the plan (2026-10-07). Wave 1 plan done. Real-data pre-verification changed the spec (amended §3/§4): auto events need ≥ 10 players + z clipped ±3 (else k-means split off 1 outlier: 107 vs 1, silhouette 0.90); reported k = non-empty groups. Real result 2026-09-08..10-07: 108 players → 88 one-and-done vs 20 engaged, silhouette 0.65; k=4 → 74/14/11/9; last 7 days = 9 players → too_few_players. Today no auto event reaches 10 players → only the 6 core features are used |
 
 ## v5 funnel upgrade — handoff (2026-10-07)
 

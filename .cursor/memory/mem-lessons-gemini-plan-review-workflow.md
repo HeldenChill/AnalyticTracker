@@ -47,6 +47,14 @@
 - Plan header rule "Do not edit `.cursor/memory/`" worked — Gemini left memory alone in wave 1 (earlier waves it wrote wrong notes). Keep it.
 - Other Claude sessions may edit `.cursor/memory/` in parallel (v6 Analytic spec session did during this review). Re-read before writing; use targeted unique-string replacements, never whole-file rewrites.
 
+## Plan-writing lessons from v6 wave 1 (2026-10-07)
+
+- **Run new analysis code on a copy of the real DB before writing the plan**, not only fixture tests. Fixtures passed while real data made k-means isolate one outlier player (rare auto events); fixed with min reach 10 + z clip ±3, amended in the spec. Copy `server/data/events.db*` to the scratchpad; run a throwaway `tool/try_*.dart` in the worktree; start the worktree server on another port (8099) with a scratch config for curl + MCP stdio (`bin/mcp.dart --server http://localhost:8099`).
+- Single source of truth for plan code: `ops.py` (per task: test ops, impl ops, expect-FAIL command, expected total) drives both `replay.py` (reset worktree, apply task by task, gates) and `genplan.py` (fills `@@TESTSn@@` / `@@IMPLn@@` in a template). `check_plan.py` = the review identity check (needs `PYTHONIOENCODING=utf-8`). Scripts kept only in the session scratchpad.
+- Never `rm -rf` a whole dir in the worktree for a temp file — `server/tool/` holds tracked `probe_datasets.dart`.
+- Riverpod widget tests that pump twice with different overrides need `ProviderScope(key: UniqueKey())`, else the first result sticks.
+- Silhouette with many identical rows favours splitting exact duplicates (a = 0 → s = 1); fixtures need spread inside groups, and real-data integer counts can inflate auto k.
+
 ## Gemini habits observed
 
 - Follows plans faithfully, commits per task, writes its own status notes into `.cursor/memory` — **those notes contained errors** (wrong font list, wrong class names, "sliding window"). Review and correct Gemini-written memory.
