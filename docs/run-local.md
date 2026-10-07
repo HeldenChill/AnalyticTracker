@@ -1,4 +1,4 @@
-﻿# Run AnalyticTracker locally
+# Run AnalyticTracker locally
 
 ```mermaid
 flowchart LR
@@ -41,3 +41,14 @@ Phones on Wi-Fi: allow the port once (admin PowerShell):
 ## 5. Backup
 
 Stop the server, copy `server/data/events.db` (plus `-wal`/`-shm` if present). This file is the only long-term history.
+
+## 6. Claude MCP
+
+Claude Code in this repo can query the dashboard through the `analytic-tracker` MCP server (`.mcp.json`, spec `.cursor/plans/mcp-server-design.md`).
+
+1. Start the API server (section 3) — the MCP calls it; it does not open the database itself.
+2. Open Claude Code in `D:\Projects\AnalyticTracker`; approve the `analytic-tracker` project server when asked. `claude mcp list` should show it connected.
+3. Tools: `data_health`, `filter_options`, `list_events`, `overview`, `retention`, `progression`, `event_counts`, `param_keys`, `param_values`, `list_funnels`, `run_funnel`, `save_funnel`, `delete_funnel`, `import_export`.
+4. `import_export` previews by default (`rows` in file vs `stored` per day). Each day in the file **replaces** that day's stored rows when applied with `dry_run: false`.
+
+Teammate on another PC (after an API token exists — spec §7): same `.mcp.json` entry with `--server http://<server PC LAN IP>:8080`.

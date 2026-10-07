@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "analytic-tracker": {
+      "command": "cmd",
+      "args": ["/c", "dart", "run", "server/bin/mcp.dart", "--server", "http://localhost:8080"]
+    }
+  }
+}
