@@ -119,6 +119,53 @@ Metrics (players, from previous, from first, dropped, total conversion, biggest 
 | Page | Step label = alternatives joined by " or ", filters rendered with their operator; exclusions shown as "not: ad_shown". |
 | MCP | `_defSchema` description updated to the new shape (legacy shape still accepted). |
 
+### 3.4 Editor UX — point and click, no syntax (owner 2026-10-07)
+
+Rule: **every part of a step is picked from a list or toggled with a button.** Nobody types an event name, a param key, an operator or a list syntax. Typing is limited to the funnel name, a number for numeric comparisons, and the text for "contains" (with suggestions).
+
+```text
+Funnel name [ Tutorial 1 to Level 2        ]   Window [1 day v]   Order (o) Strict  ( ) Any order
+
+Step 1  ─────────────────────────────────────────────── [↑][↓][⧉][🗑]
+  Players who did  [ tut                    v ]
+     where  [ id        v ] [ is          v ] [ Tut_1  (412)        v ]   [x]
+       and  [ step      v ] [ is          v ] [ start  (398)        v ]   [x]
+     [+ And condition]
+  — or —
+  Players who did  [ tut_skip               v ]
+     [+ And condition]
+  [+ Or another event]
+
+Step 2  ─────────────────────────────────────────────── [↑][↓][⧉][🗑]
+  Players who did  [ level_start            v ]
+     where  [ lvl       v ] [ is at least v ] [ 5        ] (seen 1 – 40)   [x]
+     [+ And condition]
+  [+ Or another event]
+  Drop the player if, before this step, they did:          (Strict order only)
+     [ tut               v ]  where [ step v ] [ is v ] [ abort (37) v ]   [x]
+     [+ Add exclusion]
+
+[+ Add step]                                  [Cancel]  [Run]  [Save]
+Summary: tut (id is Tut_1, step is start) or tut_skip → level_start (lvl ≥ 5), not tut abort
+```
+
+| Control | Behaviour |
+|---|---|
+| Event | Searchable dropdown of event names in range (existing `/events/names`), with event count. |
+| Parameter | Dropdown of keys seen on the chosen event (existing `/events/param-keys`). Disabled until an event is picked. |
+| Operator | Dropdown of plain words, not symbols: **is, is not, is one of, contains**, and for numeric params also **greater than, at least, less than, at most**. Numeric = every observed value of that key parses as a number; then numeric words are listed and "is one of"/"contains" stay available. Default: **is**. |
+| Value — is / is not | Dropdown of observed values with their counts, most frequent first, searchable when more than 15 values (existing `/events/param` breakdown). |
+| Value — is one of | Checklist popup of the same values; selected shown as chips (max 20). |
+| Value — greater than / at least / less than / at most | Number field with +/− buttons, prefilled with the median observed value, hint "seen min – max". Non-numbers cannot be entered. |
+| Value — contains | Text field with the observed values as suggestions. |
+| Changing event | Clears that matcher's conditions (keys may not exist on the new event), with a one-line notice. |
+| Changing parameter | Resets operator to "is" and clears the value. |
+| Errors | Shown inline under the row in plain words ("Pick a value"); Run and Save are disabled while any row is incomplete. No raw validation codes. |
+| Summary line | One plain-language sentence for the whole funnel under the editor, updated live, using the same words as the operator dropdown. The funnel page and step table use the same wording (`≥` etc. only in the compact chart labels). |
+| Breakdown key (wave 2) | Same pattern: dropdown of step-1 param keys or user-property keys; never typed. |
+
+No new API route is needed: the operator list comes from the values the editor already fetches.
+
 ## 4. Wave 2 — compare segments
 
 Run request gains `breakdown`:
@@ -181,6 +228,7 @@ Risk: these routes expose per-player event history over the LAN without auth →
 
 | Wave | Must-have tests |
 |---|---|
+| 1 (editor) | Widget tests: operator list shows numeric words only for numeric keys; value control switches per operator (dropdown / checklist / number field / text); changing event clears conditions; Run/Save disabled while a row is incomplete; summary sentence text. |
 | 1 | Legacy JSON round-trip (v3 single filter, v4 params list, no `op`, no `order`); every op incl. missing param + `ne`, numeric parse failure; OR alternatives; exclusion before step k drops the player, a row matching both step and exclusion advances; any-order with steps out of order, one row cannot satisfy two steps, prefix counting; validation messages. **Regression:** existing engine tests unchanged and passing; real-DB funnel 1 still 75 → 22 → 7 → 4 → 3. |
 | 2 | Segment from step-1 row (not a later row); top 5 + Other merge; "(none)"; segment counts sum to the all-players counts; route validation. |
 | 3 | Day and week buckets (Monday start, range starting mid-week), empty buckets present, `incomplete` flag with 1-day window and whole-range window. |
