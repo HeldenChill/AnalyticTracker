@@ -44,7 +44,13 @@ String? _optional(Map<String, String> q, String key) {
 
 Filters _filters(Map<String, String> q) {
   final (from, to) = _range(q);
-  return Filters(from: from, to: to, platform: _optional(q, 'platform'), version: _optional(q, 'version'));
+  return Filters(
+    from: from,
+    to: to,
+    platform: _optional(q, 'platform'),
+    version: _optional(q, 'version'),
+    includeTest: q['test'] == '1',
+  );
 }
 
 Future<Map<String, dynamic>> _jsonBody(Request req) async {
@@ -97,14 +103,15 @@ Handler buildHandler(EventStore store) {
       final q = req.url.queryParameters;
       final name = _required(q, 'name');
       final f = _filters(q);
-      return _json(store.paramKeys(name, f.from, f.to, platform: f.platform, version: f.version));
+      return _json(store.paramKeys(name, f.from, f.to,
+          platform: f.platform, version: f.version, includeTest: f.includeTest));
     })
     ..get('/funnels', (Request req) => _json([for (final s in store.funnels.list()) s.toJson()]))
     ..post('/funnels/run', (Request req) async {
       final body = await _jsonBody(req);
       final def = _parseDef(body['def']);
       final f = _filters({
-        for (final k in const ['from', 'to', 'platform', 'version'])
+        for (final k in const ['from', 'to', 'platform', 'version', 'test'])
           if (body[k] is String) k: body[k] as String,
       });
       return _json(store.funnelEngine.run(def, f).toJson());
@@ -133,7 +140,7 @@ Handler buildHandler(EventStore store) {
       final f = _filters(q);
       return _json([
         for (final c in store.counts(f.from, f.to,
-            name: _optional(q, 'name'), platform: f.platform, version: f.version))
+            name: _optional(q, 'name'), platform: f.platform, version: f.version, includeTest: f.includeTest))
           c.toJson(),
       ]);
     })
@@ -144,7 +151,7 @@ Handler buildHandler(EventStore store) {
       final f = _filters(q);
       return _json([
         for (final b in store.paramBreakdown(name, key, f.from, f.to,
-            platform: f.platform, version: f.version))
+            platform: f.platform, version: f.version, includeTest: f.includeTest))
           b.toJson(),
       ]);
     })
@@ -161,7 +168,8 @@ Handler buildHandler(EventStore store) {
       }
       final f = _filters(q);
       return _json([
-        for (final s in store.funnel(steps, f.from, f.to, platform: f.platform, version: f.version))
+        for (final s in store.funnel(steps, f.from, f.to,
+            platform: f.platform, version: f.version, includeTest: f.includeTest))
           s.toJson(),
       ]);
     });

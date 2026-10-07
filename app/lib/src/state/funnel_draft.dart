@@ -38,14 +38,24 @@ class FunnelDraft {
     if (canAdd) steps.insert(i + 1, steps[i]);
   }
 
-  /// Changing the event clears the parameter filter.
+  /// Changing the event clears the parameter filters.
   void setEvent(int i, String event) => steps[i] = FunnelStepDef(event: event);
 
-  /// Changing the key clears the value.
-  void setParamKey(int i, String? key) => steps[i] = FunnelStepDef(event: steps[i].event, paramKey: key);
+  bool canAddParam(int i) => steps[i].params.length < maxStepParams;
 
-  void setParamValue(int i, String? value) =>
-      steps[i] = FunnelStepDef(event: steps[i].event, paramKey: steps[i].paramKey, paramValue: value);
+  void _setParams(int i, List<ParamFilter> params) => steps[i] = FunnelStepDef(event: steps[i].event, params: params);
+
+  void addParam(int i) {
+    if (canAddParam(i)) _setParams(i, [...steps[i].params, const ParamFilter('', null)]);
+  }
+
+  void removeParam(int i, int p) => _setParams(i, [...steps[i].params]..removeAt(p));
+
+  /// Changing the key clears the value.
+  void setParamKey(int i, int p, String key) => _setParams(i, [...steps[i].params]..[p] = ParamFilter(key, null));
+
+  void setParamValue(int i, int p, String? value) =>
+      _setParams(i, [...steps[i].params]..[p] = ParamFilter(steps[i].params[p].key, value));
 
   FunnelDef toDef() =>
       FunnelDef(name: name.trim(), windowMinutes: windowMinutes, steps: List.unmodifiable(steps));

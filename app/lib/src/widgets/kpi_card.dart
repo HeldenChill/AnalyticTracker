@@ -9,8 +9,10 @@ class KpiCard extends StatelessWidget {
     required this.value,
     this.delta,
     this.higherIsBetter = true,
+    this.width = 190,
   });
 
+  final double width;
   final String title;
   final String value;
   final double? delta;
@@ -22,7 +24,7 @@ class KpiCard extends StatelessWidget {
     final tokens = AnalyticsTokens.of(context);
     final d = delta;
     return SizedBox(
-      width: 190,
+      width: width,
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(14),

@@ -23,34 +23,73 @@ String? _trimmedOrNull(Object? v) {
   return t.isEmpty ? null : t;
 }
 
+const int maxStepParams = 5;
+
+String? _nonEmptyOrNull(Object? v) => (v is String && v.isNotEmpty) ? v : null;
+
+bool _sameParams(List<ParamFilter> a, List<ParamFilter> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
+
+/// "id = Tut_1, step = end", or null when there are no filters.
+String? paramFiltersLabel(List<ParamFilter> params) =>
+    params.isEmpty ? null : params.map((p) => '${p.key} = ${p.value}').join(', ');
+
+/// One `param = value` condition. In the editor [key] may be '' and [value] null
+/// until picked; [FunnelDef.validate] rejects that.
+class ParamFilter {
+  const ParamFilter(this.key, this.value);
+
+  final String key;
+  final String? value;
+
+  factory ParamFilter.fromJson(Map<String, dynamic> j) =>
+      ParamFilter(_trimmedOrNull(j['key']) ?? '', _nonEmptyOrNull(j['value']));
+
+  Map<String, dynamic> toJson() => {'key': key, 'value': value};
+
+  @override
+  bool operator ==(Object other) => other is ParamFilter && other.key == key && other.value == value;
+
+  @override
+  int get hashCode => Object.hash(key, value);
+}
+
+/// [params] are ANDed: an event matches only when every filter matches.
 class FunnelStepDef {
-  const FunnelStepDef({required this.event, this.paramKey, this.paramValue});
+  const FunnelStepDef({required this.event, this.params = const []});
 
   final String event;
-  final String? paramKey;
-  final String? paramValue;
+  final List<ParamFilter> params;
 
-  String? get filterLabel => paramKey == null ? null : '$paramKey = $paramValue';
+  String? get filterLabel => paramFiltersLabel(params);
 
-  factory FunnelStepDef.fromJson(Map<String, dynamic> j) => FunnelStepDef(
-        event: (j['event'] as String).trim(),
-        paramKey: _trimmedOrNull(j['paramKey']),
-        paramValue: (j['paramValue'] is String && (j['paramValue'] as String).isNotEmpty)
-            ? j['paramValue'] as String
-            : null,
-      );
+  /// Reads `params`, or the pre-BUG-0008 single `paramKey`/`paramValue` shape.
+  factory FunnelStepDef.fromJson(Map<String, dynamic> j) {
+    final legacyKey = _trimmedOrNull(j['paramKey']);
+    return FunnelStepDef(
+      event: (j['event'] as String).trim(),
+      params: j['params'] is List
+          ? [for (final p in j['params'] as List) ParamFilter.fromJson(p as Map<String, dynamic>)]
+          : [if (legacyKey != null) ParamFilter(legacyKey, _nonEmptyOrNull(j['paramValue']))],
+    );
+  }
 
-  Map<String, dynamic> toJson() => {'event': event, 'paramKey': paramKey, 'paramValue': paramValue};
+  Map<String, dynamic> toJson() => {
+        'event': event,
+        'params': [for (final p in params) p.toJson()],
+      };
 
   @override
   bool operator ==(Object other) =>
-      other is FunnelStepDef &&
-      other.event == event &&
-      other.paramKey == paramKey &&
-      other.paramValue == paramValue;
+      other is FunnelStepDef && other.event == event && _sameParams(other.params, params);
 
   @override
-  int get hashCode => Object.hash(event, paramKey, paramValue);
+  int get hashCode => Object.hash(event, Object.hashAll(params));
 }
 
 class FunnelDef {
@@ -69,11 +108,12 @@ class FunnelDef {
       final s = steps[i];
       final n = i + 1;
       if (s.event.trim().isEmpty) return 'Step $n: pick an event';
-      if ((s.paramKey == null) != (s.paramValue == null)) {
-        return 'Step $n: set both parameter and value, or neither';
-      }
-      if (s.paramKey != null && !_paramKeyRe.hasMatch(s.paramKey!)) {
-        return 'Step $n: parameter name may only use letters, digits and _';
+      if (s.params.length > maxStepParams) return 'Step $n: at most $maxStepParams parameter filters';
+      final seen = <String>{};
+      for (final p in s.params) {
+        if (p.key.isEmpty || p.value == null) return 'Step $n: set both parameter and value, or remove the filter';
+        if (!_paramKeyRe.hasMatch(p.key)) return 'Step $n: parameter name may only use letters, digits and _';
+        if (!seen.add(p.key)) return 'Step $n: parameter "${p.key}" is used twice';
       }
     }
     if (windowMinutes != null && windowMinutes! <= 0) return 'Time window must be positive';
@@ -148,8 +188,7 @@ class FunnelStepResult {
   const FunnelStepResult({
     required this.index,
     required this.event,
-    required this.paramKey,
-    required this.paramValue,
+    this.params = const [],
     required this.players,
     required this.fromPrevious,
     required this.fromFirst,
@@ -159,19 +198,21 @@ class FunnelStepResult {
 
   final int index;
   final String event;
-  final String? paramKey;
-  final String? paramValue;
+  final List<ParamFilter> params;
   final int players;
   final double? fromPrevious;
   final double? fromFirst;
   final int? dropped;
   final double? medianSeconds;
 
+  String? get filterLabel => paramFiltersLabel(params);
+
   factory FunnelStepResult.fromJson(Map<String, dynamic> j) => FunnelStepResult(
         index: j['index'] as int,
         event: j['event'] as String,
-        paramKey: j['paramKey'] as String?,
-        paramValue: j['paramValue'] as String?,
+        params: [
+          for (final p in (j['params'] as List?) ?? const []) ParamFilter.fromJson(p as Map<String, dynamic>),
+        ],
         players: j['players'] as int,
         fromPrevious: _optDouble(j['fromPrevious']),
         fromFirst: _optDouble(j['fromFirst']),
@@ -182,8 +223,7 @@ class FunnelStepResult {
   Map<String, dynamic> toJson() => {
         'index': index,
         'event': event,
-        'paramKey': paramKey,
-        'paramValue': paramValue,
+        'params': [for (final p in params) p.toJson()],
         'players': players,
         'fromPrevious': fromPrevious,
         'fromFirst': fromFirst,

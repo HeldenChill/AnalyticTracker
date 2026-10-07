@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import 'metrics_store.dart' show testEventsClause;
+
 /// Strict-order funnel with a conversion window counted from step 1.
 /// Definitions: spec section 3 (.cursor/plans/funnels-and-styles-design.md).
 class FunnelEngine {
@@ -15,7 +17,7 @@ class FunnelEngine {
     if (error != null) throw ArgumentError(error);
     final steps = def.steps;
 
-    final where = StringBuffer("day BETWEEN ? AND ? AND user_pseudo_id <> ''");
+    final where = StringBuffer("day BETWEEN ? AND ? AND user_pseudo_id <> ''${testEventsClause(f.includeTest)}");
     final args = <Object?>[f.from, f.to];
     if (f.platform != null) {
       where.write(' AND platform = ?');
@@ -57,8 +59,7 @@ class FunnelEngine {
       out.add(FunnelStepResult(
         index: k,
         event: steps[k].event,
-        paramKey: steps[k].paramKey,
-        paramValue: steps[k].paramValue,
+        params: steps[k].params,
         players: players[k],
         fromPrevious: (prev == null || prev == 0) ? null : players[k] / prev,
         fromFirst: first == 0 ? null : players[k] / first,
@@ -113,9 +114,7 @@ class FunnelEngine {
 
   bool _matches(_Ev e, FunnelStepDef s) {
     if (e.name != s.event) return false;
-    final key = s.paramKey;
-    if (key == null) return true;
-    return _paramText(e.params[key]) == s.paramValue;
+    return s.params.every((p) => _paramText(e.params[p.key]) == p.value);
   }
 
   /// Same text form SQLite gives for CAST(json_extract(...) AS TEXT).

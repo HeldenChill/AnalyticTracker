@@ -4,8 +4,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/analytics_tokens.dart';
+import 'format.dart';
 
-/// Titled line chart, one point per day; hover shows the value (fl_chart default tooltip).
+/// Titled line chart, one point per day; hover shows day + value.
 class MetricLineChart extends StatelessWidget {
   const MetricLineChart({super.key, required this.title, required this.days, required this.values});
 
@@ -38,6 +39,19 @@ class MetricLineChart extends StatelessWidget {
                 child: LineChart(
                   LineChartData(
                     minY: 0,
+                    // Inverse surface keeps contrast in every style; values are counts.
+                    lineTouchData: LineTouchData(
+                      touchTooltipData: LineTouchTooltipData(
+                        getTooltipColor: (_) => theme.colorScheme.inverseSurface,
+                        getTooltipItems: (spots) => [
+                          for (final s in spots)
+                            LineTooltipItem(
+                              '${days[s.x.toInt()].substring(5)}  ${fmtCount(s.y)}',
+                              TextStyle(color: theme.colorScheme.onInverseSurface, fontWeight: FontWeight.w600),
+                            ),
+                        ],
+                      ),
+                    ),
                     gridData: FlGridData(
                       show: true,
                       drawVerticalLine: false,

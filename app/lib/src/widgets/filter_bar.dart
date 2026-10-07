@@ -72,6 +72,12 @@ class FilterBar extends ConsumerWidget {
                   options: options.versions,
                   onChanged: notifier.setVersion,
                 ),
+                FilterChip(
+                  label: const Text('Test devices'),
+                  tooltip: 'Include events sent from Firebase DebugView test devices',
+                  selected: f.includeTest,
+                  onSelected: notifier.setIncludeTest,
+                ),
               ],
             ),
           ),

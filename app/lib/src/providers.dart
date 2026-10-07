@@ -46,12 +46,12 @@ final progressionProvider = FutureProvider.family<ProgressionData, Filters>(
 
 final countsProvider = FutureProvider.family<List<EventCount>, ({Filters filters, String? name})>(
     (ref, q) => ref.watch(apiClientProvider).counts(q.filters.from, q.filters.to,
-        name: q.name, platform: q.filters.platform, version: q.filters.version));
+        name: q.name, platform: q.filters.platform, version: q.filters.version, includeTest: q.filters.includeTest));
 
 final paramProvider =
     FutureProvider.family<List<ParamBucket>, ({Filters filters, String name, String key})>(
         (ref, q) => ref.watch(apiClientProvider).param(q.name, q.key, q.filters.from, q.filters.to,
-            platform: q.filters.platform, version: q.filters.version));
+            platform: q.filters.platform, version: q.filters.version, includeTest: q.filters.includeTest));
 
 
 final savedFunnelsProvider =
@@ -67,6 +67,6 @@ final paramKeysProvider = FutureProvider.family<List<String>, ({String event, Fi
 final paramValuesProvider =
     FutureProvider.family<List<String>, ({String event, String key, Filters filters})>((ref, q) async {
   final buckets = await ref.watch(apiClientProvider).param(q.event, q.key, q.filters.from, q.filters.to,
-      platform: q.filters.platform, version: q.filters.version);
+      platform: q.filters.platform, version: q.filters.version, includeTest: q.filters.includeTest);
   return [for (final b in buckets) if (b.value != '(none)') b.value];
 });

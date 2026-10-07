@@ -40,27 +40,37 @@ class _OverviewBody extends StatelessWidget {
             padding: EdgeInsets.only(bottom: 12),
             child: Card(child: ListTile(leading: Icon(Icons.info_outline), title: Text('No data in this range'))),
           ),
-        Wrap(spacing: 12, runSpacing: 12, children: [
-          KpiCard(title: 'DAU (avg)', value: fmtDecimal(k.dau), delta: pctChange(k.dau, p?.dau)),
-          KpiCard(title: 'New users', value: '${k.newUsers}', delta: pctChange(k.newUsers, p?.newUsers)),
-          KpiCard(title: 'Sessions', value: '${k.sessions}', delta: pctChange(k.sessions, p?.sessions)),
-          KpiCard(
-            title: 'Sessions / DAU',
-            value: fmtDecimal(k.sessionsPerDau),
-            delta: k.sessionsPerDau == null ? null : pctChange(k.sessionsPerDau!, p?.sessionsPerDau),
-          ),
-          KpiCard(
-            title: 'Playtime / DAU',
-            value: '${fmtDecimal(k.playtimeMinPerDau)} min',
-            delta: k.playtimeMinPerDau == null ? null : pctChange(k.playtimeMinPerDau!, p?.playtimeMinPerDau),
-          ),
-          KpiCard(
-            title: 'Uninstalls',
-            value: '${k.uninstalls}',
-            delta: pctChange(k.uninstalls, p?.uninstalls),
-            higherIsBetter: false,
-          ),
-        ]),
+        // Six cards fill one row, else 3 + 3, else 2 per row — never a lone orphan.
+        LayoutBuilder(builder: (context, box) {
+          const gap = 12.0;
+          const minCard = 150.0;
+          final perRow = box.maxWidth >= 6 * minCard + 5 * gap ? 6 : (box.maxWidth >= 3 * minCard + 2 * gap ? 3 : 2);
+          final w = ((box.maxWidth - (perRow - 1) * gap) / perRow).floorToDouble();
+          return Wrap(spacing: gap, runSpacing: gap, children: [
+            KpiCard(width: w, title: 'DAU (avg)', value: fmtDecimal(k.dau), delta: pctChange(k.dau, p?.dau)),
+            KpiCard(width: w, title: 'New users', value: '${k.newUsers}', delta: pctChange(k.newUsers, p?.newUsers)),
+            KpiCard(width: w, title: 'Sessions', value: '${k.sessions}', delta: pctChange(k.sessions, p?.sessions)),
+            KpiCard(
+              width: w,
+              title: 'Sessions / DAU',
+              value: fmtDecimal(k.sessionsPerDau),
+              delta: k.sessionsPerDau == null ? null : pctChange(k.sessionsPerDau!, p?.sessionsPerDau),
+            ),
+            KpiCard(
+              width: w,
+              title: 'Playtime / DAU',
+              value: '${fmtDecimal(k.playtimeMinPerDau)} min',
+              delta: k.playtimeMinPerDau == null ? null : pctChange(k.playtimeMinPerDau!, p?.playtimeMinPerDau),
+            ),
+            KpiCard(
+              width: w,
+              title: 'Uninstalls',
+              value: '${k.uninstalls}',
+              delta: pctChange(k.uninstalls, p?.uninstalls),
+              higherIsBetter: false,
+            ),
+          ]);
+        }),
         const SizedBox(height: 16),
         Wrap(spacing: 12, runSpacing: 12, children: [
           MetricLineChart(title: 'DAU', days: days, values: [for (final d in data.daily) d.dau]),

@@ -73,9 +73,10 @@ class ApiClient {
   Future<Map<String, dynamic>> _getMap(String path, [Map<String, String> query = const {}]) async =>
       _map(await _send('GET', path, query: query), path);
 
-  Map<String, String> _extra(String? platform, String? version) => {
+  Map<String, String> _extra(String? platform, String? version, bool includeTest) => {
         if (platform != null) 'platform': platform,
         if (version != null) 'version': version,
+        if (includeTest) 'test': '1',
       };
 
   Future<List<DayStat>> days() async =>
@@ -85,26 +86,26 @@ class ApiClient {
       [for (final j in await _getList('events/names')) j as String];
 
   Future<List<EventCount>> counts(String from, String to,
-          {String? name, String? platform, String? version}) async =>
+          {String? name, String? platform, String? version, bool includeTest = false}) async =>
       [
         for (final j in await _getList('events/count', {
           'from': from,
           'to': to,
           if (name != null) 'name': name,
-          ..._extra(platform, version),
+          ..._extra(platform, version, includeTest),
         }))
           EventCount.fromJson(j as Map<String, dynamic>),
       ];
 
   Future<List<ParamBucket>> param(String name, String key, String from, String to,
-          {String? platform, String? version}) async =>
+          {String? platform, String? version, bool includeTest = false}) async =>
       [
         for (final j in await _getList('events/param', {
           'name': name,
           'key': key,
           'from': from,
           'to': to,
-          ..._extra(platform, version),
+          ..._extra(platform, version, includeTest),
         }))
           ParamBucket.fromJson(j as Map<String, dynamic>),
       ];
@@ -116,7 +117,7 @@ class ApiClient {
           'steps': stepsCsv,
           'from': from,
           'to': to,
-          ..._extra(platform, version),
+          ..._extra(platform, version, false),
         }))
           FunnelStep.fromJson(j as Map<String, dynamic>),
       ];

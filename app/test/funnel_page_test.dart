@@ -7,14 +7,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 const steps = [
   FunnelStepDef(event: 'first_open'),
-  FunnelStepDef(event: 'tut', paramKey: 'step', paramValue: '1'),
-  FunnelStepDef(event: 'tut', paramKey: 'step', paramValue: '3'),
+  FunnelStepDef(event: 'tut', params: [ParamFilter('step', '1')]),
+  FunnelStepDef(event: 'tut', params: [ParamFilter('step', '3')]),
 ];
 
 const result = FunnelResult(steps: [
-  FunnelStepResult(index: 0, event: 'first_open', paramKey: null, paramValue: null, players: 214, fromPrevious: null, fromFirst: 1.0, dropped: null, medianSeconds: null),
-  FunnelStepResult(index: 1, event: 'tut', paramKey: 'step', paramValue: '1', players: 198, fromPrevious: 198 / 214, fromFirst: 198 / 214, dropped: 16, medianSeconds: 40),
-  FunnelStepResult(index: 2, event: 'tut', paramKey: 'step', paramValue: '3', players: 160, fromPrevious: 160 / 198, fromFirst: 160 / 214, dropped: 38, medianSeconds: 130),
+  FunnelStepResult(index: 0, event: 'first_open', players: 214, fromPrevious: null, fromFirst: 1.0, dropped: null, medianSeconds: null),
+  FunnelStepResult(index: 1, event: 'tut', params: [ParamFilter('step', '1')], players: 198, fromPrevious: 198 / 214, fromFirst: 198 / 214, dropped: 16, medianSeconds: 40),
+  FunnelStepResult(index: 2, event: 'tut', params: [ParamFilter('step', '3')], players: 160, fromPrevious: 160 / 198, fromFirst: 160 / 214, dropped: 38, medianSeconds: 130),
 ], totalConversion: 160 / 214, biggestDropIndex: 2);
 
 Future<void> pump(WidgetTester t, List<Override> overrides) async {
@@ -64,7 +64,7 @@ void main() {
             SavedFunnel(id: 1, name: 'Onboarding', windowMinutes: 1440, steps: steps, updatedAt: 'x'),
           ]),
       funnelResultProvider.overrideWith((ref, q) async => const FunnelResult(steps: [
-            FunnelStepResult(index: 0, event: 'first_open', paramKey: null, paramValue: null, players: 0, fromPrevious: null, fromFirst: null, dropped: null, medianSeconds: null),
+            FunnelStepResult(index: 0, event: 'first_open', players: 0, fromPrevious: null, fromFirst: null, dropped: null, medianSeconds: null),
           ], totalConversion: null, biggestDropIndex: null)),
     ]);
     expect(find.text('No players reached step 1 in this range'), findsOneWidget);

@@ -75,9 +75,11 @@ class FunnelChart extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600)),
-                      if (s.paramKey != null)
-                        Text('${s.paramKey} = ${s.paramValue}',
+                      if (s.filterLabel != null)
+                        Text(s.filterLabel!,
                             textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                     ],
                   ),

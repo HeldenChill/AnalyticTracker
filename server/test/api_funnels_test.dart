@@ -44,7 +44,13 @@ void main() {
     expect(c1, 201);
     final id = (created as Map)['id'] as int;
     expect(created['name'], 'Onboarding');
-    expect((created['steps'] as List)[1], {'event': 'tut', 'paramKey': 'step', 'paramValue': '1'});
+    // Legacy paramKey/paramValue body is stored in the BUG-0008 `params` shape.
+    expect((created['steps'] as List)[1], {
+      'event': 'tut',
+      'params': [
+        {'key': 'step', 'value': '1'},
+      ],
+    });
 
     final (c2, list) = await call('GET', '/funnels');
     expect(c2, 200);
@@ -99,6 +105,19 @@ void main() {
 
     final (_, ios) = await call('POST', '/funnels/run', {'def': onboarding, 'from': d1, 'to': d1, 'platform': 'IOS'});
     expect(((ios as Map)['steps'] as List).map((s) => s['players']), [1, 0]);
+  });
+
+  test('test-device events need test=1 (BUG-0007)', () async {
+    store.replaceDay('2026-10-02', [evx('2026-10-02', 1, 'first_open', 'dev', params: {'debug_event': 1})]);
+    const d2 = '2026-10-02';
+    final (_, off) = await call('POST', '/funnels/run', {'def': onboarding, 'from': d2, 'to': d2});
+    expect(((off as Map)['steps'] as List).first['players'], 0);
+    final (_, on) = await call('POST', '/funnels/run', {'def': onboarding, 'from': d2, 'to': d2, 'test': '1'});
+    expect(((on as Map)['steps'] as List).first['players'], 1);
+    final (_, ov) = await call('GET', '/overview?from=$d2&to=$d2');
+    expect((ov as Map)['kpis']['newUsers'], 0);
+    final (_, ovTest) = await call('GET', '/overview?from=$d2&to=$d2&test=1');
+    expect((ovTest as Map)['kpis']['newUsers'], 1);
   });
 
   test('POST /funnels/run rejects bad range and bad def', () async {

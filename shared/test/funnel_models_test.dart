@@ -7,7 +7,7 @@ Map<String, dynamic> roundTrip(Map<String, dynamic> j) => jsonDecode(jsonEncode(
 
 const def = FunnelDef(name: 'Onboarding', windowMinutes: 1440, steps: [
   FunnelStepDef(event: 'first_open'),
-  FunnelStepDef(event: 'tut', paramKey: 'step', paramValue: '1'),
+  FunnelStepDef(event: 'tut', params: [ParamFilter('step', '1')]),
 ]);
 
 void main() {
@@ -19,17 +19,32 @@ void main() {
       'name': 'Onboarding',
       'windowMinutes': 1440,
       'steps': [
-        {'event': 'first_open', 'paramKey': null, 'paramValue': null},
-        {'event': 'tut', 'paramKey': 'step', 'paramValue': '1'},
+        {'event': 'first_open', 'params': <Object>[]},
+        {
+          'event': 'tut',
+          'params': [
+            {'key': 'step', 'value': '1'},
+          ],
+        },
       ],
     });
   });
 
-  test('empty strings in JSON become null filters', () {
+  test('legacy single paramKey/paramValue JSON still reads (BUG-0008)', () {
     final s = FunnelStepDef.fromJson({'event': ' tut ', 'paramKey': '', 'paramValue': ''});
     expect(s, const FunnelStepDef(event: 'tut'));
     expect(s.filterLabel, isNull);
-    expect(const FunnelStepDef(event: 'tut', paramKey: 'step', paramValue: '3').filterLabel, 'step = 3');
+    expect(FunnelStepDef.fromJson({'event': 'tut', 'paramKey': 'step', 'paramValue': '1'}),
+        const FunnelStepDef(event: 'tut', params: [ParamFilter('step', '1')]));
+    expect(FunnelStepDef.fromJson({'event': 'tut', 'paramKey': null, 'paramValue': null}),
+        const FunnelStepDef(event: 'tut'));
+  });
+
+  test('two filters per step round trip and label', () {
+    const s = FunnelStepDef(event: 'tut', params: [ParamFilter('id', 'Tut_1'), ParamFilter('step', 'end')]);
+    expect(FunnelStepDef.fromJson(roundTrip(s.toJson())), s);
+    expect(s.filterLabel, 'id = Tut_1, step = end');
+    expect(const FunnelStepDef(event: 'tut', params: [ParamFilter('step', '3')]).filterLabel, 'step = 3');
   });
 
   test('equality differs on window and steps', () {
@@ -50,11 +65,21 @@ void main() {
       expect(d(steps: const []).validate(), 'Add at least one step');
       expect(d(steps: List.filled(11, const FunnelStepDef(event: 'a'))).validate(), 'A funnel allows at most 10 steps');
       expect(d(steps: const [FunnelStepDef(event: 'a'), FunnelStepDef(event: ' ')]).validate(), 'Step 2: pick an event');
-      expect(d(steps: const [FunnelStepDef(event: 'a', paramKey: 'step')]).validate(),
-          'Step 1: set both parameter and value, or neither');
-      expect(d(steps: const [FunnelStepDef(event: 'a', paramValue: '1')]).validate(),
-          'Step 1: set both parameter and value, or neither');
-      expect(d(steps: const [FunnelStepDef(event: 'a', paramKey: 'a.b', paramValue: '1')]).validate(),
+      expect(d(steps: const [FunnelStepDef(event: 'a', params: [ParamFilter('step', null)])]).validate(),
+          'Step 1: set both parameter and value, or remove the filter');
+      expect(d(steps: const [FunnelStepDef(event: 'a', params: [ParamFilter('', '1')])]).validate(),
+          'Step 1: set both parameter and value, or remove the filter');
+      expect(
+          d(steps: const [
+            FunnelStepDef(event: 'a', params: [ParamFilter('step', '1'), ParamFilter('step', '2')]),
+          ]).validate(),
+          'Step 1: parameter "step" is used twice');
+      expect(
+          d(steps: [
+            FunnelStepDef(event: 'a', params: [for (var i = 0; i < 6; i++) ParamFilter('k$i', '1')]),
+          ]).validate(),
+          'Step 1: at most 5 parameter filters');
+      expect(d(steps: const [FunnelStepDef(event: 'a', params: [ParamFilter('a.b', '1')])]).validate(),
           'Step 1: parameter name may only use letters, digits and _');
       expect(d(window: 0).validate(), 'Time window must be positive');
     });
@@ -79,12 +104,12 @@ void main() {
 
   test('FunnelResult round trip with nulls and int JSON numbers', () {
     const r = FunnelResult(steps: [
-      FunnelStepResult(index: 0, event: 'a', paramKey: null, paramValue: null, players: 5, fromPrevious: null, fromFirst: 1.0, dropped: null, medianSeconds: null),
-      FunnelStepResult(index: 1, event: 'b', paramKey: 'k', paramValue: 'v', players: 3, fromPrevious: 0.6, fromFirst: 0.6, dropped: 2, medianSeconds: 20.0),
+      FunnelStepResult(index: 0, event: 'a', players: 5, fromPrevious: null, fromFirst: 1.0, dropped: null, medianSeconds: null),
+      FunnelStepResult(index: 1, event: 'b', params: [ParamFilter('k', 'v')], players: 3, fromPrevious: 0.6, fromFirst: 0.6, dropped: 2, medianSeconds: 20.0),
     ], totalConversion: 0.6, biggestDropIndex: 1);
     expect(FunnelResult.fromJson(roundTrip(r.toJson())).toJson(), r.toJson());
     final fromInts = FunnelStepResult.fromJson({
-      'index': 1, 'event': 'b', 'paramKey': null, 'paramValue': null, 'players': 1,
+      'index': 1, 'event': 'b', 'players': 1,
       'fromPrevious': 1, 'fromFirst': 1, 'dropped': 0, 'medianSeconds': 20,
     });
     expect(fromInts.fromFirst, 1.0);

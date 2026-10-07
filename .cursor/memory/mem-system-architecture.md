@@ -44,7 +44,8 @@ Pull re-fetches last **3** days (late events) and fills missing days **oldest fi
 - Player = non-empty `user_pseudo_id`. DAU KPI = mean daily DAU over stored days in range. Sessions/DAU and Playtime/DAU null when DAU sum 0. Previous period = same length right before; null if no stored days.
 - Retention: cohort = earliest `first_open` across all data; D1/3/7/14/30 exact-day; cell null (blank) when not yet observable; weighted average skips nulls.
 - Progression: `stg_start/stg_cmp/stg_fail` + param `stg`; drop-off vs stage **N+1** (skipped stage = 0 players — v2 fix commit 0cfa1e1).
-- Funnel: strict order, entry = first step-1 event, greedy next match, window counted from step-1 time (≤ edge counts), param compared as text, median gap per step, biggest drop = lowest from-previous (earliest on tie).
+- Funnel: strict order, entry = first step-1 event, greedy next match, window counted from step-1 time (≤ edge counts), step `params` = 0–5 ANDed `{key, value}` filters compared as text (legacy `paramKey/paramValue` JSON still read), median gap per step, biggest drop = lowest from-previous (earliest on tie).
+- Test devices: `Filters.includeTest` (query `test=1`, default off) — server `testEventsClause` drops events with `debug_event` = 1 on every metric/explore route (per event, json_extract per row).
 
 ## App styling
 

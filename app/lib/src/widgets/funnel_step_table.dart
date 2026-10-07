@@ -43,7 +43,7 @@ class FunnelStepTable extends StatelessWidget {
           DataRow(cells: [
             DataCell(Text('${s.index + 1}')),
             DataCell(Text(s.event)),
-            DataCell(Text(s.paramKey == null ? '—' : '${s.paramKey} = ${s.paramValue}')),
+            DataCell(Text(s.filterLabel ?? '—')),
             DataCell(Text('${s.players}')),
             DataCell(Text(fmtPct(s.fromPrevious))),
             DataCell(Text(fmtPct(s.fromFirst))),

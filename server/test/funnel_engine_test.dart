@@ -11,8 +11,8 @@ const day = 86400 * sec;
 
 FunnelDef onboarding({int? window = 1440}) => FunnelDef(name: 'Onboarding', windowMinutes: window, steps: const [
       FunnelStepDef(event: 'first_open'),
-      FunnelStepDef(event: 'tut', paramKey: 'step', paramValue: '1'),
-      FunnelStepDef(event: 'tut', paramKey: 'step', paramValue: '3'),
+      FunnelStepDef(event: 'tut', params: [ParamFilter('step', '1')]),
+      FunnelStepDef(event: 'tut', params: [ParamFilter('step', '3')]),
     ]);
 
 EventStore seeded() {
@@ -47,7 +47,7 @@ void main() {
     final r = store.funnelEngine.run(onboarding(), f);
     expect(r.steps.map((s) => s.players).toList(), [5, 3, 2]);
     expect(r.steps[0].toJson(), {
-      'index': 0, 'event': 'first_open', 'paramKey': null, 'paramValue': null, 'players': 5,
+      'index': 0, 'event': 'first_open', 'params': <Object>[], 'players': 5,
       'fromPrevious': null, 'fromFirst': 1.0, 'dropped': null, 'medianSeconds': null,
     });
     expect(r.steps[1].fromPrevious, closeTo(0.6, 1e-9));
@@ -60,8 +60,37 @@ void main() {
     expect(r.steps[2].medianSeconds, 43215.0);
     expect(r.totalConversion, closeTo(0.4, 1e-9));
     expect(r.biggestDropIndex, 1);
-    expect(r.steps[2].paramKey, 'step');
-    expect(r.steps[2].paramValue, '3');
+    expect(r.steps[2].params, const [ParamFilter('step', '3')]);
+  });
+
+  test('all param filters of a step must match (BUG-0008)', () {
+    final s = EventStore.inMemory();
+    addTearDown(s.close);
+    s.replaceDay(d1, [
+      // u1: Tut_1 start then Tut_1 end -> reaches step 2
+      evx(d1, 1, 'tut', 'u1', params: {'id': 'Tut_1', 'step': 'start'}),
+      evx(d1, 2, 'tut', 'u1', params: {'id': 'Tut_1', 'step': 'end'}),
+      // u2: Tut_1 start then Tut_2 end -> id mismatch, stops at step 1
+      evx(d1, 1, 'tut', 'u2', params: {'id': 'Tut_1', 'step': 'start'}),
+      evx(d1, 2, 'tut', 'u2', params: {'id': 'Tut_2', 'step': 'end'}),
+    ]);
+    final r = s.funnelEngine.run(const FunnelDef(name: 'tut', windowMinutes: null, steps: [
+      FunnelStepDef(event: 'tut', params: [ParamFilter('id', 'Tut_1'), ParamFilter('step', 'start')]),
+      FunnelStepDef(event: 'tut', params: [ParamFilter('id', 'Tut_1'), ParamFilter('step', 'end')]),
+    ]), f);
+    expect(r.steps.map((x) => x.players).toList(), [2, 1]);
+  });
+
+  test('test-device events excluded unless includeTest (BUG-0007)', () {
+    final s = EventStore.inMemory();
+    addTearDown(s.close);
+    s.replaceDay(d1, [
+      evx(d1, 1, 'first_open', 'real'),
+      evx(d1, 1, 'first_open', 'dev', params: {'debug_event': 1}),
+    ]);
+    const def = FunnelDef(name: 'x', windowMinutes: null, steps: [FunnelStepDef(event: 'first_open')]);
+    expect(s.funnelEngine.run(def, f).steps.single.players, 1);
+    expect(s.funnelEngine.run(def, f.withIncludeTest(true)).steps.single.players, 2);
   });
 
   test('window boundary', () {

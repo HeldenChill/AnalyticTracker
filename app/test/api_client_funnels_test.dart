@@ -41,11 +41,12 @@ void main() {
   test('run sends def and filters', () async {
     final mock = MockClient((req) async {
       expect(req.url.path, '/funnels/run');
-      expect(jsonDecode(req.body), {'def': def.toJson(), 'from': '2026-10-01', 'to': '2026-10-02', 'platform': 'IOS'});
+      expect(jsonDecode(req.body),
+          {'def': def.toJson(), 'from': '2026-10-01', 'to': '2026-10-02', 'platform': 'IOS', 'test': '1'});
       return http.Response(jsonEncode({'steps': [], 'totalConversion': null, 'biggestDropIndex': null}), 200);
     });
     final r = await ApiClient('http://h:8080', client: mock)
-        .runFunnel(def, const Filters(from: '2026-10-01', to: '2026-10-02', platform: 'IOS'));
+        .runFunnel(def, const Filters(from: '2026-10-01', to: '2026-10-02', platform: 'IOS', includeTest: true));
     expect(r.steps, isEmpty);
   });
 

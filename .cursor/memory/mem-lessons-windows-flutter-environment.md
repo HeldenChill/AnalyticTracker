@@ -8,6 +8,7 @@
 
 - Flutter 3.47.6 / Dart 3.13.5 at **`D:\flutter`**. `D:\flutter\bin` is on the **user PATH (registry)**, but agent shells started before the PATH edit don't see it → prefix `$env:Path = "D:\flutter\bin;$env:Path"` (PowerShell) or `PATH=/d/flutter/bin:$PATH` (bash).
 - Test PATH the way Task Scheduler sees it: build Path from `[Environment]::GetEnvironmentVariable('Path','Machine')` + `'User'` and run `where dart` in a fresh process (BUG-0002 rejected this way).
+- `dart` / `flutter` on PATH are **`.bat` shims** (`D:\flutter\bin\dart.bat`). Anything that spawns without a shell (Claude Code `.mcp.json`, Node `spawn`) must use `"command": "cmd", "args": ["/c", "dart", ...]`. Real exe: `D:\flutter\bin\cache\dart-sdk\bin\dart.exe`.
 - Not admin. Elevated registry/settings changes are refused by the agent's permission classifier → hand OS-level steps to the owner.
 
 ## Windows build prerequisites (both hit this session, in this order)

@@ -110,9 +110,9 @@ class EventStore {
   String journalMode() =>
       (_db.select('PRAGMA journal_mode;').first.values.first as String).toLowerCase();
 
-  /// Extra `AND ...` clause + args for optional platform/version filters.
-  (String, List<Object?>) _extraFilters(String? platform, String? version) {
-    final sql = StringBuffer();
+  /// Extra `AND ...` clause + args for optional platform/version/test-device filters.
+  (String, List<Object?>) _extraFilters(String? platform, String? version, bool includeTest) {
+    final sql = StringBuffer(testEventsClause(includeTest));
     final args = <Object?>[];
     if (platform != null) {
       sql.write(' AND platform = ?');
@@ -127,8 +127,8 @@ class EventStore {
 
   /// Distinct top-level parameter keys seen on [eventName] in the range.
   List<String> paramKeys(String eventName, String from, String to,
-      {String? platform, String? version}) {
-    final (extra, extraArgs) = _extraFilters(platform, version);
+      {String? platform, String? version, bool includeTest = false}) {
+    final (extra, extraArgs) = _extraFilters(platform, version, includeTest);
     final rows = _db.select(
       'SELECT DISTINCT j.key AS k FROM events, json_each(events.params_json) AS j '
       'WHERE event_name = ? AND day BETWEEN ? AND ?$extra ORDER BY k;',
@@ -143,9 +143,9 @@ class EventStore {
       ];
 
   List<EventCount> counts(String from, String to,
-      {String? name, String? platform, String? version}) {
+      {String? name, String? platform, String? version, bool includeTest = false}) {
     final filter = name == null ? '' : ' AND event_name = ?';
-    final (extra, extraArgs) = _extraFilters(platform, version);
+    final (extra, extraArgs) = _extraFilters(platform, version, includeTest);
     final rows = _db.select(
       'SELECT day, event_name, COUNT(*) AS c FROM events '
       'WHERE day BETWEEN ? AND ?$filter$extra '
@@ -159,11 +159,11 @@ class EventStore {
   }
 
   List<ParamBucket> paramBreakdown(String eventName, String key, String from, String to,
-      {int limit = 50, String? platform, String? version}) {
+      {int limit = 50, String? platform, String? version, bool includeTest = false}) {
     if (!_keyRe.hasMatch(key)) {
       throw ArgumentError('param key must match [A-Za-z0-9_]+');
     }
-    final (extra, extraArgs) = _extraFilters(platform, version);
+    final (extra, extraArgs) = _extraFilters(platform, version, includeTest);
     final rows = _db.select(
       'SELECT CAST(json_extract(params_json, ?) AS TEXT) AS v, COUNT(*) AS c FROM events '
       'WHERE event_name = ? AND day BETWEEN ? AND ?$extra '
@@ -179,11 +179,11 @@ class EventStore {
   /// Ordered funnel: a user reaches step k only after reaching steps 1..k-1
   /// earlier (by ts_micros) within [from, to].
   List<FunnelStep> funnel(List<String> steps, String from, String to,
-      {String? platform, String? version}) {
+      {String? platform, String? version, bool includeTest = false}) {
     if (steps.isEmpty) throw ArgumentError('steps must not be empty');
     final distinct = steps.toSet().toList();
     final marks = List.filled(distinct.length, '?').join(', ');
-    final (extra, extraArgs) = _extraFilters(platform, version);
+    final (extra, extraArgs) = _extraFilters(platform, version, includeTest);
     final rows = _db.select(
       'SELECT user_pseudo_id, event_name FROM events '
       'WHERE day BETWEEN ? AND ? AND event_name IN ($marks)$extra '

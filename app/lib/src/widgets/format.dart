@@ -1,5 +1,8 @@
 String fmtPct(double? v) => v == null ? '—' : '${(v * 100).round()}%';
 
+/// Whole numbers without ".0"; fractions keep one decimal.
+String fmtCount(num v) => v == v.roundToDouble() ? '${v.round()}' : v.toStringAsFixed(1);
+
 String fmtDecimal(double? v, {int digits = 1}) => v == null ? '—' : v.toStringAsFixed(digits);
 
 /// Relative change; null when there is nothing to compare against.

@@ -9,9 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const result = FunnelResult(steps: [
-  FunnelStepResult(index: 0, event: 'first_open', paramKey: null, paramValue: null, players: 214, fromPrevious: null, fromFirst: 1.0, dropped: null, medianSeconds: null),
-  FunnelStepResult(index: 1, event: 'tut', paramKey: 'step', paramValue: '1', players: 198, fromPrevious: 198 / 214, fromFirst: 198 / 214, dropped: 16, medianSeconds: 40),
-  FunnelStepResult(index: 2, event: 'tut', paramKey: 'step', paramValue: '3', players: 160, fromPrevious: 160 / 198, fromFirst: 160 / 214, dropped: 38, medianSeconds: 130),
+  FunnelStepResult(index: 0, event: 'first_open', players: 214, fromPrevious: null, fromFirst: 1.0, dropped: null, medianSeconds: null),
+  FunnelStepResult(index: 1, event: 'tut', params: [ParamFilter('step', '1')], players: 198, fromPrevious: 198 / 214, fromFirst: 198 / 214, dropped: 16, medianSeconds: 40),
+  FunnelStepResult(index: 2, event: 'tut', params: [ParamFilter('step', '3')], players: 160, fromPrevious: 160 / 198, fromFirst: 160 / 214, dropped: 38, medianSeconds: 130),
 ], totalConversion: 160 / 214, biggestDropIndex: 2);
 
 void setSize(WidgetTester t) {
@@ -110,13 +110,36 @@ void main() {
     });
 
     testWidgets('Run closes without saving', (t) async {
-      await open(t, initial: const FunnelDef(name: 'F', windowMinutes: null, steps: [FunnelStepDef(event: 'tut', paramKey: 'step', paramValue: '1')]));
+      await open(t, initial: const FunnelDef(name: 'F', windowMinutes: null, steps: [FunnelStepDef(event: 'tut', params: [ParamFilter('step', '1')])]));
       expect(find.text('Whole range'), findsOneWidget);
       await t.tap(find.text('Run'));
       await t.pumpAndSettle();
       expect(saved, isEmpty);
       expect(outcome!.saved, isFalse);
-      expect(outcome!.def.steps.single.paramValue, '1');
+      expect(outcome!.def.steps.single.params, const [ParamFilter('step', '1')]);
+    });
+
+    testWidgets('second parameter filter: added row must be filled before Run', (t) async {
+      await open(t, initial: const FunnelDef(name: 'F', windowMinutes: null, steps: [FunnelStepDef(event: 'tut', params: [ParamFilter('step', '1')])]));
+      expect(find.byTooltip('Remove filter'), findsOneWidget);
+      await t.tap(find.text('And parameter'));
+      await t.pumpAndSettle();
+      expect(find.byTooltip('Remove filter'), findsNWidgets(2));
+      await t.tap(find.text('Run'));
+      await t.pumpAndSettle();
+      expect(find.text('Step 1: set both parameter and value, or remove the filter'), findsOneWidget);
+      expect(outcome, isNull);
+      await t.tap(find.byTooltip('Remove filter').last);
+      await t.pumpAndSettle();
+      await t.tap(find.text('Run'));
+      await t.pumpAndSettle();
+      expect(outcome!.def.steps.single.params, const [ParamFilter('step', '1')]);
+    });
+
+    test('fmtCount drops .0 on whole numbers (BUG-0006)', () {
+      expect(fmtCount(11.0), '11');
+      expect(fmtCount(0), '0');
+      expect(fmtCount(2.25), '2.3');
     });
 
     testWidgets('new funnel: add and remove steps', (t) async {

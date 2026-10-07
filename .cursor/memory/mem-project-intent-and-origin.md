@@ -40,13 +40,15 @@
 - Windows release build verified by Claude at runtime against real data, including screenshots of all four styles and the Funnels page.
 - Real saved funnel in DB: "Level 1-2 progression" (first_open → level_1_start → level_1_complete → level_2_start → level_2_complete): 79 entered, 4% total, biggest drop level 1 start → complete (−72%).
 
+## 2026-10-07
+
+- Owner: "apply fix for all bug, except IAM" → Claude applied its recommendations for BUG-0005..0009 directly (no Gemini plan): test devices excluded by default + "Test devices" chip; 2+ ANDed param filters per funnel step (spec §3 amended). All VERIFY_PENDING until seen in the Windows app.
+- v4 MCP (brainstorm → spec → plan, same day): owner chose **analysis + manage funnels + data ops**, **owner now / team later**, approach **A = Dart stdio MCP (`dart_mcp`) calling the HTTP API** (not direct SQLite, not `/mcp` in shelf). No `pull_now` until IAM; no raw SQL; API token required before team use. Spec `mcp-server-design.md`, plan `mcp-server-implementation.md` (5 tasks, for Gemini).
+
 ## Open owner decisions
 
 | Item | Question | Assistant recommendation |
 |---|---|---|
-| BUG-0007 | Test-device events (`debug_event: 1`, 15% of events) counted everywhere | Exclude by default + "Include test devices" toggle in filter bar |
-| BUG-0008 | `tut` needs two param filters (`id` + `step`) per funnel step | Allow 2+ filters per step (spec §3 change) |
-| BUG-0005/0006/0009 | Tooltip contrast, tooltip decimals, KPI row wrap | Small fixes; Claude or one Gemini plan |
 | IAM | Grant a read-only SA (BigQuery Data Viewer + Job User) to enable the automatic daily pull | Dedicated `analytic-tracker-pull` SA, not the Admin SDK key |
 
 ## Workspace setup history

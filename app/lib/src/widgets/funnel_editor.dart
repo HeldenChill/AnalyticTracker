@@ -122,9 +122,12 @@ class _FunnelEditorDialogState extends ConsumerState<FunnelEditorDialog> {
                   names: names,
                   filters: filters,
                   canDuplicate: _draft.canAdd,
+                  canAddParam: _draft.canAddParam(i),
                   onEvent: (e) => setState(() => _draft.setEvent(i, e)),
-                  onKey: (k) => setState(() => _draft.setParamKey(i, k)),
-                  onValue: (v) => setState(() => _draft.setParamValue(i, v)),
+                  onAddParam: () => setState(() => _draft.addParam(i)),
+                  onRemoveParam: (p) => setState(() => _draft.removeParam(i, p)),
+                  onKey: (p, k) => setState(() => _draft.setParamKey(i, p, k)),
+                  onValue: (p, v) => setState(() => _draft.setParamValue(i, p, v)),
                   onUp: () => setState(() => _draft.moveUp(i)),
                   onDown: () => setState(() => _draft.moveDown(i)),
                   onDuplicate: () => setState(() => _draft.duplicate(i)),
@@ -162,7 +165,10 @@ class _StepRow extends ConsumerWidget {
     required this.names,
     required this.filters,
     required this.canDuplicate,
+    required this.canAddParam,
     required this.onEvent,
+    required this.onAddParam,
+    required this.onRemoveParam,
     required this.onKey,
     required this.onValue,
     required this.onUp,
@@ -177,9 +183,12 @@ class _StepRow extends ConsumerWidget {
   final List<String> names;
   final Filters filters;
   final bool canDuplicate;
+  final bool canAddParam;
   final ValueChanged<String> onEvent;
-  final ValueChanged<String?> onKey;
-  final ValueChanged<String?> onValue;
+  final VoidCallback onAddParam;
+  final ValueChanged<int> onRemoveParam;
+  final void Function(int p, String key) onKey;
+  final void Function(int p, String? value) onValue;
   final VoidCallback onUp;
   final VoidCallback onDown;
   final VoidCallback onDuplicate;
@@ -187,21 +196,17 @@ class _StepRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final key = step.paramKey;
     final keys = step.event.isEmpty
         ? const <String>[]
         : ref.watch(paramKeysProvider((event: step.event, filters: filters))).valueOrNull ?? const <String>[];
-    final values = (step.event.isEmpty || key == null)
-        ? const <String>[]
-        : ref.watch(paramValuesProvider((event: step.event, key: key, filters: filters))).valueOrNull ??
-            const <String>[];
     final eventOptions = {...names, if (step.event.isNotEmpty) step.event}.toList()..sort();
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 28, child: Text('${index + 1}.')),
+          Padding(padding: const EdgeInsets.only(top: 16), child: SizedBox(width: 28, child: Text('${index + 1}.'))),
           DropdownMenu<String>(
             width: 260,
             menuHeight: 320,
@@ -218,31 +223,26 @@ class _StepRow extends ConsumerWidget {
           ),
           const SizedBox(width: 12),
           SizedBox(
-            width: 170,
-            child: DropdownButton<String?>(
-              isExpanded: true,
-              value: key,
-              items: [
-                const DropdownMenuItem<String?>(value: null, child: Text('Any parameter')),
-                if (key != null && !keys.contains(key)) DropdownMenuItem<String?>(value: key, child: Text(key)),
-                for (final k in keys) DropdownMenuItem<String?>(value: k, child: Text(k)),
+            width: 360,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var p = 0; p < step.params.length; p++)
+                  _ParamRow(
+                    event: step.event,
+                    filter: step.params[p],
+                    keys: keys,
+                    filters: filters,
+                    onKey: (k) => onKey(p, k),
+                    onValue: (v) => onValue(p, v),
+                    onRemove: () => onRemoveParam(p),
+                  ),
+                TextButton.icon(
+                  onPressed: step.event.isNotEmpty && canAddParam ? onAddParam : null,
+                  icon: const Icon(Icons.filter_alt_outlined, size: 18),
+                  label: Text(step.params.isEmpty ? 'Add parameter filter' : 'And parameter'),
+                ),
               ],
-              onChanged: step.event.isEmpty ? null : onKey,
-            ),
-          ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 170,
-            child: DropdownButton<String?>(
-              isExpanded: true,
-              value: step.paramValue,
-              hint: Text(key == null ? '—' : (values.isEmpty ? 'No values in this range' : 'Value')),
-              items: [
-                if (step.paramValue != null && !values.contains(step.paramValue))
-                  DropdownMenuItem<String?>(value: step.paramValue, child: Text(step.paramValue!)),
-                for (final v in values) DropdownMenuItem<String?>(value: v, child: Text(v)),
-              ],
-              onChanged: key == null ? null : onValue,
             ),
           ),
           const SizedBox(width: 8),
@@ -254,5 +254,68 @@ class _StepRow extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+/// One `parameter = value` filter of a step; filters are ANDed.
+class _ParamRow extends ConsumerWidget {
+  const _ParamRow({
+    required this.event,
+    required this.filter,
+    required this.keys,
+    required this.filters,
+    required this.onKey,
+    required this.onValue,
+    required this.onRemove,
+  });
+
+  final String event;
+  final ParamFilter filter;
+  final List<String> keys;
+  final Filters filters;
+  final ValueChanged<String> onKey;
+  final ValueChanged<String?> onValue;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final key = filter.key.isEmpty ? null : filter.key;
+    final value = filter.value;
+    final values = key == null
+        ? const <String>[]
+        : ref.watch(paramValuesProvider((event: event, key: key, filters: filters))).valueOrNull ??
+            const <String>[];
+    return Row(children: [
+      SizedBox(
+        width: 150,
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: key,
+          hint: const Text('Parameter'),
+          items: [
+            if (key != null && !keys.contains(key)) DropdownMenuItem(value: key, child: Text(key)),
+            for (final k in keys) DropdownMenuItem(value: k, child: Text(k)),
+          ],
+          onChanged: (k) {
+            if (k != null) onKey(k);
+          },
+        ),
+      ),
+      const SizedBox(width: 8),
+      SizedBox(
+        width: 150,
+        child: DropdownButton<String?>(
+          isExpanded: true,
+          value: value,
+          hint: Text(key == null ? '—' : (values.isEmpty ? 'No values in this range' : 'Value')),
+          items: [
+            if (value != null && !values.contains(value)) DropdownMenuItem<String?>(value: value, child: Text(value)),
+            for (final v in values) DropdownMenuItem<String?>(value: v, child: Text(v)),
+          ],
+          onChanged: key == null ? null : onValue,
+        ),
+      ),
+      IconButton(tooltip: 'Remove filter', icon: const Icon(Icons.remove_circle_outline, size: 18), onPressed: onRemove),
+    ]);
   }
 }

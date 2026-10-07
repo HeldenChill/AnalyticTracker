@@ -20,6 +20,7 @@
 - `Interfaces` block per task (exact names/types consumed/produced); Global Constraints with exact values; Review Focus = 5 untested failure modes each pinned to a test.
 - Task 0 = verify gates + commit leftover work; last task = **runtime verification checklist** that cannot be ticked from tests alone.
 - Avoid broken intermediate states: add new providers first, remove old ones in the task that deletes their last user.
+- For a plan using a **new package**, read its source (download the pub archive to scratchpad) and **compile + run the plan's code in a throwaway `git worktree`** (HEAD + `git diff | git apply`) before writing the plan. v4 caught `Tool.toolAnnotations` (not `annotations`) and the `dart.bat` spawn issue this way.
 - Verify external facts before putting them in a plan (e.g. curl the Google Fonts CSS to get real TTF URLs).
 - Self-review catches real plan bugs: List-in-record family key, chart axis label colliding with asserted text, `...?` on non-null (analyzer warning), a "tie" test that wasn't a tie, missing spec copy ("No values in this range").
 

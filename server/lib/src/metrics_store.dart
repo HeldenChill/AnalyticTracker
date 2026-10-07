@@ -1,6 +1,13 @@
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+/// `AND ...` clause dropping test-device events (Firebase DebugView sets `debug_event`
+/// on each event). Empty when [includeTest]. Per event, not per device (BUG-0007).
+// ponytail: json_extract per row; add an indexed is_debug column if the table gets big.
+String testEventsClause(bool includeTest) => includeTest
+    ? ''
+    : " AND COALESCE(CAST(json_extract(params_json, '\$.debug_event') AS INTEGER), 0) = 0";
+
 /// Dashboard metrics. Definitions: spec section 5
 /// (.cursor/plans/gameanalytics-dashboard-design.md).
 class MetricsStore {
@@ -20,7 +27,7 @@ class MetricsStore {
       parts.add('app_version = ?');
       args.add(f.version);
     }
-    return (parts.join(' AND '), args);
+    return (parts.join(' AND ') + testEventsClause(f.includeTest), args);
   }
 
   List<String> _storedDays(String from, String to) => [
@@ -55,7 +62,8 @@ class MetricsStore {
   RetentionData retention(Filters f) {
     final last = _db.select('SELECT MAX(day) AS d FROM pulled_days;').first['d'] as String?;
 
-    final filterSql = StringBuffer();
+    final test = testEventsClause(f.includeTest);
+    final filterSql = StringBuffer(test);
     final args = <Object?>[f.from, f.to];
     if (f.platform != null) {
       filterSql.write(' AND e.platform = ?');
@@ -71,7 +79,7 @@ class MetricsStore {
     final cohortRows = _db.select('''
       WITH firsts AS (
         SELECT user_pseudo_id AS uid, MIN(ts_micros) AS ts FROM events
-        WHERE event_name = 'first_open' AND user_pseudo_id <> ''
+        WHERE event_name = 'first_open' AND user_pseudo_id <> ''$test
         GROUP BY user_pseudo_id
       )
       SELECT e.user_pseudo_id AS uid, MIN(e.day) AS day
@@ -88,7 +96,7 @@ class MetricsStore {
     final activeDays = <String, Set<String>>{};
     for (final r in _db.select('''
       SELECT DISTINCT user_pseudo_id AS uid, day FROM events
-      WHERE day BETWEEN ? AND ?
+      WHERE day BETWEEN ? AND ?$test
         AND user_pseudo_id IN (SELECT user_pseudo_id FROM events WHERE event_name = 'first_open');
     ''', [f.from, addDays(f.to, retentionOffsets.last)])) {
       activeDays.putIfAbsent(r['uid'] as String, () => <String>{}).add(r['day'] as String);

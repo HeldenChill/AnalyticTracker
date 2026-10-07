@@ -51,10 +51,13 @@ flowchart LR
 
 ## 3. Funnel definition and metrics (authoritative)
 
-`FunnelDef = { name, windowMinutes: int or null, steps: [ { event, paramKey: string or null, paramValue: string or null } ] }`
+`FunnelDef = { name, windowMinutes: int or null, steps: [ { event, params: [ { key, value } ] } ] }`
 
-- A step matches an event row when `event_name = event` and, if `paramKey` set, `CAST(json_extract(params_json, '$.<paramKey>') AS TEXT) = paramValue`. `paramKey` must match `^[A-Za-z0-9_]+$`.
-- Rows considered: global filters (date range, platform, version), only events matching some step, ordered by `ts_micros, id` per player; empty `user_pseudo_id` excluded.
+> **Amended 2026-10-07 (BUG-0008):** each step has 0–5 ANDed `params` filters (was one `paramKey`/`paramValue`). Legacy `paramKey`/`paramValue` JSON is still read as one filter. Each key at most once per step. `FunnelResult` steps carry `params` instead of `paramKey`/`paramValue`.
+> **Amended 2026-10-07 (BUG-0007):** events with `debug_event` = 1 are excluded unless `test=1` (query or run body) — applies to every metric route, not just funnels.
+
+- A step matches an event row when `event_name = event` and, for **every** filter, the param's text form equals `value`. Each `key` must match `^[A-Za-z0-9_]+$`.
+- Rows considered: global filters (date range, platform, version, test devices), only events matching some step, ordered by `ts_micros, id` per player; empty `user_pseudo_id` excluded.
 - Per player: entry = **first** row matching step 1. Then greedily, for k = 2..n, the first row after the previous matched row (strictly later position in the ordered list) that matches step k and has `ts <= entryTs + window` (no limit when window null). Stop at the first unmatched step.
 - Step k **players** = players who matched steps 1..k.
 - **From previous** = players(k) / players(k-1); **From first** = players(k) / players(1); **Dropped** = players(k-1) − players(k). Step 1: from previous/dropped = null, from first = 1 (null if players(1) = 0).

@@ -26,6 +26,8 @@ class FiltersNotifier extends Notifier<Filters> {
   void setPlatform(String? p) => state = state.withPlatform(p);
 
   void setVersion(String? v) => state = state.withVersion(v);
+
+  void setIncludeTest(bool v) => state = state.withIncludeTest(v);
 }
 
 final filtersProvider = NotifierProvider<FiltersNotifier, Filters>(FiltersNotifier.new);
