@@ -1,0 +1,324 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:analytic_shared/analytic_shared.dart';
+import 'package:dart_mcp/server.dart';
+import 'package:http/http.dart' as http;
+
+/// Handler for one tool: validated arguments in, response text out.
+typedef ToolHandler = Future<String> Function(Map<String, Object?> args);
+
+/// A failure the MCP client should see as an `isError` result with [message].
+class ToolFailure implements Exception {
+  ToolFailure(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+/// The AnalyticTracker MCP tools (spec .cursor/plans/mcp-server-design.md §4).
+/// Each handler calls the shelf API at [baseUrl] and returns its JSON as text.
+/// No transport code: `AnalyticMcpServer` registers [all]; tests use [call].
+class AnalyticTools {
+  AnalyticTools(this.baseUrl, this._http)
+      : _base = Uri.parse(baseUrl.endsWith('/') ? baseUrl : '$baseUrl/');
+
+  final String baseUrl;
+  final Uri _base;
+  final http.Client _http;
+
+  /// Tool name -> (schema, handler), in spec §4 order.
+  late final Map<String, (Tool, ToolHandler)> all = {
+    for (final t in _tools()) t.$1.name: t,
+  };
+
+  /// Runs tool [name] and converts [ToolFailure] into an `isError` result.
+  Future<CallToolResult> call(String name, Map<String, Object?> args) async {
+    final entry = all[name];
+    if (entry == null) return _error('Unknown tool $name');
+    try {
+      return CallToolResult(content: [TextContent(text: await entry.$2(args))]);
+    } on ToolFailure catch (e) {
+      return _error(e.message);
+    }
+  }
+
+  static CallToolResult _error(String message) =>
+      CallToolResult(isError: true, content: [TextContent(text: message)]);
+
+  // ---- schemas ----
+
+  static final _read = ToolAnnotations(readOnlyHint: true);
+
+  static final Map<String, Schema> _filterProps = {
+    'from': Schema.string(description: 'First day, YYYY-MM-DD, inclusive.'),
+    'to': Schema.string(description: 'Last day, YYYY-MM-DD, inclusive.'),
+    'platform': Schema.string(description: 'Platform, e.g. ANDROID or IOS. Omit for all. Options: filter_options.'),
+    'version': Schema.string(description: 'App version, e.g. 1.0.3. Omit for all. Options: filter_options.'),
+    'include_test': Schema.bool(
+        description: 'Include events from Firebase DebugView test devices (debug_event = 1). Default false.'),
+  };
+
+  static ObjectSchema _filtered([Map<String, Schema> extra = const {}, List<String> required = const []]) =>
+      Schema.object(properties: {..._filterProps, ...extra}, required: ['from', 'to', ...required]);
+
+  static final _defSchema = Schema.object(
+    description: 'Funnel definition: {"name": string, "windowMinutes": int or null (null = whole range), '
+        '"steps": [{"event": string, "params": [{"key": string, "value": string}]}]}. '
+        'Strict step order; max 10 steps; max 5 params per step, ANDed; values compared as text.',
+  );
+
+  List<(Tool, ToolHandler)> _tools() => [
+        (
+          Tool(
+            name: 'data_health',
+            description: 'Stored days with row counts and pull time, plus missingDays (gaps between the first '
+                'and last stored day). Check this first when numbers look low.',
+            inputSchema: Schema.object(),
+            annotations: _read,
+          ),
+          _dataHealth,
+        ),
+        (
+          Tool(
+            name: 'filter_options',
+            description: 'Platforms and app versions present in the data, for the platform/version filters.',
+            inputSchema: Schema.object(),
+            annotations: _read,
+          ),
+          (_) => _send('GET', 'filters'),
+        ),
+        (
+          Tool(
+            name: 'list_events',
+            description: 'All distinct event names ever stored.',
+            inputSchema: Schema.object(),
+            annotations: _read,
+          ),
+          (_) => _send('GET', 'events/names'),
+        ),
+        (
+          Tool(
+            name: 'overview',
+            description: 'KPIs and daily series. DAU = distinct non-empty user_pseudo_id per day (KPI = mean over '
+                'stored days); new users = first_open; sessions = session_start; uninstalls = app_remove; '
+                'playtime = user_engagement engagement_time_msec. "previous" = same-length period just before.',
+            inputSchema: _filtered(),
+            annotations: _read,
+          ),
+          (a) => _send('GET', 'overview', query: _filterQuery(a)),
+        ),
+        (
+          Tool(
+            name: 'retention',
+            description: 'Cohorts by day of each player\'s first first_open in range; retained = active exactly '
+                'D1/D3/D7/D14/D30 later. null = not yet observable. average = weighted, skipping nulls.',
+            inputSchema: _filtered(),
+            annotations: _read,
+          ),
+          (a) => _send('GET', 'retention', query: _filterQuery(a)),
+        ),
+        (
+          Tool(
+            name: 'progression',
+            description: 'Per stage from stg_start/stg_cmp/stg_fail with param stg: players, starts, completes, '
+                'fails, winRate, attemptsPerClear, dropOff vs stage N+1.',
+            inputSchema: _filtered(),
+            annotations: _read,
+          ),
+          (a) => _send('GET', 'progression', query: _filterQuery(a)),
+        ),
+        (
+          Tool(
+            name: 'event_counts',
+            description: 'Event counts per day and event name. Pass name to count one event only.',
+            inputSchema: _filtered({'name': Schema.string(description: 'Event name, e.g. level_1_start.')}),
+            annotations: _read,
+          ),
+          (a) => _send('GET', 'events/count', query: {
+            ..._filterQuery(a),
+            if (a['name'] case final String name) 'name': name,
+          }),
+        ),
+        (
+          Tool(
+            name: 'param_keys',
+            description: 'Parameter keys seen on one event in range (for funnel step filters).',
+            inputSchema: _filtered({'event': Schema.string(description: 'Event name.')}, ['event']),
+            annotations: _read,
+          ),
+          (a) => _send('GET', 'events/param-keys', query: {..._filterQuery(a), 'name': a['event'] as String}),
+        ),
+        (
+          Tool(
+            name: 'param_values',
+            description: 'Value buckets with counts for one parameter of one event, most frequent first (top 50).',
+            inputSchema: _filtered({
+              'event': Schema.string(description: 'Event name.'),
+              'key': Schema.string(description: 'Parameter key, letters/digits/_ only.'),
+            }, ['event', 'key']),
+            annotations: _read,
+          ),
+          (a) => _send('GET', 'events/param', query: {
+            ..._filterQuery(a),
+            'name': a['event'] as String,
+            'key': a['key'] as String,
+          }),
+        ),
+        (
+          Tool(
+            name: 'list_funnels',
+            description: 'Saved team funnels with id, name, windowMinutes, steps, updatedAt.',
+            inputSchema: Schema.object(),
+            annotations: _read,
+          ),
+          (_) => _send('GET', 'funnels'),
+        ),
+        (
+          Tool(
+            name: 'run_funnel',
+            description: 'Run a funnel over the filters. Pass exactly one of id (saved funnel) or def (inline). '
+                'Returns players, fromPrevious, fromFirst, dropped, medianSeconds per step, totalConversion, '
+                'biggestDropIndex.',
+            inputSchema: _filtered({
+              'id': Schema.int(description: 'Saved funnel id from list_funnels.'),
+              'def': _defSchema,
+            }),
+            annotations: _read,
+          ),
+          _runFunnel,
+        ),
+        (
+          Tool(
+            name: 'save_funnel',
+            description: 'Create a saved funnel, or update funnel id when id is given. Saved funnels are shared '
+                'with the whole team; last write wins.',
+            inputSchema: Schema.object(properties: {
+              'def': _defSchema,
+              'id': Schema.int(description: 'Existing funnel id to update. Omit to create.'),
+            }, required: ['def']),
+            annotations: ToolAnnotations(readOnlyHint: false, destructiveHint: false),
+          ),
+          _saveFunnel,
+        ),
+        (
+          Tool(
+            name: 'delete_funnel',
+            description: 'Delete a saved team funnel. Cannot be undone.',
+            inputSchema: Schema.object(
+              properties: {'id': Schema.int(description: 'Funnel id from list_funnels.')},
+              required: ['id'],
+            ),
+            annotations: ToolAnnotations(readOnlyHint: false, destructiveHint: true),
+          ),
+          _deleteFunnel,
+        ),
+        (
+          Tool(
+            name: 'import_export',
+            description: 'Import a BigQuery console JSON export (manual export query) from a file on this machine. '
+                'WARNING: every day present in the file REPLACES all stored rows of that day. Default dry_run=true '
+                'returns [{day, rows, stored}] without changing anything; compare rows vs stored, then call again '
+                'with dry_run=false to apply.',
+            inputSchema: Schema.object(properties: {
+              'path': Schema.string(description: 'Path to the export file (absolute path recommended).'),
+              'dry_run': Schema.bool(description: 'Preview only. Default true.'),
+            }, required: ['path']),
+            annotations: ToolAnnotations(readOnlyHint: false, destructiveHint: true),
+          ),
+          _importExport,
+        ),
+      ];
+
+  // ---- handlers ----
+
+  static Map<String, String> _filterQuery(Map<String, Object?> a) => {
+        'from': a['from'] as String,
+        'to': a['to'] as String,
+        if (a['platform'] case final String p) 'platform': p,
+        if (a['version'] case final String v) 'version': v,
+        if (a['include_test'] == true) 'test': '1',
+      };
+
+  Future<String> _dataHealth(Map<String, Object?> _) async {
+    final days = jsonDecode(await _send('GET', 'days')) as List;
+    return jsonEncode({
+      'days': days,
+      'missingDays': missingDays([for (final d in days) (d as Map)['day'] as String]),
+    });
+  }
+
+  Future<String> _runFunnel(Map<String, Object?> a) async {
+    final id = a['id'];
+    final def = a['def'];
+    if ((id == null) == (def == null)) {
+      throw ToolFailure('Pass exactly one of "id" (saved funnel) or "def" (inline definition)');
+    }
+    final body = {'def': def ?? await _savedDef(id as int), ..._filterQuery(a)};
+    return _send('POST', 'funnels/run', body: jsonEncode(body));
+  }
+
+  Future<Map<String, Object?>> _savedDef(int id) async {
+    final list = jsonDecode(await _send('GET', 'funnels')) as List;
+    for (final f in list) {
+      if (f is Map && f['id'] == id) {
+        return {'name': f['name'], 'windowMinutes': f['windowMinutes'], 'steps': f['steps']};
+      }
+    }
+    throw ToolFailure('Funnel $id not found');
+  }
+
+  Future<String> _saveFunnel(Map<String, Object?> a) {
+    final body = jsonEncode(a['def']);
+    final id = a['id'];
+    return id == null ? _send('POST', 'funnels', body: body) : _send('PUT', 'funnels/$id', body: body);
+  }
+
+  Future<String> _deleteFunnel(Map<String, Object?> a) async {
+    await _send('DELETE', 'funnels/${a['id']}');
+    return jsonEncode({'deleted': a['id']});
+  }
+
+  Future<String> _importExport(Map<String, Object?> a) async {
+    final path = a['path'] as String;
+    final String text;
+    try {
+      text = await File(path).readAsString();
+    } on FileSystemException catch (e) {
+      throw ToolFailure('Cannot read $path: ${e.osError?.message ?? e.message}');
+    } on FormatException catch (e) {
+      throw ToolFailure('Cannot read $path: not UTF-8 text (${e.message})');
+    }
+    final dryRun = a['dry_run'] != false;
+    return _send('POST', 'import', query: {if (dryRun) 'dryRun': '1'}, body: text, contentType: 'text/plain');
+  }
+
+  /// One HTTP call; 2xx -> body text, anything else -> [ToolFailure].
+  Future<String> _send(String method, String path,
+      {Map<String, String> query = const {}, String? body, String contentType = 'application/json'}) async {
+    final resolved = _base.resolve(path);
+    final uri = query.isEmpty ? resolved : resolved.replace(queryParameters: query);
+    final http.Response res;
+    try {
+      final req = http.Request(method, uri);
+      if (body != null) {
+        req.headers['content-type'] = contentType;
+        req.body = body;
+      }
+      res = await http.Response.fromStream(await _http.send(req)).timeout(const Duration(seconds: 60));
+    } catch (e) {
+      throw ToolFailure(
+          'AnalyticTracker server not reachable at $baseUrl. Start it: cd server; dart run bin/server.dart ($e)');
+    }
+    if (res.statusCode >= 200 && res.statusCode < 300) return res.body;
+    String? message;
+    try {
+      final j = jsonDecode(res.body);
+      if (j is Map && j['error'] is String) message = j['error'] as String;
+    } on FormatException {
+      // not JSON; fall back to the status code
+    }
+    throw ToolFailure(message ?? 'HTTP ${res.statusCode}');
+  }
+}

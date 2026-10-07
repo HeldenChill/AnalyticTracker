@@ -10,3 +10,4 @@ export 'src/pull.dart';
 export 'src/raw_event.dart';
 export 'src/import_export.dart';
 export 'src/metrics_store.dart';
+export 'src/mcp_tools.dart';
