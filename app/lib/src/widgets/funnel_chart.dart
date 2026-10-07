@@ -66,22 +66,25 @@ class FunnelChart extends StatelessWidget {
           children: [
             for (final s in steps)
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  child: Column(
-                    children: [
-                      Text('${s.index + 1}. ${s.event}',
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600)),
-                      if (s.filterLabel != null)
-                        Text(s.filterLabel!,
+                child: Tooltip(
+                  message: s.text,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    child: Column(
+                      children: [
+                        Text('${s.index + 1}. ${s.eventsLabel}',
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                    ],
+                            style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600)),
+                        if (s.filterLabel != null)
+                          Text(s.filterLabel!,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                      ],
+                    ),
                   ),
                 ),
               ),

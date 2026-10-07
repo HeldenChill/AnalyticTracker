@@ -5,8 +5,9 @@ import '../theme/analytics_tokens.dart';
 import 'format.dart';
 
 class FunnelStepTable extends StatelessWidget {
-  const FunnelStepTable({super.key, required this.result});
+  const FunnelStepTable({super.key, required this.result, this.order = FunnelOrder.strict});
   final FunnelResult result;
+  final FunnelOrder order;
 
   @override
   Widget build(BuildContext context) {
@@ -28,22 +29,27 @@ class FunnelStepTable extends StatelessWidget {
 
     return DataTable(
       columnSpacing: 20,
-      columns: const [
-        DataColumn(label: Text('Step'), numeric: true),
-        DataColumn(label: Text('Event')),
-        DataColumn(label: Text('Filter')),
-        DataColumn(label: Text('Players'), numeric: true),
-        DataColumn(label: Text('From previous'), numeric: true),
-        DataColumn(label: Text('From first'), numeric: true),
-        DataColumn(label: Text('Dropped'), numeric: true),
-        DataColumn(label: Text('Median time'), numeric: true),
+      dataRowMaxHeight: double.infinity,
+      columns: [
+        const DataColumn(label: Text('Step'), numeric: true),
+        const DataColumn(label: Text('Event')),
+        const DataColumn(label: Text('Players'), numeric: true),
+        const DataColumn(label: Text('From previous'), numeric: true),
+        const DataColumn(label: Text('From first'), numeric: true),
+        const DataColumn(label: Text('Dropped'), numeric: true),
+        DataColumn(
+          label: Text(order == FunnelOrder.any ? 'Median time from step 1' : 'Median time'),
+          numeric: true,
+        ),
       ],
       rows: [
         for (final s in result.steps)
           DataRow(cells: [
             DataCell(Text('${s.index + 1}')),
-            DataCell(Text(s.event)),
-            DataCell(Text(s.filterLabel ?? '—')),
+            DataCell(ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(s.text)),
+            )),
             DataCell(Text('${s.players}')),
             DataCell(Text(fmtPct(s.fromPrevious))),
             DataCell(Text(fmtPct(s.fromFirst))),

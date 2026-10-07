@@ -172,7 +172,7 @@ class _FunnelResultView extends ConsumerWidget {
                       children: [
                         Text(def.name, style: theme.textTheme.titleLarge),
                         Chip(label: Text(funnelWindowLabel(def.windowMinutes))),
-                        const Chip(label: Text('Strict order')),
+                        Chip(label: Text(def.order.label)),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -195,7 +195,7 @@ class _FunnelResultView extends ConsumerWidget {
                     const SizedBox(height: 16),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      child: FunnelStepTable(result: r),
+                      child: FunnelStepTable(result: r, order: def.order),
                     ),
                   ],
                 ),
