@@ -28,6 +28,7 @@ class FunnelStore {
       windowMinutes: def.windowMinutes,
       steps: def.steps,
       updatedAt: r['updated_at'] as String,
+      order: def.order,
     );
   }
 

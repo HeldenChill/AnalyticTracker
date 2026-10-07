@@ -128,6 +128,15 @@ void main() {
       });
     });
 
+    test('saved any-order funnel keeps its order when run', () async {
+      final saved = [
+        {...savedList[0], 'order': 'any'},
+      ];
+      serve((req) => req.url.path == '/funnels' ? http.Response(jsonEncode(saved), 200) : http.Response('{}', 200));
+      await tools.call('run_funnel', {...range, 'id': 7});
+      expect((jsonDecode(seen[1].body) as Map)['def']['order'], 'any');
+    });
+
     test('unknown saved id is an error, no run request', () async {
       serve((req) => http.Response(jsonEncode(savedList), 200));
       final r = await tools.call('run_funnel', {...range, 'id': 99});

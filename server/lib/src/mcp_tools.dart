@@ -65,8 +65,13 @@ class AnalyticTools {
 
   static final _defSchema = Schema.object(
     description: 'Funnel definition: {"name": string, "windowMinutes": int or null (null = whole range), '
-        '"steps": [{"event": string, "params": [{"key": string, "value": string}]}]}. '
-        'Strict step order; max 10 steps; max 5 params per step, ANDed; values compared as text.',
+        '"order": "strict" (default) or "any", '
+        '"steps": [{"event": string, "params": [filter], "or": [{"event", "params"}], "exclude": [{"event", "params"}]}]}. '
+        'filter = {"key": string, "op": "eq" (default) | "ne" | "contains" | "gt" | "gte" | "lt" | "lte", "value": string} '
+        'or {"key": string, "op": "in", "values": [string]}. '
+        'Max 10 steps; max 5 filters per event, ANDed; "or" adds up to 2 alternative events; '
+        '"exclude" (strict order, not step 1, max 3) drops a player who does that event between the previous step and this one. '
+        'gt/gte/lt/lte compare numbers; other ops compare text; a missing param never matches.',
   );
 
   List<(Tool, ToolHandler)> _tools() => [
@@ -263,7 +268,12 @@ class AnalyticTools {
     final list = jsonDecode(await _send('GET', 'funnels')) as List;
     for (final f in list) {
       if (f is Map && f['id'] == id) {
-        return {'name': f['name'], 'windowMinutes': f['windowMinutes'], 'steps': f['steps']};
+        return {
+          'name': f['name'],
+          'windowMinutes': f['windowMinutes'],
+          'steps': f['steps'],
+          if (f['order'] != null) 'order': f['order'],
+        };
       }
     }
     throw ToolFailure('Funnel $id not found');
