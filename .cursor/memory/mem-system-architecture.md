@@ -1,9 +1,9 @@
-# Memory: AnalyticTracker — system architecture (as built, v3)
+# Memory: AnalyticTracker — system architecture (as built, v4)
 
 **ID:** `mem-system-architecture`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-06
-**Source of truth for definitions:** specs in `.cursor/plans/` (v1 `flutter-local-server-stack.md`, v2 `gameanalytics-dashboard-design.md` §5 metrics, v3 `funnels-and-styles-design.md` §3 funnel + §6 style tokens). Verify against code before edits.
+**Last updated:** 2026-10-07
+**Source of truth for definitions:** specs in `.cursor/plans/` (v1 `flutter-local-server-stack.md`, v2 `gameanalytics-dashboard-design.md` §5 metrics, v3 `funnels-and-styles-design.md` §3 funnel (amended 10-07) + §6 style tokens, v4 `mcp-server-design.md`). Verify against code before edits.
 
 ## Shape
 
@@ -37,7 +37,10 @@ Pull re-fetches last **3** days (late events) and fills missing days **oldest fi
 | `GET /overview`, `/retention`, `/progression` | `from`,`to` + optional `platform`,`version` |
 | `GET /events/count`, `/events/param`, `/events/param-keys` | Explore pages + funnel editor dropdowns |
 | `GET /funnel` (v1, csv steps) | kept for compatibility, unused by app |
-| `GET/POST /funnels`, `PUT/DELETE /funnels/<id>`, `POST /funnels/run` | saved funnels + run with `{def, from, to, platform?, version?}` |
+| `GET/POST /funnels`, `PUT/DELETE /funnels/<id>`, `POST /funnels/run` | saved funnels + run with `{def, from, to, platform?, version?, test?}` |
+| `POST /import[?dryRun=1]` | body = BigQuery export **text**; dry run `[{day, rows, stored}]`, apply replaces each day (v4) |
+
+**MCP (v4):** `server/bin/mcp.dart` (stdio, `dart_mcp`) → `AnalyticMcpServer` → `AnalyticTools` (14 pass-through tools over this API). Registered in repo `.mcp.json` as `analytic-tracker` via `cmd /c dart run ...`. No auth anywhere (BUG-0010).
 
 ## Key metric rules (summary — exact text in specs)
 

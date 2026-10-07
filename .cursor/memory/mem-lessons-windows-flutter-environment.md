@@ -2,7 +2,7 @@
 
 **ID:** `mem-lessons-windows-flutter-environment`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-06
+**Last updated:** 2026-10-07
 
 ## Machine facts (owner PC)
 

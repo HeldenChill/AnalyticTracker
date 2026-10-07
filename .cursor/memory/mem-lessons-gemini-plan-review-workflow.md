@@ -2,8 +2,8 @@
 
 **ID:** `mem-lessons-gemini-plan-review-workflow`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-06
-**Used for:** v1 (10 tasks), v2 (11 tasks), v3 (11 tasks) — all implemented by Gemini 3.8 correctly on first pass; review found only design/data gaps and cosmetic issues.
+**Last updated:** 2026-10-07
+**Used for:** v1 (10 tasks), v2 (11 tasks), v3 (11 tasks), v4 MCP (5 tasks, code pre-verified in worktree → 7 files byte-identical, zero review findings) — all implemented by Gemini 3.8 correctly on first pass; review found only design/data gaps and cosmetic issues.
 
 ## Loop
 

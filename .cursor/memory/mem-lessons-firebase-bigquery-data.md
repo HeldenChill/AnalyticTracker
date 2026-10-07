@@ -2,7 +2,7 @@
 
 **ID:** `mem-lessons-firebase-bigquery-data`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-06
+**Last updated:** 2026-10-07
 
 ## Platform facts
 
@@ -40,8 +40,8 @@ ORDER BY event_timestamp
 
 - Live builds use **old naming**: `level_N_start` / `level_N_complete`, `ftu_pet_buy`, `tut`, plus Firebase auto events (`user_engagement` with `engagement_time_msec`, `screen_view`, `session_start`, `first_open`, `app_remove`, `firebase_campaign`). 146 distinct names (one per level).
 - New Mode A `stg_*` events: ~6 rows → Progression page empty until new builds ship (expected).
-- `tut` exists **only from 2 test devices on 2026-10-01**; params `id` (Tut_1, Tut_2…) + `step` (`start` / `end` / `abort`) — string values, not numbers. A tutorial funnel needs both filters (BUG-0008).
-- **Test devices**: 730 events (15%) from 7 users carry `debug_event: 1` → pollute every metric (BUG-0007).
+- `tut` exists **only from 2 test devices on 2026-10-01**; params `id` (Tut_1, Tut_2…) + `step` (`start` / `end` / `abort`) — string values, not numbers. A tutorial funnel needs both filters — supported since 2026-10-07 (BUG-0008: `id = Tut_1, step = end`). Because all `tut` rows are test-device events, tutorial funnels show 0 unless "Test devices" / `include_test` is on.
+- **Test devices**: 730 events (15%) from 7 users carry `debug_event: 1`. Since 2026-10-07 (BUG-0007) excluded from every metric by default; app chip "Test devices" / API `test=1` / MCP `include_test` brings them back. Real DB 09-01..10-07: 2434 events with, 1704 without.
 - Days 09-23, 09-24, 09-27 absent → no table = no events (not an import error).
 - Before calling a metric wrong, query the DB read-only (`sqlite3 file:data/events.db?mode=ro`) for who sends the event, which params/values, and whether those users have `first_open` — two "funnel shows 0" suspicions this session were data facts, not engine bugs.
 

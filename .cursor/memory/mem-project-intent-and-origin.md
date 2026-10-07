@@ -2,7 +2,7 @@
 
 **ID:** `mem-project-intent-and-origin`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-06
+**Last updated:** 2026-10-07
 **Related:** `mem-system-architecture` (what exists now), `mem-lessons-firebase-bigquery-data`, `mem-lessons-windows-flutter-environment`, `mem-lessons-gemini-plan-review-workflow`, `mem-known-bugs-index`
 
 ## Intent (owner-stated)
@@ -12,15 +12,15 @@
 - **Job:** pull game analytics from Firebase (via BigQuery export) **daily**, keep own copy, show **GameAnalytics-style** analysis.
 - First data source: PetVsMonster (PVM). Repo: `D:\Projects\AnalyticTracker`, branch `feature/flutter-local-server`.
 
-## Roles in this project (2026-10-06 session)
+## Roles in this project
 
 | Who | Does |
 |---|---|
 | Owner | Decides every design fork; runs Gemini; performs IAM/OS/installer steps |
 | Claude | Research, brainstorming, specs, step-by-step plans, code review, runtime verification, small fixes on request |
-| Gemini 3.8 | Implements the plans task-by-task (v1, v2, v3), commits per task |
+| Gemini 3.8 | Implements the plans task-by-task (v1–v4), commits per task |
 
-## Decision timeline (all 2026-10-06)
+## Decision timeline (2026-10-06 unless dated)
 
 | Round | Owner decision | Result |
 |---|---|---|
@@ -33,17 +33,35 @@
 | Data access | SA key lacks BigQuery roles, owner cannot grant IAM now → **manual BigQuery console export + `bin/import.dart`** | 5,002 real events imported |
 | v2 | "Do like GameAnalytics": dashboards first (designer/PM), Overview + Retention + Progression, sidebar, global filters (date + platform + version), server-side SQL per page; Progression reads **`stg_*` only**; retention cohort = **`first_open`** | spec `gameanalytics-dashboard-design.md`, plan `gameanalytics-dashboard-implementation.md` |
 | v3 | Funnels like GameAnalytics: **strict order + time window**, **saved on server, shared**, **one param filter per step**; styles: owner asked for a **live web demo**, then chose **all four** with a Settings switch | spec `funnels-and-styles-design.md`, plan `funnels-and-styles-implementation.md`, demo https://claude.ai/artifact/Y3Qpmvo8jHbpuupEfWioDS |
+| v3.1 (10-07) | "Apply fix for all bug except IAM" → Claude's recommendations applied inline: exclude test devices by default + toggle; up to 5 ANDed param filters per funnel step | BUG-0005..0009 VERIFY_PENDING |
+| v4 (10-07) | MCP so Claude can use the app: analysis + manage funnels + data ops; owner now, team later; Dart stdio MCP over HTTP API | spec `mcp-server-design.md`, plan `mcp-server-implementation.md`, Gemini implemented, Claude reviewed OK |
 
-## Status (end of 2026-10-06 session)
+## Status (end of 2026-10-07 session) — START HERE
 
-- v1 + v2 + v3 implemented by Gemini, all committed (32 commits on the branch). Gates: shared 33, server 113, app 62 tests passing; analyze clean.
-- Windows release build verified by Claude at runtime against real data, including screenshots of all four styles and the Funnels page.
-- Real saved funnel in DB: "Level 1-2 progression" (first_open → level_1_start → level_1_complete → level_2_start → level_2_complete): 79 entered, 4% total, biggest drop level 1 start → complete (−72%).
+- Branch `feature/flutter-local-server`, HEAD `b7889b3`, tree clean, nothing pushed (owner pushes). v1–v4 committed.
+- Gates: shared **34**, server **140**, app **65** tests passing; analyze clean.
+- API server on :8080 was restarted by Claude with v4 code (has `POST /import`). If a new session finds 404 on `/import`, it is a stale server.
+- Saved funnel id 1 "Level 1-2 progression" (first_open → level_1_start → level_1_complete → level_2_start → level_2_complete): last 30 days, test devices off = 75 → 22 → 7 → 4 → 3, 4% total. (2026-10-06 figure 79 included test devices.)
+- Owner-side pending: (1) approve `analytic-tracker` project MCP in Claude Code → then Claude can call the 14 tools directly; (2) visual check of BUG-0005..0009 in the Windows app (build release, screenshots of all 4 styles: tooltip contrast/ints, KPI row of six at 1440 px, "Test devices" chip, two-filter funnel step) → move to RESOLVED.
+
+## Next-step candidates (owner picks)
+
+| Item | Note |
+|---|---|
+| Verify BUG-0005..0009 in app | Release build + screenshots; recipe in `mem-lessons-windows-flutter-environment` |
+| API token (BUG-0010) | Prerequisite before teammates use MCP/API; own spec |
+| `pull_now` MCP tool | Only after IAM fixed |
+| Other platforms (Android/iOS/Web) | Owner said after Windows settles |
+
+## History 2026-10-06
+
+- v1 + v2 + v3 implemented by Gemini (32 commits). Windows release build verified at runtime with screenshots of all four styles and the Funnels page. Review found BUG-0005..0009.
 
 ## 2026-10-07
 
 - Owner: "apply fix for all bug, except IAM" → Claude applied its recommendations for BUG-0005..0009 directly (no Gemini plan): test devices excluded by default + "Test devices" chip; 2+ ANDed param filters per funnel step (spec §3 amended). All VERIFY_PENDING until seen in the Windows app.
 - v4 MCP (brainstorm → spec → plan, same day): owner chose **analysis + manage funnels + data ops**, **owner now / team later**, approach **A = Dart stdio MCP (`dart_mcp`) calling the HTTP API** (not direct SQLite, not `/mcp` in shelf). No `pull_now` until IAM; no raw SQL; API token required before team use. Spec `mcp-server-design.md`, plan `mcp-server-implementation.md` (5 tasks, for Gemini).
+- v4 implemented by Gemini (commits b4f2f59..b7889b3), reviewed by Claude: all 7 new files byte-identical to plan; gates shared 34 / server 140 / app 65; runtime via `cmd /c dart run server/bin/mcp.dart` against live server OK (overview == API, funnel 1 = 75 → 3, 4%; import dry run 57 days all match; save/delete; server-down hint). Pending owner: approve `analytic-tracker` in Claude Code (`claude mcp list`). Risk BUG-0010 (no API auth) deferred.
 
 ## Open owner decisions
 
