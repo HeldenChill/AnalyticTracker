@@ -5,6 +5,8 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
 import 'event_store.dart';
+import 'import_export.dart';
+import 'raw_event.dart';
 
 const _maxFunnelSteps = 10;
 
@@ -115,6 +117,28 @@ Handler buildHandler(EventStore store) {
           if (body[k] is String) k: body[k] as String,
       });
       return _json(store.funnelEngine.run(def, f).toJson());
+    })
+    ..post('/import', (Request req) async {
+      // Body = BigQuery export file text (see parseBigQueryExport). The server
+      // never reads a client-supplied path.
+      final text = await req.readAsString();
+      if (text.trim().isEmpty) throw _BadRequest('Request body must be a BigQuery export');
+      final Map<String, List<RawEvent>> byDay;
+      try {
+        byDay = parseBigQueryExport(text);
+      } on FormatException catch (e) {
+        throw _BadRequest(e.message);
+      }
+      final days = byDay.keys.toList()..sort();
+      if (req.url.queryParameters['dryRun'] == '1') {
+        return _json([
+          for (final d in days) {'day': d, 'rows': byDay[d]!.length, 'stored': store.rowCount(d)},
+        ]);
+      }
+      for (final d in days) {
+        store.replaceDay(d, byDay[d]!);
+      }
+      return _json({for (final d in days) d: byDay[d]!.length});
     })
     ..post('/funnels', (Request req) async {
       final def = _parseDef(await _jsonBody(req));
