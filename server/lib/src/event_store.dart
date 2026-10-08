@@ -137,6 +137,17 @@ class EventStore {
     return [for (final r in rows) r['k'] as String];
   }
 
+  List<String> userPropKeys(String from, String to,
+      {String? platform, String? version, bool includeTest = false}) {
+    final (extra, extraArgs) = _extraFilters(platform, version, includeTest);
+    final rows = _db.select(
+      'SELECT DISTINCT j.key AS k FROM events, json_each(events.user_props_json) AS j '
+      'WHERE day BETWEEN ? AND ?$extra ORDER BY k;',
+      [from, to, ...extraArgs],
+    );
+    return [for (final r in rows) r['k'] as String];
+  }
+
   List<String> eventNames() => [
         for (final r in _db.select('SELECT DISTINCT event_name FROM events ORDER BY event_name;'))
           r['event_name'] as String,

@@ -108,6 +108,11 @@ Handler buildHandler(EventStore store) {
       return _json(store.paramKeys(name, f.from, f.to,
           platform: f.platform, version: f.version, includeTest: f.includeTest));
     })
+    ..get('/events/user-prop-keys', (Request req) {
+      final f = _filters(req.url.queryParameters);
+      return _json(store.userPropKeys(f.from, f.to,
+          platform: f.platform, version: f.version, includeTest: f.includeTest));
+    })
     ..get('/funnels', (Request req) => _json([for (final s in store.funnels.list()) s.toJson()]))
     ..post('/funnels/run', (Request req) async {
       final body = await _jsonBody(req);
