@@ -87,6 +87,56 @@ class FunnelEngine {
     return out;
   }
 
+  /// Filter players who converted (reached >= step) or dropped (reached == step - 1)
+  /// at step [step] (1-based, k >= 2), ordered by entryTs ascending.
+  FunnelPlayersResult players(
+    FunnelDef def,
+    Filters f, {
+    required int step,
+    required FunnelPlayerOutcome outcome,
+    FunnelBreakdown? breakdown,
+    String? segment,
+    int limit = 100,
+  }) {
+    if (step < 2 || step > def.steps.length) {
+      throw ArgumentError('Step out of range: $step (funnel has ${def.steps.length} steps)');
+    }
+    if (limit < 1 || limit > 500) {
+      throw ArgumentError('Limit must be between 1 and 500 (got $limit)');
+    }
+
+    var allPaths = paths(def, f, breakdown: breakdown);
+    if (segment != null) {
+      allPaths = allPaths.where((p) => p.segment == segment).toList();
+    }
+
+    final matched = <PlayerPath>[];
+    for (final p in allPaths) {
+      final isMatch = outcome == FunnelPlayerOutcome.converted
+          ? p.reached >= step
+          : p.reached == step - 1;
+      if (isMatch) {
+        matched.add(p);
+      }
+    }
+
+    matched.sort((a, b) {
+      final cmp = a.stepTs.first.compareTo(b.stepTs.first);
+      return cmp != 0 ? cmp : a.uid.compareTo(b.uid);
+    });
+
+    final total = matched.length;
+    final sliced = matched.take(limit).map((p) => FunnelPlayerItem(
+          uid: p.uid,
+          entryTs: p.stepTs.first,
+          reached: p.reached,
+          lastTs: p.stepTs.last,
+          stepTs: p.stepTs,
+        )).toList();
+
+    return FunnelPlayersResult(total: total, players: sliced);
+  }
+
   String _extractSegment(_Ev ev, FunnelBreakdown b) {
     switch (b.by) {
       case FunnelBreakdownBy.platform:

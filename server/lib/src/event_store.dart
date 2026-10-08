@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:analytic_shared/analytic_shared.dart';
@@ -220,6 +221,29 @@ class EventStore {
     ];
   }
 
+  /// Returns chronological events for [uid] within [fromTs, toTs] microseconds.
+  List<PlayerTimelineEvent> playerEvents(
+    String uid,
+    int fromTs,
+    int toTs, {
+    bool includeTest = false,
+    int limit = 300,
+  }) {
+    final rows = _db.select(
+      'SELECT ts_micros, event_name, params_json FROM events '
+      'WHERE user_pseudo_id = ? AND ts_micros BETWEEN ? AND ?${testEventsClause(includeTest)} '
+      'ORDER BY ts_micros ASC, id ASC LIMIT ?;',
+      [uid, fromTs, toTs, limit],
+    );
+    return [
+      for (final r in rows)
+        PlayerTimelineEvent(
+          ts: r['ts_micros'] as int,
+          event: r['event_name'] as String,
+          params: (jsonDecode(r['params_json'] as String) as Map<String, dynamic>?) ?? const {},
+        ),
+    ];
+  }
 
   void close() => _db.dispose();
 }
