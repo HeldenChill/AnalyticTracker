@@ -6,32 +6,34 @@ import 'package:sqlite3/sqlite3.dart';
 import 'metrics_store.dart' show testEventsClause;
 
 /// One player's walk through a funnel: [stepTs] holds the time of the row
-/// matched for steps 1..[reached], in step order.
+/// matched for steps 1..[reached], in step order. [segment] holds the breakdown
+/// value taken from the step-1 matched row.
 class PlayerPath {
-  const PlayerPath(this.uid, this.stepTs);
+  const PlayerPath(this.uid, this.stepTs, {this.segment});
 
   final String uid;
   final List<int> stepTs;
+  final String? segment;
 
   int get reached => stepTs.length;
 }
 
-/// Funnel with a conversion window counted from step 1, strict or any order.
-/// Definitions: v3 spec section 3 + v5 spec section 3
-/// (.cursor/plans/funnels-and-styles-design.md, funnel-upgrade-design.md).
 class FunnelEngine {
   FunnelEngine(this._db);
 
   final Database _db;
 
-  FunnelResult run(FunnelDef def, Filters f) => summarize(def, paths(def, f));
+  FunnelResult run(FunnelDef def, Filters f, {FunnelBreakdown? breakdown}) =>
+      summarize(def, paths(def, f, breakdown: breakdown), breakdown: breakdown);
 
   /// Every player whose step 1 happened in range, with how far they got.
-  // ponytail: loads all matching rows into memory (~5k events/month today);
-  // switch to a streaming cursor per player if a range reaches ~1M rows.
-  List<PlayerPath> paths(FunnelDef def, Filters f) {
+  List<PlayerPath> paths(FunnelDef def, Filters f, {FunnelBreakdown? breakdown}) {
     final error = def.validate();
     if (error != null) throw ArgumentError(error);
+    if (breakdown != null) {
+      final bErr = breakdown.validate();
+      if (bErr != null) throw ArgumentError(bErr);
+    }
     final steps = def.steps;
 
     final where = StringBuffer("day BETWEEN ? AND ? AND user_pseudo_id <> ''${testEventsClause(f.includeTest)}");
@@ -49,7 +51,7 @@ class FunnelEngine {
     }.toList();
     final marks = List.filled(names.length, '?').join(', ');
     final rows = _db.select(
-      'SELECT user_pseudo_id AS uid, event_name, ts_micros, params_json FROM events '
+      'SELECT user_pseudo_id AS uid, event_name, ts_micros, params_json, platform, app_version, user_props_json FROM events '
       'WHERE $where AND event_name IN ($marks) '
       'ORDER BY user_pseudo_id, ts_micros, id;',
       [...args, ...names],
@@ -63,18 +65,48 @@ class FunnelEngine {
       final events = <_Ev>[];
       while (i < rows.length && rows[i]['uid'] == uid) {
         final r = rows[i];
-        events.add(_Ev(r['event_name'] as String, r['ts_micros'] as int, r['params_json'] as String));
+        events.add(_Ev(
+          r['event_name'] as String,
+          r['ts_micros'] as int,
+          r['params_json'] as String,
+          platform: (r['platform'] as String?) ?? '',
+          appVersion: (r['app_version'] as String?) ?? '',
+          userPropsJson: (r['user_props_json'] as String?) ?? '{}',
+        ));
         i++;
       }
-      final stepTs = def.order == FunnelOrder.any
-          ? _walkAnyOrder(events, steps, windowMicros)
-          : _walkStrict(events, steps, windowMicros);
-      if (stepTs.isNotEmpty) out.add(PlayerPath(uid, stepTs));
+      final walkRes = def.order == FunnelOrder.any
+          ? _walkAnyOrderWithEntry(events, steps, windowMicros)
+          : _walkStrictWithEntry(events, steps, windowMicros);
+      if (walkRes != null) {
+        final (stepTs, step1Ev) = walkRes;
+        final seg = breakdown == null ? null : _extractSegment(step1Ev, breakdown);
+        out.add(PlayerPath(uid, stepTs, segment: seg));
+      }
     }
     return out;
   }
 
-  FunnelResult summarize(FunnelDef def, List<PlayerPath> paths) {
+  String _extractSegment(_Ev ev, FunnelBreakdown b) {
+    switch (b.by) {
+      case FunnelBreakdownBy.platform:
+        return ev.platform.isEmpty ? '(none)' : ev.platform;
+      case FunnelBreakdownBy.version:
+        return ev.appVersion.isEmpty ? '(none)' : ev.appVersion;
+      case FunnelBreakdownBy.param:
+        final val = ev.params[b.key!];
+        if (val == null) return '(none)';
+        final s = _paramText(val);
+        return s.isEmpty ? '(none)' : s;
+      case FunnelBreakdownBy.userProp:
+        final val = ev.userProps[b.key!];
+        if (val == null) return '(none)';
+        final s = _paramText(val);
+        return s.isEmpty ? '(none)' : s;
+    }
+  }
+
+  FunnelResult summarize(FunnelDef def, List<PlayerPath> paths, {FunnelBreakdown? breakdown}) {
     final steps = def.steps;
     final players = List<int>.filled(steps.length, 0);
     final gaps = List.generate(steps.length, (_) => <double>[]);
@@ -87,7 +119,7 @@ class FunnelEngine {
       }
     }
 
-    final first = players[0];
+    final first = players.isEmpty ? 0 : players[0];
     final out = <FunnelStepResult>[];
     for (var k = 0; k < steps.length; k++) {
       final prev = k == 0 ? null : players[k - 1];
@@ -117,20 +149,89 @@ class FunnelEngine {
       }
     }
 
+    final segResults = breakdown == null ? const <FunnelSegmentResult>[] : _aggregateSegments(def, paths);
+
     return FunnelResult(
       steps: out,
       totalConversion: first == 0 ? null : players.last / first,
       biggestDropIndex: biggest,
+      segments: segResults,
     );
   }
 
-  /// Entry = first step-1 row. Each later step = first row after the previous
-  /// match, inside the window. A row matching an exclusion of step k before
-  /// step k matches ends the walk (step match is checked first on each row).
-  List<int> _walkStrict(List<_Ev> evs, List<FunnelStepDef> steps, int? windowMicros) {
+  List<FunnelSegmentResult> _aggregateSegments(FunnelDef def, List<PlayerPath> paths) {
+    final groups = <String, List<PlayerPath>>{};
+    for (final p in paths) {
+      final key = p.segment ?? '(none)';
+      (groups[key] ??= []).add(p);
+    }
+
+    final sortedKeys = groups.keys.toList()
+      ..sort((a, b) {
+        final cmp = groups[b]!.length.compareTo(groups[a]!.length);
+        if (cmp != 0) return cmp;
+        return a.compareTo(b);
+      });
+
+    final List<String> topKeys;
+    final List<PlayerPath> otherPaths = [];
+    if (sortedKeys.length <= 5) {
+      topKeys = sortedKeys;
+    } else {
+      topKeys = sortedKeys.take(5).toList();
+      for (var i = 5; i < sortedKeys.length; i++) {
+        otherPaths.addAll(groups[sortedKeys[i]]!);
+      }
+    }
+
+    final out = <FunnelSegmentResult>[];
+    for (final key in topKeys) {
+      out.add(_buildSegmentResult(key, def, groups[key]!));
+    }
+    if (otherPaths.isNotEmpty) {
+      out.add(_buildSegmentResult('Other', def, otherPaths));
+    }
+    return out;
+  }
+
+  FunnelSegmentResult _buildSegmentResult(String segValue, FunnelDef def, List<PlayerPath> paths) {
+    final steps = def.steps;
+    final players = List<int>.filled(steps.length, 0);
+    final gaps = List.generate(steps.length, (_) => <double>[]);
+    for (final p in paths) {
+      for (var k = 0; k < p.reached; k++) {
+        players[k]++;
+        if (k == 0) continue;
+        final from = def.order == FunnelOrder.any ? p.stepTs[0] : p.stepTs[k - 1];
+        gaps[k].add((p.stepTs[k] - from) / 1000000);
+      }
+    }
+
+    final first = players.isEmpty ? 0 : players[0];
+    final stepResults = <FunnelSegmentStepResult>[];
+    for (var k = 0; k < steps.length; k++) {
+      final prev = k == 0 ? null : players[k - 1];
+      stepResults.add(FunnelSegmentStepResult(
+        players: players[k],
+        fromPrevious: (prev == null || prev == 0) ? null : players[k] / prev,
+        fromFirst: first == 0 ? null : players[k] / first,
+        dropped: prev == null ? null : prev - players[k],
+        medianSeconds: k == 0 ? null : _median(gaps[k]),
+      ));
+    }
+
+    return FunnelSegmentResult(
+      value: segValue,
+      steps: stepResults,
+      totalConversion: first == 0 ? null : players.last / first,
+    );
+  }
+
+  (List<int>, _Ev)? _walkStrictWithEntry(List<_Ev> evs, List<FunnelStepDef> steps, int? windowMicros) {
     var pos = evs.indexWhere((e) => _matchesStep(e, steps[0]));
-    if (pos < 0) return const [];
-    final entryTs = evs[pos].ts;
+    if (pos < 0) return null;
+    final entryEv = evs[pos];
+    final entryTs = entryEv.ts;
     final ts = [entryTs];
     for (var k = 1; k < steps.length; k++) {
       var found = -1;
@@ -141,111 +242,125 @@ class FunnelEngine {
           found = j;
           break;
         }
-        if (steps[k].exclude.any((m) => _matches(e, m))) break;
+        if (steps[k].exclude.any((m) => _matchesMatcher(e, m))) {
+          return (ts, entryEv);
+        }
       }
-      if (found < 0) break;
-      ts.add(evs[found].ts);
+      if (found < 0) return (ts, entryEv);
       pos = found;
+      ts.add(evs[pos].ts);
     }
-    return ts;
+    return (ts, entryEv);
   }
 
-  /// Entry = first step-1 row. Steps 2..n, in step order, each take the first
-  /// unused row after entry inside the window. Reached = longest prefix of
-  /// matched steps, so counts never rise from step to step.
-  List<int> _walkAnyOrder(List<_Ev> evs, List<FunnelStepDef> steps, int? windowMicros) {
-    final entry = evs.indexWhere((e) => _matchesStep(e, steps[0]));
-    if (entry < 0) return const [];
-    final entryTs = evs[entry].ts;
-    final used = <int>{entry};
+  (List<int>, _Ev)? _walkAnyOrderWithEntry(List<_Ev> evs, List<FunnelStepDef> steps, int? windowMicros) {
+    var pos = evs.indexWhere((e) => _matchesStep(e, steps[0]));
+    if (pos < 0) return null;
+    final entryEv = evs[pos];
+    final entryTs = entryEv.ts;
     final ts = [entryTs];
-    var prefix = true;
+
+    final used = <int>{pos};
     for (var k = 1; k < steps.length; k++) {
-      var found = -1;
-      for (var j = entry + 1; j < evs.length; j++) {
+      var matched = -1;
+      for (var j = pos + 1; j < evs.length; j++) {
+        if (used.contains(j)) continue;
         final e = evs[j];
         if (windowMicros != null && e.ts > entryTs + windowMicros) break;
-        if (!used.contains(j) && _matchesStep(e, steps[k])) {
-          found = j;
+        if (_matchesStep(e, steps[k])) {
+          matched = j;
           break;
         }
       }
-      if (found < 0) {
-        prefix = false;
-        continue;
-      }
-      used.add(found);
-      if (prefix) ts.add(evs[found].ts);
+      if (matched < 0) break;
+      used.add(matched);
+      ts.add(evs[matched].ts);
     }
-    return ts;
+    return (ts, entryEv);
   }
 
-  bool _matchesStep(_Ev e, FunnelStepDef s) => s.matchers.any((m) => _matches(e, m));
+  bool _matchesStep(_Ev e, FunnelStepDef step) => step.matchers.any((m) => _matchesMatcher(e, m));
 
-  bool _matches(_Ev e, StepMatcher m) =>
-      e.name == m.event && m.params.every((p) => _filterMatches(e.params[p.key], p));
+  bool _matchesMatcher(_Ev e, StepMatcher m) {
+    if (e.name != m.event) return false;
+    for (final p in m.params) {
+      if (!_matchesParam(e, p)) return false;
+    }
+    return true;
+  }
 
-  /// A missing param never matches, for every operator including "is not".
-  static bool _filterMatches(Object? raw, ParamFilter p) {
-    final text = _paramText(raw);
-    if (text == null) return false;
-    switch (p.op) {
+  bool _matchesParam(_Ev e, ParamFilter f) {
+    final v = e.params[f.key];
+    if (v == null) return false;
+    final text = _paramText(v);
+
+    switch (f.op) {
       case FilterOp.eq:
-        return text == p.value;
+        return text == (f.value ?? '');
       case FilterOp.ne:
-        return text != p.value;
+        return text != (f.value ?? '');
       case FilterOp.isIn:
-        return p.values.contains(text);
+        return f.values.contains(text);
       case FilterOp.contains:
-        return text.contains(p.value!);
+        final needle = f.value ?? '';
+        return needle.isEmpty ? true : text.contains(needle);
       case FilterOp.gt:
       case FilterOp.gte:
       case FilterOp.lt:
       case FilterOp.lte:
-        final a = raw is num ? raw.toDouble() : double.tryParse(text);
-        final b = double.tryParse(p.value!);
-        if (a == null || b == null) return false;
-        return switch (p.op) {
-          FilterOp.gt => a > b,
-          FilterOp.gte => a >= b,
-          FilterOp.lt => a < b,
-          _ => a <= b,
-        };
+        final left = num.tryParse(text);
+        final right = num.tryParse(f.value ?? '');
+        if (left == null || right == null) return false;
+        switch (f.op) {
+          case FilterOp.gt:
+            return left > right;
+          case FilterOp.gte:
+            return left >= right;
+          case FilterOp.lt:
+            return left < right;
+          case FilterOp.lte:
+            return left <= right;
+          default:
+            return false;
+        }
     }
   }
 
-  /// Same text form SQLite gives for CAST(json_extract(...) AS TEXT).
-  static String? _paramText(Object? v) {
-    if (v == null) return null;
-    if (v is String) return v;
-    if (v is bool) return v ? '1' : '0';
-    if (v is num) return '$v';
-    return jsonEncode(v);
+  static double? _median(List<double> list) {
+    if (list.isEmpty) return null;
+    final copy = [...list]..sort();
+    final mid = copy.length ~/ 2;
+    if (copy.length.isOdd) return copy[mid];
+    return (copy[mid - 1] + copy[mid]) / 2;
   }
 
-  static double? _median(List<double> xs) {
-    if (xs.isEmpty) return null;
-    final s = [...xs]..sort();
-    final mid = s.length ~/ 2;
-    return s.length.isOdd ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+  static String _paramText(Object? v) {
+    if (v == null) return '';
+    if (v is num || v is bool || v is String) return v.toString();
+    return jsonEncode(v);
   }
 }
 
 class _Ev {
-  _Ev(this.name, this.ts, this._paramsJson);
+  _Ev(
+    this.name,
+    this.ts,
+    this.paramsJson, {
+    this.platform = '',
+    this.appVersion = '',
+    this.userPropsJson = '{}',
+  });
 
   final String name;
   final int ts;
-  final String _paramsJson;
+  final String paramsJson;
+  final String platform;
+  final String appVersion;
+  final String userPropsJson;
 
-  late final Map<String, dynamic> params = _decode(_paramsJson);
+  Map<String, dynamic>? _params;
+  Map<String, dynamic> get params => _params ??= jsonDecode(paramsJson) as Map<String, dynamic>;
 
-  static Map<String, dynamic> _decode(String raw) {
-    try {
-      final v = jsonDecode(raw);
-      return v is Map<String, dynamic> ? v : const {};
-    } on FormatException {
-      return const {};
-    }
-  }
+  Map<String, dynamic>? _userProps;
+  Map<String, dynamic> get userProps => _userProps ??= jsonDecode(userPropsJson) as Map<String, dynamic>;
 }
