@@ -44,7 +44,10 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
   @override
   void didUpdateWidget(FunnelDrilldownPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.step != widget.step || oldWidget.segment != widget.segment) {
+    if (oldWidget.step != widget.step ||
+        oldWidget.segment != widget.segment ||
+        oldWidget.initialOutcome != widget.initialOutcome) {
+      _outcome = widget.initialOutcome;
       _selectedPlayer = null;
     }
   }

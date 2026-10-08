@@ -87,4 +87,57 @@ void main() {
     expect(find.text('step1'), findsOneWidget);
     expect(find.text('Step 1'), findsOneWidget); // Highlight badge
   });
+
+  testWidgets('FunnelDrilldownPanel updates outcome when rebuilt with different initialOutcome', (tester) async {
+    const def = FunnelDef(
+      name: 'F',
+      windowMinutes: 1440,
+      steps: [FunnelStepDef(event: 'step1'), FunnelStepDef(event: 'step2')],
+    );
+    const f = Filters(from: '2026-10-01', to: '2026-10-01');
+
+    var outcome = FunnelPlayerOutcome.dropped;
+    late StateSetter setParentState;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          apiClientProvider.overrideWithValue(_FakeApiClient()),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                setParentState = setState;
+                return FunnelDrilldownPanel(
+                  def: def,
+                  filters: f,
+                  step: 2,
+                  initialOutcome: outcome,
+                  onClose: () {},
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    expect(find.byType(SegmentedButton<FunnelPlayerOutcome>), findsOneWidget);
+    final segmentedBtn = tester.widget<SegmentedButton<FunnelPlayerOutcome>>(
+      find.byType(SegmentedButton<FunnelPlayerOutcome>),
+    );
+    expect(segmentedBtn.selected, equals({FunnelPlayerOutcome.dropped}));
+
+    setParentState(() {
+      outcome = FunnelPlayerOutcome.converted;
+    });
+    await tester.pumpAndSettle();
+
+    final updatedBtn = tester.widget<SegmentedButton<FunnelPlayerOutcome>>(
+      find.byType(SegmentedButton<FunnelPlayerOutcome>),
+    );
+    expect(updatedBtn.selected, equals({FunnelPlayerOutcome.converted}));
+  });
 }
