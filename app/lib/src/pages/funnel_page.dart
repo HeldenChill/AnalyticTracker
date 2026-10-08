@@ -149,7 +149,7 @@ class _FunnelResultView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final tokens = AnalyticsTokens.of(context);
-    final q = (def: def, filters: ref.watch(filtersProvider));
+    final q = (def: def, filters: ref.watch(filtersProvider), breakdown: null);
     return ref.watch(funnelResultProvider(q)).when(
           loading: () => const Padding(
             padding: EdgeInsets.all(32),

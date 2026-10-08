@@ -57,9 +57,15 @@ final paramProvider =
 final savedFunnelsProvider =
     FutureProvider<List<SavedFunnel>>((ref) => ref.watch(apiClientProvider).funnels());
 
-/// FunnelDef and Filters compare by value, so equal queries share one fetch.
-final funnelResultProvider = FutureProvider.family<FunnelResult, ({FunnelDef def, Filters filters})>(
-    (ref, q) => ref.watch(apiClientProvider).runFunnel(q.def, q.filters));
+final funnelBreakdownProvider = StateProvider.autoDispose<FunnelBreakdown?>((ref) => null);
+
+final userPropKeysProvider = FutureProvider.autoDispose.family<List<String>, Filters>((ref, f) =>
+    ref.watch(apiClientProvider).userPropKeys(f.from, f.to,
+        platform: f.platform, version: f.version, includeTest: f.includeTest));
+
+final funnelResultProvider = FutureProvider.autoDispose
+    .family<FunnelResult, ({FunnelDef def, Filters filters, FunnelBreakdown? breakdown})>(
+        (ref, q) => ref.watch(apiClientProvider).runFunnel(q.def, q.filters, breakdown: q.breakdown));
 
 final paramKeysProvider = FutureProvider.family<List<String>, ({String event, Filters filters})>(
     (ref, q) => ref.watch(apiClientProvider).paramKeys(q.event, q.filters));

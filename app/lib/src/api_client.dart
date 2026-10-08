@@ -149,6 +149,21 @@ class ApiClient {
     await _send('DELETE', 'funnels/$id');
   }
 
-  Future<FunnelResult> runFunnel(FunnelDef def, Filters f) async => FunnelResult.fromJson(
-      await _map(await _send('POST', 'funnels/run', body: {'def': def.toJson(), ...f.toQuery()}), 'funnels/run'));
+  Future<List<String>> userPropKeys(String from, String to,
+          {String? platform, String? version, bool includeTest = false}) async =>
+      [
+        for (final j in await _getList(
+            'events/user-prop-keys',
+            Filters(from: from, to: to, platform: platform, version: version, includeTest: includeTest).toQuery()))
+          j as String,
+      ];
+
+  Future<FunnelResult> runFunnel(FunnelDef def, Filters f, {FunnelBreakdown? breakdown}) async =>
+      FunnelResult.fromJson(await _map(
+          await _send('POST', 'funnels/run', body: {
+            'def': def.toJson(),
+            ...f.toQuery(),
+            if (breakdown != null) 'breakdown': breakdown.toJson(),
+          }),
+          'funnels/run'));
 }
