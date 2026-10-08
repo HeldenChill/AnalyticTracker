@@ -216,6 +216,46 @@ class AnalyticTools {
         ),
         (
           Tool(
+            name: 'funnel_players',
+            description: 'List players who converted or dropped at step k (k >= 2) of a funnel. '
+                'Pass id or inline def, step, outcome ("converted" or "dropped"), optional segment, limit (1..500).',
+            inputSchema: _filtered({
+              'id': Schema.int(description: 'Saved funnel id from list_funnels.'),
+              'def': _defSchema,
+              'step': Schema.int(description: '1-based step index k >= 2.'),
+              'outcome': EnumSchema.untitledSingleSelect(
+                description: 'Whether player converted at step k or dropped before it.',
+                values: ['converted', 'dropped'],
+              ),
+              'segment': Schema.string(description: 'Filter to a specific breakdown segment.'),
+              'breakdown_by': EnumSchema.untitledSingleSelect(
+                description: 'Segment breakdown dimension (needed if filtering by segment).',
+                values: ['platform', 'version', 'param', 'userProp'],
+              ),
+              'breakdown_key': Schema.string(description: 'Breakdown key for param or userProp.'),
+              'limit': Schema.int(description: 'Max players to return (default 100, max 500).'),
+            }, ['step', 'outcome']),
+            annotations: _read,
+          ),
+          _funnelPlayers,
+        ),
+        (
+          Tool(
+            name: 'player_events',
+            description: 'Chronological timeline of all events for one player between from_ts and to_ts microseconds.',
+            inputSchema: Schema.object(properties: {
+              'uid': Schema.string(description: 'Player user_pseudo_id.'),
+              'from_ts': Schema.int(description: 'Start time in microseconds.'),
+              'to_ts': Schema.int(description: 'End time in microseconds.'),
+              'include_test': Schema.bool(description: 'Include test-device events. Default false.'),
+              'limit': Schema.int(description: 'Max events (default 300, max 1000).'),
+            }, required: ['uid', 'from_ts', 'to_ts']),
+            annotations: _read,
+          ),
+          _playerEvents,
+        ),
+        (
+          Tool(
             name: 'save_funnel',
             description: 'Create a saved funnel, or update funnel id when id is given. Saved funnels are shared '
                 'with the whole team; last write wins.',
@@ -306,6 +346,38 @@ class AnalyticTools {
       }
     }
     throw ToolFailure('Funnel $id not found');
+  }
+
+  Future<String> _funnelPlayers(Map<String, Object?> a) async {
+    final id = a['id'];
+    final def = a['def'];
+    if ((id == null) == (def == null)) {
+      throw ToolFailure('Pass exactly one of "id" (saved funnel) or "def" (inline definition)');
+    }
+    final body = {
+      'def': def ?? await _savedDef(id as int),
+      ..._filterQuery(a),
+      'step': (a['step'] as num).toInt(),
+      'outcome': a['outcome'] as String,
+      if (a['limit'] != null) 'limit': (a['limit'] as num).toInt(),
+      if (a['segment'] != null) 'segment': a['segment'] as String,
+      if (a['breakdown_by'] case final String by)
+        'breakdown': {
+          'by': by,
+          if (a['breakdown_key'] case final String key) 'key': key,
+        },
+    };
+    return _send('POST', 'funnels/players', body: jsonEncode(body));
+  }
+
+  Future<String> _playerEvents(Map<String, Object?> a) async {
+    final uid = a['uid'] as String;
+    return _send('GET', 'players/$uid/events', query: {
+      'fromTs': (a['from_ts'] as num).toInt().toString(),
+      'toTs': (a['to_ts'] as num).toInt().toString(),
+      if (a['include_test'] == true) 'test': '1',
+      if (a['limit'] != null) 'limit': (a['limit'] as num).toInt().toString(),
+    });
   }
 
   Future<String> _saveFunnel(Map<String, Object?> a) {

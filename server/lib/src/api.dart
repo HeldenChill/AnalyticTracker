@@ -143,6 +143,59 @@ Handler buildHandler(EventStore store) {
       }
       return _json(store.funnelEngine.run(def, f, breakdown: breakdown, interval: interval).toJson());
     })
+    ..post('/funnels/players', (Request req) async {
+      final body = await _jsonBody(req);
+      final def = _parseDef(body['def']);
+      final f = _filters({
+        for (final k in const ['from', 'to', 'platform', 'version', 'test'])
+          if (body[k] is String) k: body[k] as String,
+      });
+
+      final stepRaw = body['step'];
+      if (stepRaw is! int) throw _BadRequest('"step" must be an integer');
+      if (stepRaw < 2 || stepRaw > def.steps.length) {
+        throw _BadRequest('Step out of range: $stepRaw');
+      }
+
+      final outcomeRaw = body['outcome'];
+      if (outcomeRaw is! String) throw _BadRequest('"outcome" is required');
+      final FunnelPlayerOutcome outcome;
+      try {
+        outcome = FunnelPlayerOutcome.parse(outcomeRaw);
+      } on FormatException {
+        throw _BadRequest('Unknown outcome "$outcomeRaw"');
+      }
+
+      int limit = 100;
+      if (body['limit'] != null) {
+        if (body['limit'] is! int) throw _BadRequest('"limit" must be an integer');
+        limit = body['limit'] as int;
+        if (limit < 1 || limit > 500) throw _BadRequest('"limit" must be between 1 and 500');
+      }
+
+      FunnelBreakdown? breakdown;
+      if (body['breakdown'] case final Map<String, dynamic> b) {
+        try {
+          breakdown = FunnelBreakdown.fromJson(b);
+        } on FormatException catch (e) {
+          throw _BadRequest(e.message);
+        }
+        final err = breakdown.validate();
+        if (err != null) throw _BadRequest(err);
+      }
+
+      final segment = body['segment'] as String?;
+
+      return _json(store.funnelEngine.players(
+        def,
+        f,
+        step: stepRaw,
+        outcome: outcome,
+        breakdown: breakdown,
+        segment: segment,
+        limit: limit,
+      ).toJson());
+    })
     ..post('/import', (Request req) async {
       // Body = BigQuery export file text (see parseBigQueryExport). The server
       // never reads a client-supplied path.
@@ -202,6 +255,35 @@ Handler buildHandler(EventStore store) {
         for (final b in store.paramBreakdown(name, key, f.from, f.to,
             platform: f.platform, version: f.version, includeTest: f.includeTest))
           b.toJson(),
+      ]);
+    })
+    ..get('/players/<uid>/events', (Request req, String uid) {
+      final q = req.url.queryParameters;
+      final fromTsRaw = q['fromTs'];
+      final toTsRaw = q['toTs'];
+      if (fromTsRaw == null || toTsRaw == null) {
+        throw _BadRequest('"fromTs" and "toTs" are required');
+      }
+      final fromTs = int.tryParse(fromTsRaw);
+      final toTs = int.tryParse(toTsRaw);
+      if (fromTs == null || toTs == null) {
+        throw _BadRequest('"fromTs" and "toTs" must be integer microseconds');
+      }
+      if (fromTs > toTs) throw _BadRequest('"fromTs" must be on or before "toTs"');
+
+      int limit = 300;
+      if (q['limit'] != null) {
+        final l = int.tryParse(q['limit']!);
+        if (l == null || l < 1 || l > 1000) {
+          throw _BadRequest('"limit" must be between 1 and 1000');
+        }
+        limit = l;
+      }
+      final includeTest = q['test'] == '1';
+
+      return _json([
+        for (final ev in store.playerEvents(uid, fromTs, toTs, includeTest: includeTest, limit: limit))
+          ev.toJson(),
       ]);
     })
     ..get('/funnel', (Request req) {

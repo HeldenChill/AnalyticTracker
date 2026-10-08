@@ -39,15 +39,18 @@ void main() {
 
   setUp(serve);
 
-  test('all 15 tools, spec order, with annotations', () {
+  test('all 17 tools, spec order, with annotations', () {
     expect(tools.all.keys, [
       'data_health', 'filter_options', 'list_events', 'overview', 'retention', 'progression',
-      'event_counts', 'param_keys', 'param_values', 'user_prop_keys', 'list_funnels', 'run_funnel', 'save_funnel',
-      'delete_funnel', 'import_export',
+      'event_counts', 'param_keys', 'param_values', 'user_prop_keys', 'list_funnels', 'run_funnel',
+      'funnel_players', 'player_events', 'save_funnel', 'delete_funnel', 'import_export',
     ]);
     bool? readOnly(String n) => tools.all[n]!.$1.toolAnnotations?.readOnlyHint;
     bool? destructive(String n) => tools.all[n]!.$1.toolAnnotations?.destructiveHint;
-    for (final n in ['data_health', 'overview', 'run_funnel', 'list_funnels', 'param_values', 'user_prop_keys']) {
+    for (final n in [
+      'data_health', 'overview', 'run_funnel', 'list_funnels', 'param_values', 'user_prop_keys',
+      'funnel_players', 'player_events',
+    ]) {
       expect(readOnly(n), isTrue, reason: n);
     }
     expect(readOnly('save_funnel'), isFalse);
