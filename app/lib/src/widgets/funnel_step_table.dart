@@ -1,5 +1,6 @@
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/analytics_tokens.dart';
 import 'format.dart';
@@ -8,6 +9,35 @@ class FunnelStepTable extends StatelessWidget {
   const FunnelStepTable({super.key, required this.result, this.order = FunnelOrder.strict});
   final FunnelResult result;
   final FunnelOrder order;
+
+  Future<void> _copyCsv(BuildContext context) async {
+    final csv = toCsv([
+      'Step',
+      'Event',
+      'Players',
+      'From previous',
+      'From first',
+      'Dropped',
+      order == FunnelOrder.any ? 'Median time from step 1' : 'Median time',
+    ], [
+      for (final s in result.steps)
+        [
+          s.index + 1,
+          s.text,
+          s.players,
+          fmtPct(s.fromPrevious),
+          fmtPct(s.fromFirst),
+          s.dropped ?? '',
+          fmtDuration(s.medianSeconds),
+        ],
+    ]);
+    await Clipboard.setData(ClipboardData(text: csv));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Copied CSV to clipboard')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +57,21 @@ class FunnelStepTable extends StatelessWidget {
       );
     }
 
-    return DataTable(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () => _copyCsv(context),
+              icon: const Icon(Icons.copy_outlined, size: 16),
+              label: const Text('Copy CSV'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        DataTable(
       columnSpacing: 20,
       dataRowMaxHeight: double.infinity,
       columns: [
@@ -56,6 +100,8 @@ class FunnelStepTable extends StatelessWidget {
             DataCell(dropped(s)),
             DataCell(Text(fmtDuration(s.medianSeconds))),
           ]),
+      ],
+        ),
       ],
     );
   }

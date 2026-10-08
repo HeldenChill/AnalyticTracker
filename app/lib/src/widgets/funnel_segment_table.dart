@@ -1,5 +1,6 @@
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/analytics_tokens.dart';
 import 'format.dart';
@@ -7,6 +8,29 @@ import 'format.dart';
 class FunnelSegmentTable extends StatelessWidget {
   const FunnelSegmentTable({super.key, required this.result});
   final FunnelResult result;
+
+  Future<void> _copyCsv(BuildContext context) async {
+    final csv = toCsv([
+      'Segment',
+      'Entered',
+      for (final s in result.steps) 'Step ${s.index + 1}',
+      'Total conversion',
+    ], [
+      for (final seg in result.segments)
+        [
+          seg.value,
+          seg.steps.isEmpty ? 0 : seg.steps.first.players,
+          for (final st in seg.steps) fmtPct(st.fromFirst),
+          fmtPct(seg.totalConversion),
+        ],
+    ]);
+    await Clipboard.setData(ClipboardData(text: csv));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Copied CSV to clipboard')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +40,21 @@ class FunnelSegmentTable extends StatelessWidget {
 
     if (segments.isEmpty) return const SizedBox.shrink();
 
-    return DataTable(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () => _copyCsv(context),
+              icon: const Icon(Icons.copy_outlined, size: 16),
+              label: const Text('Copy CSV'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        DataTable(
       columnSpacing: 24,
       columns: [
         const DataColumn(label: Text('Segment')),
@@ -50,6 +88,8 @@ class FunnelSegmentTable extends StatelessWidget {
             ]);
           }(),
         ],
+      ],
+        ),
       ],
     );
   }

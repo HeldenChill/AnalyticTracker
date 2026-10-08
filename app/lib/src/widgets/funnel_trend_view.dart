@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/analytics_tokens.dart';
 import 'format.dart';
@@ -26,6 +27,30 @@ class FunnelTrendView extends StatefulWidget {
 class _FunnelTrendViewState extends State<FunnelTrendView> {
   // 0 = Total conversion (all steps), k = Step 1 -> Step (k + 1)
   int _selectedStepIndex = 0;
+
+  Future<void> _copyCsv(BuildContext context) async {
+    final steps = widget.result.steps;
+    final csv = toCsv([
+      'Start',
+      for (final s in steps) 'Step ${s.index + 1}',
+      'Total conversion',
+      'Incomplete',
+    ], [
+      for (final t in widget.result.trend)
+        [
+          t.start,
+          for (final p in t.players) p,
+          fmtPct(t.totalConversion),
+          t.incomplete ? 'true' : 'false',
+        ],
+    ]);
+    await Clipboard.setData(ClipboardData(text: csv));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Copied CSV to clipboard')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +101,7 @@ class _FunnelTrendViewState extends State<FunnelTrendView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Controls: Interval toggle + Step Picker
+        // Controls: Interval toggle + Step Picker + Copy CSV
         Wrap(
           spacing: 16,
           runSpacing: 8,
@@ -104,6 +129,11 @@ class _FunnelTrendViewState extends State<FunnelTrendView> {
               onChanged: (v) {
                 if (v != null) setState(() => _selectedStepIndex = v);
               },
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _copyCsv(context),
+              icon: const Icon(Icons.copy_outlined, size: 16),
+              label: const Text('Copy CSV'),
             ),
           ],
         ),
