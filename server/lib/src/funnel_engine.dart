@@ -23,8 +23,8 @@ class FunnelEngine {
 
   final Database _db;
 
-  FunnelResult run(FunnelDef def, Filters f, {FunnelBreakdown? breakdown}) =>
-      summarize(def, paths(def, f, breakdown: breakdown), breakdown: breakdown);
+  FunnelResult run(FunnelDef def, Filters f, {FunnelBreakdown? breakdown, FunnelInterval? interval}) =>
+      summarize(def, paths(def, f, breakdown: breakdown), filters: f, breakdown: breakdown, interval: interval);
 
   /// Every player whose step 1 happened in range, with how far they got.
   List<PlayerPath> paths(FunnelDef def, Filters f, {FunnelBreakdown? breakdown}) {
@@ -106,7 +106,13 @@ class FunnelEngine {
     }
   }
 
-  FunnelResult summarize(FunnelDef def, List<PlayerPath> paths, {FunnelBreakdown? breakdown}) {
+  FunnelResult summarize(
+    FunnelDef def,
+    List<PlayerPath> paths, {
+    Filters? filters,
+    FunnelBreakdown? breakdown,
+    FunnelInterval? interval,
+  }) {
     final steps = def.steps;
     final players = List<int>.filled(steps.length, 0);
     final gaps = List.generate(steps.length, (_) => <double>[]);
@@ -150,12 +156,16 @@ class FunnelEngine {
     }
 
     final segResults = breakdown == null ? const <FunnelSegmentResult>[] : _aggregateSegments(def, paths);
+    final trendResults = (interval == null || filters == null)
+        ? const <FunnelTrendPoint>[]
+        : _aggregateTrend(def, paths, filters, interval);
 
     return FunnelResult(
       steps: out,
       totalConversion: first == 0 ? null : players.last / first,
       biggestDropIndex: biggest,
       segments: segResults,
+      trend: trendResults,
     );
   }
 
@@ -190,6 +200,82 @@ class FunnelEngine {
     }
     if (otherPaths.isNotEmpty) {
       out.add(_buildSegmentResult('Other', def, otherPaths));
+    }
+    return out;
+  }
+
+  List<FunnelTrendPoint> _aggregateTrend(
+    FunnelDef def,
+    List<PlayerPath> paths,
+    Filters filters,
+    FunnelInterval interval,
+  ) {
+    final steps = def.steps;
+    final from = filters.from;
+    final to = filters.to;
+    final toEndUtc = DateTime.parse('${to}T00:00:00Z').add(const Duration(days: 1));
+    final windowDuration = def.windowMinutes == null ? null : Duration(minutes: def.windowMinutes!);
+
+    final List<String> bucketStarts;
+    if (interval == FunnelInterval.day) {
+      bucketStarts = daysBetween(from, to);
+    } else {
+      final fromDate = DateTime.parse('${from}T00:00:00Z');
+      final firstMonday = fromDate.subtract(Duration(days: fromDate.weekday - 1));
+      final toDate = DateTime.parse('${to}T00:00:00Z');
+      final lastMonday = toDate.subtract(Duration(days: toDate.weekday - 1));
+
+      final weeks = <String>[];
+      for (var cur = firstMonday; !cur.isAfter(lastMonday); cur = cur.add(const Duration(days: 7))) {
+        weeks.add(formatDay(cur));
+      }
+      bucketStarts = weeks;
+    }
+
+    final byBucket = <String, List<PlayerPath>>{for (final s in bucketStarts) s: []};
+    for (final p in paths) {
+      if (p.stepTs.isEmpty) continue;
+      final entryDate = DateTime.fromMicrosecondsSinceEpoch(p.stepTs.first, isUtc: true);
+      final String key;
+      if (interval == FunnelInterval.day) {
+        key = formatDay(entryDate);
+      } else {
+        final monday = DateTime.utc(entryDate.year, entryDate.month, entryDate.day)
+            .subtract(Duration(days: entryDate.weekday - 1));
+        key = formatDay(monday);
+      }
+      byBucket[key]?.add(p);
+    }
+
+    final out = <FunnelTrendPoint>[];
+    for (var i = 0; i < bucketStarts.length; i++) {
+      final start = bucketStarts[i];
+      final bPaths = byBucket[start] ?? const [];
+      final players = List<int>.filled(steps.length, 0);
+      for (final p in bPaths) {
+        for (var k = 0; k < p.reached; k++) {
+          players[k]++;
+        }
+      }
+
+      final first = players.isEmpty ? 0 : players.first;
+      final double? totalConversion = (first == 0 || players.isEmpty) ? null : players.last / first;
+
+      final bool incomplete;
+      if (windowDuration == null) {
+        incomplete = i == bucketStarts.length - 1;
+      } else {
+        final bucketDuration = interval == FunnelInterval.day ? const Duration(days: 1) : const Duration(days: 7);
+        final bucketEndUtc = DateTime.parse('${start}T00:00:00Z').add(bucketDuration);
+        incomplete = bucketEndUtc.add(windowDuration).isAfter(toEndUtc);
+      }
+
+      out.add(FunnelTrendPoint(
+        start: start,
+        players: players,
+        totalConversion: totalConversion,
+        incomplete: incomplete,
+      ));
     }
     return out;
   }
