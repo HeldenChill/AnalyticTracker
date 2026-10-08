@@ -2,14 +2,14 @@
 
 **ID:** `mem-system-architecture`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-07
-**Source of truth for definitions:** specs in `.cursor/plans/` (v1 `flutter-local-server-stack.md`, v2 `gameanalytics-dashboard-design.md` §5 metrics, v3 `funnels-and-styles-design.md` §3 funnel (amended 10-07) + §6 style tokens, v4 `mcp-server-design.md`, **v5 `funnel-upgrade-design.md` — wave 1 built + reviewed 2026-10-07; waves 2–4 planned**). Verify against code before edits.
+**Last updated:** 2026-10-08
+**Source of truth for definitions:** specs in `.cursor/plans/` (v1 `flutter-local-server-stack.md`, v2 `gameanalytics-dashboard-design.md` §5 metrics, v3 `funnels-and-styles-design.md` §3 funnel (amended 10-07) + §6 style tokens, v4 `mcp-server-design.md`, **v5 `funnel-upgrade-design.md` — waves 1, 2, 3 built + reviewed; wave 4 planned**). Verify against code before edits.
 
 ## Shape
 
 | Package | Path | Role |
 |---|---|---|
-| `analytic_shared` | `shared/` | Day utils (`isValidDay`, `addDays` UTC, `daysBetween`, `missingDays`, table-name conversion), `Filters` value class, all JSON models (v1 models, dashboard models, funnel models with `FunnelDef.validate()`) |
+| `analytic_shared` | `shared/` | Day utils (`isValidDay`, `addDays` UTC, `daysBetween`, `missingDays`, table-name conversion), `Filters` value class, all JSON models (v1 models, dashboard models, funnel models with `FunnelDef.validate()`, `FunnelBreakdown`, `FunnelInterval`, `FunnelTrendPoint`) |
 | `analytic_server` | `server/` | `EventStore` (SQLite, WAL, busy_timeout 5000) + `metrics` (`MetricsStore`), `funnels` (`FunnelStore`), `funnelEngine` (`FunnelEngine`); BigQuery source; shelf API; CLIs `bin/pull.dart`, `bin/server.dart`, `bin/import.dart`; `tool/probe_datasets.dart` |
 | `analytic_app` | `app/` | Flutter (Riverpod 2.6.1 pinned, fl_chart, http, shared_preferences); `AppShell` sidebar + `FilterBar`; pages Overview / Retention / Progression / Funnels; Explore: Events / Parameters; Data health; Settings |
 
@@ -35,19 +35,22 @@ Pull re-fetches last **3** days (late events) and fills missing days **oldest fi
 |---|---|
 | `GET /days`, `/events/names`, `/filters` | health, event list, platform/version options |
 | `GET /overview`, `/retention`, `/progression` | `from`,`to` + optional `platform`,`version` |
-| `GET /events/count`, `/events/param`, `/events/param-keys` | Explore pages + funnel editor dropdowns |
+| `GET /events/count`, `/events/param`, `/events/param-keys`, `/events/user-prop-keys` | Explore pages + funnel editor/breakdown dropdowns |
 | `GET /funnel` (v1, csv steps) | kept for compatibility, unused by app |
-| `GET/POST /funnels`, `PUT/DELETE /funnels/<id>`, `POST /funnels/run` | saved funnels + run with `{def, from, to, platform?, version?, test?}` |
+| `GET/POST /funnels`, `PUT/DELETE /funnels/<id>`, `POST /funnels/run` | saved funnels + run with `{def, from, to, platform?, version?, test?, breakdown?, interval?}` |
 | `POST /import[?dryRun=1]` | body = BigQuery export **text**; dry run `[{day, rows, stored}]`, apply replaces each day (v4) |
 
-**MCP (v4):** `server/bin/mcp.dart` (stdio, `dart_mcp`) → `AnalyticMcpServer` → `AnalyticTools` (14 pass-through tools over this API). Registered in repo `.mcp.json` as `analytic-tracker` via `cmd /c dart run ...`. No auth anywhere (BUG-0010).
+**MCP (v4–v5):** `server/bin/mcp.dart` (stdio, `dart_mcp`) → `AnalyticMcpServer` → `AnalyticTools` (15 pass-through tools over this API, including `user_prop_keys` and `run_funnel` breakdown/interval). Registered in repo `.mcp.json` as `analytic-tracker` via `cmd /c dart run ...`. No auth anywhere (BUG-0010).
 
 ## Key metric rules (summary — exact text in specs)
 
 - Player = non-empty `user_pseudo_id`. DAU KPI = mean daily DAU over stored days in range. Sessions/DAU and Playtime/DAU null when DAU sum 0. Previous period = same length right before; null if no stored days.
 - Retention: cohort = earliest `first_open` across all data; D1/3/7/14/30 exact-day; cell null (blank) when not yet observable; weighted average skips nulls.
 - Progression: `stg_start/stg_cmp/stg_fail` + param `stg`; drop-off vs stage **N+1** (skipped stage = 0 players — v2 fix commit 0cfa1e1).
-- Funnel: strict order, entry = first step-1 event, greedy next match, window counted from step-1 time (≤ edge counts), step `params` = 0–5 ANDed `{key, value}` filters compared as text (legacy `paramKey/paramValue` JSON still read), median gap per step, biggest drop = lowest from-previous (earliest on tie).
+- Funnel (v5 paths core): single walk in `FunnelEngine.paths()` to `PlayerPath(uid, stepTs, segment)`.
+  - **Matching (wave 1):** strict/any order, entry = first step-1 event; `ParamFilter` operators (`eq`, `ne`, `in`, `contains`, `gt`, `gte`, `lt`, `lte`); OR alternatives (<=2); exclusion steps (<=3, strict only).
+  - **Breakdown (wave 2):** platform, app version, step-1 event param, user property; top 5 segments by entered players + "Other" + "(none)".
+  - **Trend (wave 3):** day & ISO week (Monday) bucketing in UTC, empty buckets preserved with 0 players and null totalConversion, incomplete flag on window overflow or last bucket of whole-range window. Steps/Trend view switch, `FunnelTrendView` (MetricLineChart with dashed incomplete points, interval toggle, step picker, entered players bar row).
 - Test devices: `Filters.includeTest` (query `test=1`, default off) — server `testEventsClause` drops events with `debug_event` = 1 on every metric/explore route (per event, json_extract per row).
 
 ## Planned v6 Analytic tab (spec draft, not built)

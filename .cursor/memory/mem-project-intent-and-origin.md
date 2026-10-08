@@ -2,7 +2,7 @@
 
 **ID:** `mem-project-intent-and-origin`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-07
+**Last updated:** 2026-10-08
 **Related:** `mem-system-architecture` (what exists now), `mem-lessons-firebase-bigquery-data`, `mem-lessons-windows-flutter-environment`, `mem-lessons-gemini-plan-review-workflow`, `mem-known-bugs-index`
 
 ## Intent (owner-stated)
@@ -10,7 +10,7 @@
 - **Standalone app**, separate from any game. Targets: **Windows first**, then Android / iOS / Web.
 - **Users:** small team (designer, PM, dev) reading shared dashboards — not a power-user query tool (query builder deferred).
 - **Job:** pull game analytics from Firebase (via BigQuery export) **daily**, keep own copy, show **GameAnalytics-style** analysis.
-- First data source: PetVsMonster (PVM). Repo: `D:\Projects\AnalyticTracker`, branch `feature/flutter-local-server`.
+- First data source: PetVsMonster (PVM). Repo: `D:\Projects\AnalyticTracker`, branch `main`.
 
 ## Roles in this project
 
@@ -18,7 +18,7 @@
 |---|---|
 | Owner | Decides every design fork; runs Gemini; performs IAM/OS/installer steps |
 | Claude | Research, brainstorming, specs, step-by-step plans, code review, runtime verification, small fixes on request |
-| Gemini 3.8 | Implements the plans task-by-task (v1–v4), commits per task |
+| Gemini 3.8 | Implements the plans task-by-task (v1–v5 wave 3), commits per task |
 
 ## Decision timeline (2026-10-06 unless dated)
 
@@ -35,27 +35,33 @@
 | v3 | Funnels like GameAnalytics: **strict order + time window**, **saved on server, shared**, **one param filter per step**; styles: owner asked for a **live web demo**, then chose **all four** with a Settings switch | spec `funnels-and-styles-design.md`, plan `funnels-and-styles-implementation.md`, demo https://claude.ai/artifact/Y3Qpmvo8jHbpuupEfWioDS |
 | v3.1 (10-07) | "Apply fix for all bug except IAM" → Claude's recommendations applied inline: exclude test devices by default + toggle; up to 5 ANDed param filters per funnel step | BUG-0005..0009 VERIFY_PENDING |
 | v4 (10-07) | MCP so Claude can use the app: analysis + manage funnels + data ops; owner now, team later; Dart stdio MCP over HTTP API | spec `mcp-server-design.md`, plan `mcp-server-implementation.md`, Gemini implemented, Claude reviewed OK |
-| v6 (10-07, draft) | New **Analytic** tab = data-science "hidden gems". Owner chose: clusters + churn drivers + associations + anomalies, **hybrid** per-player features, **Dart on server**; after research (`docs/research/analytic-ml-methods.md`) added level difficulty + quit wall, churn rules + last actions, survival + version impact, AI narrative = MCP prompt `weekly_insights`. Predictive per-player models out of scope (282 players) | spec `analytic-tab-design.md` (5 waves), uncommitted while Gemini runs v5 wave 1; awaiting owner spec review + 2 open defaults (§13: first-24h churn features; sequencing vs v5 waves 2–4) |
+| v5 Wave 1 (10-07) | Richer matching: param operators, OR alternatives, exclusion steps, Any-order mode | Implemented & reviewed; gates 42/158/76 |
+| v5 Wave 2 (10-08) | Compare segments: Platform, version, step-1 param, user property breakdown; top 5 + Other + (none) | Implemented & reviewed; 15 MCP tools |
+| v5 Wave 3 (10-08) | Trend over time: Day & week bucketing, ISO Monday alignment, empty buckets with nulls, incomplete overflow detection, Steps/Trend view switch, MetricLineChart dashed incomplete lines, entered players bar row | Implemented by Gemini (6 commits `f01f36f`..`91a2826`), gates 51/171/83 (305 total) clean |
+| v6 (10-07, draft) | New **Analytic** tab = data-science "hidden gems". Owner chose: clusters + churn drivers + associations + anomalies, **hybrid** per-player features, **Dart on server**; after research (`docs/research/analytic-ml-methods.md`) added level difficulty + quit wall, churn rules + last actions, survival + version impact, AI narrative = MCP prompt `weekly_insights`. Predictive per-player models out of scope (282 players) | spec `analytic-tab-design.md` (5 waves), awaiting owner spec review + 2 open defaults (§13) |
 
-## Status (end of 2026-10-07 session) — START HERE
+## Status (end of 2026-10-08 Wave 3 session) — START HERE
 
-- **v6 Analytic tab (newest thread):** spec + research committed by owner in `b8829f5`. **Wave 1 plan written 2026-10-07: `.cursor/plans/analytic-wave1-implementation.md` (Tasks 0–7, clusters + MCP tool `analysis_clusters` + prompt `weekly_insights`), pre-verified + replayed per task in a throwaway worktree; gates shared 42→44, server 158→167→176→180→184, app 76→80; plan identity check 42/42.** Plan + spec amendment (§3/§4 + file tables) are **uncommitted** (repo now on `main`; Claude did not commit on main unasked). Next: owner commits docs → runs Gemini → Claude reviews. Details: section "v6 Analytic tab — handoff" below.
-- **Branch change (seen 2026-10-07 evening):** owner merged `feature/flutter-local-server` into `main` and pushed; `main` = `origin/main` = `b8829f5`. Lines below that say "branch feature/..." are history.
-- Branch `feature/flutter-local-server`, HEAD `0f25689`, v1–v5 wave 1 committed, nothing pushed (owner pushes). **v5 funnel upgrade: wave 1 implemented by Gemini (6 commits, Tasks 1–6) and reviewed by Claude 2026-10-07 — 11 whole files byte-identical to plan + all exact edits verbatim, gates 42/158/75, Task 7 API checks pass (funnel 1 = 75 → 22 → 7 → 4 → 3; any-order `first_open` → `level_1_start` or `level_2_start` = 75 → 24, median 80 s; op `">="` → 400). Owner is doing the manual UI walkthrough (Task 7 Step 4); first owner finding = BUG-0011, fixed by Claude, uncommitted (`app/lib/src/widgets/funnel_editor.dart` + `app/test/funnel_editor_matching_test.dart`, app gates 76). Release exe rebuilt 16:20 with the fix.** Details: section "v5 funnel upgrade — handoff" below.
-- Gates: before wave 1 34 / 140 / 65; after wave 1 (verified) shared **42**, server **158**, app **75**; + BUG-0011 test → app **76**.
-- v5 = `funnel-upgrade-design.md` (4 waves: 1 richer matching + point-and-click editor, 2 compare segments, 3 trend, 4 who dropped + timeline + CSV). Wave 1 plan `funnel-wave1-implementation.md` (Tasks 0–7); code pre-verified task by task in a throwaway worktree. Done: Gemini implemented, Claude reviewed. Next: owner finishes Task 7 Step 4 checklist (8 items) → commit BUG-0011 fix → wave 2 plan.
-- API server on :8080 was restarted by Claude 2026-10-07 ~16:05 with v5 wave 1 code (accepts `op`/`or`/`exclude`/`order`). A 400 on a valid any-order def = stale server.
-- Saved funnel id 1 "Level 1-2 progression" (first_open → level_1_start → level_1_complete → level_2_start → level_2_complete): last 30 days, test devices off = 75 → 22 → 7 → 4 → 3, 4% total. (2026-10-06 figure 79 included test devices.)
-- `analytic-tracker` MCP: the 14 `mcp__analytic-tracker__*` tools were listed in the 2026-10-07 session (approval done; not called yet).
-- Owner-side pending: visual check of BUG-0005..0009 in the Windows app (build release, screenshots of all 4 styles: tooltip contrast/ints, KPI row of six at 1440 px, "Test devices" chip, two-filter funnel step) → move to RESOLVED.
+- **Branch:** `main` (clean working tree). All commits for v5 Wave 1, Wave 2, and Wave 3 committed.
+- **v5 funnel upgrade Wave 3 complete:**
+  - Shared: `FunnelInterval` (`day`, `week`), `FunnelTrendPoint`, `FunnelResult.trend`.
+  - Server: `FunnelEngine.run(..., interval: ...)` aggregates by entry day or ISO week Monday (UTC), covers all buckets in date range (empty buckets preserved with 0 players and null conversion), flags `incomplete` on window overflow or last whole-range bucket.
+  - Server API & MCP: `POST /funnels/run` accepts `interval`; MCP `run_funnel` schema and handler support `interval`.
+  - App: `ApiClient.runFunnel(..., interval: ...)`, `funnelIntervalProvider`, `funnelResultProvider` with interval.
+  - App UI: `FunnelPage` has **Steps / Trend** view switch; in Trend mode renders `FunnelTrendView` with Day/Week toggle, step picker dropdown ("Total conversion" or "Step 1 -> Step k"), `MetricLineChart` with dashed segments for incomplete points and `%` tooltip format, and entered players per bucket bar row.
+  - Test gates: shared **51**, server **171**, app **83** (total **305** tests pass, all 3 analyzers say `No issues found!`).
+- **Next up: v5 Wave 4 — Drill-down:**
+  - Features: player list per step ("who dropped"), in-app event timeline (1h before entry to 24h after last matched step, capped at 300 rows), CSV export via copy to clipboard.
+  - Spec: `.cursor/plans/funnel-upgrade-design.md` §6 (Wave 4) and §8.
+  - Next step: write `.cursor/plans/funnel-wave4-implementation.md`.
 
 ## Next-step candidates (owner picks)
 
 | Item | Note |
 |---|---|
-| v6 Analytic wave 1 | Owner commits plan + spec amendment → Gemini runs `analytic-wave1-implementation.md` → Claude reviews (identity check script pattern, Task 7 numbers); §13 defaults (first-24h churn features, sequencing vs v5 waves 2–4) still open, needed before wave 2 |
-| v5 wave 1 manual UI check (Task 7 Step 4) | **Owner doing it now** in the 16:20 release build. `tut` needs the "Test devices" chip on (test-only event). Owner reports PASS/FAIL per item → verify BUG-0011 → commit fix → wave 2 (segments) plan |
-| Verify BUG-0005..0009 in app | Release build + screenshots; recipe in `mem-lessons-windows-flutter-environment` |
+| **v5 Funnel Wave 4 plan** | **Planned next:** Write `.cursor/plans/funnel-wave4-implementation.md` (who dropped + timeline + clipboard CSV export) |
+| v6 Analytic wave 1 | Spec `analytic-tab-design.md` + plan `analytic-wave1-implementation.md` ready; waiting on sequencing decision vs v5 waves |
+| Verify BUG-0005..0009, 0011 in app | Release build + screenshots; recipe in `mem-lessons-windows-flutter-environment` |
 | API token (BUG-0010) | Prerequisite before teammates use MCP/API; own spec |
 | `pull_now` MCP tool | Only after IAM fixed |
 | Other platforms (Android/iOS/Web) | Owner said after Windows settles |
