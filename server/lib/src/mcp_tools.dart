@@ -205,6 +205,10 @@ class AnalyticTools {
               'breakdown_key': Schema.string(
                 description: 'Parameter key or user property key when breakdown_by is param or userProp.',
               ),
+              'interval': EnumSchema.untitledSingleSelect(
+                description: 'Bucketing interval for trend over time ("day" or "week").',
+                values: ['day', 'week'],
+              ),
             }),
             annotations: _read,
           ),
@@ -284,6 +288,7 @@ class AnalyticTools {
           'by': by,
           if (a['breakdown_key'] case final String key) 'key': key,
         },
+      if (a['interval'] case final String interval) 'interval': interval,
     };
     return _send('POST', 'funnels/run', body: jsonEncode(body));
   }

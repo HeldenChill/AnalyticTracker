@@ -131,7 +131,17 @@ Handler buildHandler(EventStore store) {
         final err = breakdown.validate();
         if (err != null) throw _BadRequest(err);
       }
-      return _json(store.funnelEngine.run(def, f, breakdown: breakdown).toJson());
+      FunnelInterval? interval;
+      if (body['interval'] case final String it) {
+        try {
+          interval = FunnelInterval.parse(it);
+        } on FormatException catch (e) {
+          throw _BadRequest(e.message);
+        }
+      } else if (body['interval'] != null) {
+        throw _BadRequest('Unknown interval "${body['interval']}"');
+      }
+      return _json(store.funnelEngine.run(def, f, breakdown: breakdown, interval: interval).toJson());
     })
     ..post('/import', (Request req) async {
       // Body = BigQuery export file text (see parseBigQueryExport). The server

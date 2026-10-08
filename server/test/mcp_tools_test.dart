@@ -138,6 +138,22 @@ void main() {
       });
     });
 
+    test('interval parameter passes interval string', () async {
+      const def = {'name': 'x', 'windowMinutes': null, 'steps': [{'event': 'a', 'params': []}]};
+      await tools.call('run_funnel', {
+        ...range,
+        'def': def,
+        'interval': 'day',
+      });
+      expect(seen.single.method, 'POST');
+      expect(seen.single.url.path, '/funnels/run');
+      expect(jsonDecode(seen.single.body), {
+        'def': def,
+        ...range,
+        'interval': 'day',
+      });
+    });
+
     test('saved id fetches /funnels then runs its def', () async {
       serve((req) => req.url.path == '/funnels' ? http.Response(jsonEncode(savedList), 200) : http.Response('{}', 200));
       await tools.call('run_funnel', {...range, 'id': 7});
