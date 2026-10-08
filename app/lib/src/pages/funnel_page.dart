@@ -8,6 +8,7 @@ import '../theme/analytics_tokens.dart';
 import '../widgets/error_retry.dart';
 import '../widgets/format.dart';
 import '../widgets/funnel_chart.dart';
+import '../widgets/funnel_drilldown_panel.dart';
 import '../widgets/funnel_editor.dart';
 import '../widgets/funnel_segment_table.dart';
 import '../widgets/funnel_step_table.dart';
@@ -159,6 +160,7 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
   FunnelBreakdownBy? _breakdownBy;
   String? _paramKey;
   String? _userPropKey;
+  ({int step, FunnelPlayerOutcome outcome, String? segment})? _drillDown;
 
   @override
   Widget build(BuildContext context) {
@@ -199,7 +201,7 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
                 : ref.watch(paramKeysProvider((event: step1Event, filters: filters))).valueOrNull ?? const [];
             final userPropKeys = ref.watch(userPropKeysProvider(filters)).valueOrNull ?? const [];
 
-            return Card(
+            final mainCard = Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -297,7 +299,11 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
                           child: Text('No players reached step 1 in this range'),
                         ),
                       const SizedBox(height: 16),
-                      FunnelChart(result: r),
+                      FunnelChart(
+                        result: r,
+                        onSelectStep: (step, outcome) =>
+                            setState(() => _drillDown = (step: step, outcome: outcome, segment: null)),
+                      ),
                       const SizedBox(height: 16),
                       if (r.segments.isNotEmpty) ...[
                         Text('Segments', style: theme.textTheme.titleMedium),
@@ -312,12 +318,39 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
                       const SizedBox(height: 8),
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
-                        child: FunnelStepTable(result: r, order: widget.def.order),
+                        child: FunnelStepTable(
+                          result: r,
+                          order: widget.def.order,
+                          onSelectStep: (step, outcome) =>
+                              setState(() => _drillDown = (step: step, outcome: outcome, segment: null)),
+                        ),
                       ),
                     ],
                   ],
                 ),
               ),
+            );
+
+            if (_drillDown == null) return mainCard;
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: mainCard),
+                const SizedBox(width: 16),
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: FunnelDrilldownPanel(
+                    def: widget.def,
+                    filters: filters,
+                    step: _drillDown!.step,
+                    initialOutcome: _drillDown!.outcome,
+                    breakdown: breakdown,
+                    segment: _drillDown!.segment,
+                    onClose: () => setState(() => _drillDown = null),
+                  ),
+                ),
+              ],
             );
           },
         );

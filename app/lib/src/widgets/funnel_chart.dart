@@ -5,21 +5,23 @@ import '../theme/analytics_tokens.dart';
 import 'format.dart';
 
 class FunnelChart extends StatelessWidget {
-  const FunnelChart({super.key, required this.result});
+  const FunnelChart({super.key, required this.result, this.onSelectStep});
   final FunnelResult result;
+  final void Function(int step, FunnelPlayerOutcome outcome)? onSelectStep;
 
   @override
   Widget build(BuildContext context) {
     if (result.segments.isNotEmpty) {
       return _GroupedFunnelChart(result: result);
     }
-    return _StandardFunnelChart(result: result);
+    return _StandardFunnelChart(result: result, onSelectStep: onSelectStep);
   }
 }
 
 class _StandardFunnelChart extends StatelessWidget {
-  const _StandardFunnelChart({required this.result});
+  const _StandardFunnelChart({required this.result, this.onSelectStep});
   final FunnelResult result;
+  final void Function(int step, FunnelPlayerOutcome outcome)? onSelectStep;
 
   @override
   Widget build(BuildContext context) {
@@ -57,8 +59,26 @@ class _StandardFunnelChart extends StatelessWidget {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
-                                   Container(height: c.maxHeight * lost, color: tokens.bad.withValues(alpha: 0.25)),
-                                   Container(height: c.maxHeight * kept, color: tokens.chart.first),
+                                  GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: s.index >= 1 && onSelectStep != null
+                                        ? () => onSelectStep!(s.index + 1, FunnelPlayerOutcome.dropped)
+                                        : null,
+                                    child: Container(
+                                      height: c.maxHeight * lost,
+                                      color: tokens.bad.withValues(alpha: 0.25),
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: s.index >= 1 && onSelectStep != null
+                                        ? () => onSelectStep!(s.index + 1, FunnelPlayerOutcome.converted)
+                                        : null,
+                                    child: Container(
+                                      height: c.maxHeight * kept,
+                                      color: tokens.chart.first,
+                                    ),
+                                  ),
                                 ],
                               ),
                             );
