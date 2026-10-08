@@ -80,3 +80,36 @@ final paramValuesProvider =
       platform: q.filters.platform, version: q.filters.version, includeTest: q.filters.includeTest);
   return [for (final b in buckets) if (b.value != '(none)') b];
 });
+
+final funnelPlayersProvider = FutureProvider.autoDispose.family<FunnelPlayersResult, ({
+  FunnelDef def,
+  Filters filters,
+  int step,
+  FunnelPlayerOutcome outcome,
+  FunnelBreakdown? breakdown,
+  String? segment,
+  int? limit,
+})>((ref, q) => ref.watch(apiClientProvider).funnelPlayers(
+  q.def,
+  q.filters,
+  step: q.step,
+  outcome: q.outcome,
+  breakdown: q.breakdown,
+  segment: q.segment,
+  limit: q.limit ?? 100,
+));
+
+final playerEventsProvider = FutureProvider.autoDispose.family<List<PlayerTimelineEvent>, ({
+  String uid,
+  int fromTs,
+  int toTs,
+  bool includeTest,
+  int? limit,
+})>((ref, q) => ref.watch(apiClientProvider).playerEvents(
+  q.uid,
+  fromTs: q.fromTs,
+  toTs: q.toTs,
+  includeTest: q.includeTest,
+  limit: q.limit ?? 300,
+));
+

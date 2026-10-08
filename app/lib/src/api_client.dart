@@ -168,4 +168,43 @@ class ApiClient {
             if (interval != null) 'interval': interval.wire,
           }),
           'funnels/run'));
+
+  Future<FunnelPlayersResult> funnelPlayers(
+    FunnelDef def,
+    Filters f, {
+    required int step,
+    required FunnelPlayerOutcome outcome,
+    FunnelBreakdown? breakdown,
+    String? segment,
+    int limit = 100,
+  }) async =>
+      FunnelPlayersResult.fromJson(await _map(
+        await _send('POST', 'funnels/players', body: {
+          'def': def.toJson(),
+          ...f.toQuery(),
+          'step': step,
+          'outcome': outcome.wire,
+          if (breakdown != null) 'breakdown': breakdown.toJson(),
+          if (segment != null) 'segment': segment,
+          'limit': limit,
+        }),
+        'funnels/players',
+      ));
+
+  Future<List<PlayerTimelineEvent>> playerEvents(
+    String uid, {
+    required int fromTs,
+    required int toTs,
+    bool includeTest = false,
+    int limit = 300,
+  }) async =>
+      [
+        for (final j in await _getList('players/$uid/events', {
+          'fromTs': fromTs.toString(),
+          'toTs': toTs.toString(),
+          if (includeTest) 'test': '1',
+          'limit': limit.toString(),
+        }))
+          PlayerTimelineEvent.fromJson(j as Map<String, dynamic>),
+      ];
 }
