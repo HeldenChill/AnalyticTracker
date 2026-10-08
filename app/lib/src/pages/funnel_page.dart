@@ -11,6 +11,7 @@ import '../widgets/funnel_chart.dart';
 import '../widgets/funnel_editor.dart';
 import '../widgets/funnel_segment_table.dart';
 import '../widgets/funnel_step_table.dart';
+import '../widgets/funnel_trend_view.dart';
 
 class FunnelPage extends ConsumerStatefulWidget {
   const FunnelPage({super.key});
@@ -142,6 +143,8 @@ class _FunnelPageState extends ConsumerState<FunnelPage> {
   }
 }
 
+enum _FunnelViewMode { steps, trend }
+
 class _FunnelResultView extends ConsumerStatefulWidget {
   const _FunnelResultView({required this.def});
   final FunnelDef def;
@@ -151,6 +154,8 @@ class _FunnelResultView extends ConsumerStatefulWidget {
 }
 
 class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
+  _FunnelViewMode _viewMode = _FunnelViewMode.steps;
+  FunnelInterval _interval = FunnelInterval.day;
   FunnelBreakdownBy? _breakdownBy;
   String? _paramKey;
   String? _userPropKey;
@@ -172,7 +177,12 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
       breakdown = FunnelBreakdown(by: FunnelBreakdownBy.userProp, key: _userPropKey);
     }
 
-    final q = (def: widget.def, filters: filters, breakdown: breakdown, interval: null);
+    final q = (
+      def: widget.def,
+      filters: filters,
+      breakdown: breakdown,
+      interval: _viewMode == _FunnelViewMode.trend ? _interval : null,
+    );
     return ref.watch(funnelResultProvider(q)).when(
           loading: () => const Padding(
             padding: EdgeInsets.all(32),
@@ -203,89 +213,108 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
                         Text(widget.def.name, style: theme.textTheme.titleLarge),
                         Chip(label: Text(funnelWindowLabel(widget.def.windowMinutes))),
                         Chip(label: Text(widget.def.order.label)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // Breakdown selector row
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 8,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        const Text('Breakdown:'),
-                        DropdownButton<FunnelBreakdownBy?>(
-                          value: _breakdownBy,
-                          hint: const Text('None'),
-                          items: [
-                            const DropdownMenuItem(value: null, child: Text('None')),
-                            for (final b in FunnelBreakdownBy.values)
-                              DropdownMenuItem(value: b, child: Text(b.label)),
+                        const SizedBox(width: 8),
+                        SegmentedButton<_FunnelViewMode>(
+                          segments: const [
+                            ButtonSegment(value: _FunnelViewMode.steps, label: Text('Steps')),
+                            ButtonSegment(value: _FunnelViewMode.trend, label: Text('Trend')),
                           ],
-                          onChanged: (val) {
-                            setState(() {
-                              _breakdownBy = val;
-                              _paramKey = null;
-                              _userPropKey = null;
-                            });
-                          },
+                          selected: {_viewMode},
+                          showSelectedIcon: false,
+                          onSelectionChanged: (s) => setState(() => _viewMode = s.first),
                         ),
-                        if (_breakdownBy == FunnelBreakdownBy.param) ...[
-                          DropdownButton<String>(
-                            value: _paramKey,
-                            hint: const Text('Pick param'),
-                            items: [
-                              for (final k in step1ParamKeys)
-                                DropdownMenuItem(value: k, child: Text(k)),
-                            ],
-                            onChanged: (k) => setState(() => _paramKey = k),
-                          ),
-                        ],
-                        if (_breakdownBy == FunnelBreakdownBy.userProp) ...[
-                          DropdownButton<String>(
-                            value: _userPropKey,
-                            hint: const Text('Pick user property'),
-                            items: [
-                              for (final k in userPropKeys)
-                                DropdownMenuItem(value: k, child: Text(k)),
-                            ],
-                            onChanged: (k) => setState(() => _userPropKey = k),
-                          ),
-                        ],
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    Wrap(spacing: 36, runSpacing: 12, children: [
-                      _Stat(value: fmtPct(r.totalConversion), label: 'Total conversion'),
-                      _Stat(value: '$first', label: 'Players entered'),
-                      _Stat(
-                        value: drop == null ? '—' : '−${fmtPct(1 - (r.steps[drop].fromPrevious ?? 1))}',
-                        label: drop == null ? 'Biggest drop' : 'Biggest drop: step $drop → ${drop + 1}',
-                        color: drop == null ? null : tokens.bad,
+                    if (_viewMode == _FunnelViewMode.trend) ...[
+                      const SizedBox(height: 16),
+                      FunnelTrendView(
+                        result: r,
+                        interval: _interval,
+                        onIntervalChanged: (i) => setState(() => _interval = i),
                       ),
-                    ]),
-                    if (first == 0)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 12),
-                        child: Text('No players reached step 1 in this range'),
+                    ] else ...[
+                      const SizedBox(height: 16),
+                      // Breakdown selector row
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          const Text('Breakdown:'),
+                          DropdownButton<FunnelBreakdownBy?>(
+                            value: _breakdownBy,
+                            hint: const Text('None'),
+                            items: [
+                              const DropdownMenuItem(value: null, child: Text('None')),
+                              for (final b in FunnelBreakdownBy.values)
+                                DropdownMenuItem(value: b, child: Text(b.label)),
+                            ],
+                            onChanged: (val) {
+                              setState(() {
+                                _breakdownBy = val;
+                                _paramKey = null;
+                                _userPropKey = null;
+                              });
+                            },
+                          ),
+                          if (_breakdownBy == FunnelBreakdownBy.param) ...[
+                            DropdownButton<String>(
+                              value: _paramKey,
+                              hint: const Text('Pick param'),
+                              items: [
+                                for (final k in step1ParamKeys)
+                                  DropdownMenuItem(value: k, child: Text(k)),
+                              ],
+                              onChanged: (k) => setState(() => _paramKey = k),
+                            ),
+                          ],
+                          if (_breakdownBy == FunnelBreakdownBy.userProp) ...[
+                            DropdownButton<String>(
+                              value: _userPropKey,
+                              hint: const Text('Pick user property'),
+                              items: [
+                                for (final k in userPropKeys)
+                                  DropdownMenuItem(value: k, child: Text(k)),
+                              ],
+                              onChanged: (k) => setState(() => _userPropKey = k),
+                            ),
+                          ],
+                        ],
                       ),
-                    const SizedBox(height: 16),
-                    FunnelChart(result: r),
-                    const SizedBox(height: 16),
-                    if (r.segments.isNotEmpty) ...[
-                      Text('Segments', style: theme.textTheme.titleMedium),
+                      const SizedBox(height: 16),
+                      Wrap(spacing: 36, runSpacing: 12, children: [
+                        _Stat(value: fmtPct(r.totalConversion), label: 'Total conversion'),
+                        _Stat(value: '$first', label: 'Players entered'),
+                        _Stat(
+                          value: drop == null ? '—' : '−${fmtPct(1 - (r.steps[drop].fromPrevious ?? 1))}',
+                          label: drop == null ? 'Biggest drop' : 'Biggest drop: step $drop → ${drop + 1}',
+                          color: drop == null ? null : tokens.bad,
+                        ),
+                      ]),
+                      if (first == 0)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 12),
+                          child: Text('No players reached step 1 in this range'),
+                        ),
+                      const SizedBox(height: 16),
+                      FunnelChart(result: r),
+                      const SizedBox(height: 16),
+                      if (r.segments.isNotEmpty) ...[
+                        Text('Segments', style: theme.textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: FunnelSegmentTable(result: r),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      Text('Steps', style: theme.textTheme.titleMedium),
                       const SizedBox(height: 8),
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
-                        child: FunnelSegmentTable(result: r),
+                        child: FunnelStepTable(result: r, order: widget.def.order),
                       ),
-                      const SizedBox(height: 16),
                     ],
-                    Text('Steps', style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: FunnelStepTable(result: r, order: widget.def.order),
-                    ),
                   ],
                 ),
               ),
