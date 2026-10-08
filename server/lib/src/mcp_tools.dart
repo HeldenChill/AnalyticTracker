@@ -173,6 +173,15 @@ class AnalyticTools {
         ),
         (
           Tool(
+            name: 'user_prop_keys',
+            description: 'User property keys seen across all events in range (for funnel breakdown).',
+            inputSchema: _filtered(),
+            annotations: _read,
+          ),
+          (a) => _send('GET', 'events/user-prop-keys', query: _filterQuery(a)),
+        ),
+        (
+          Tool(
             name: 'list_funnels',
             description: 'Saved team funnels with id, name, windowMinutes, steps, updatedAt.',
             inputSchema: Schema.object(),
@@ -189,6 +198,13 @@ class AnalyticTools {
             inputSchema: _filtered({
               'id': Schema.int(description: 'Saved funnel id from list_funnels.'),
               'def': _defSchema,
+              'breakdown_by': EnumSchema.untitledSingleSelect(
+                description: 'Segment breakdown dimension.',
+                values: ['platform', 'version', 'param', 'userProp'],
+              ),
+              'breakdown_key': Schema.string(
+                description: 'Parameter key or user property key when breakdown_by is param or userProp.',
+              ),
             }),
             annotations: _read,
           ),
@@ -260,7 +276,15 @@ class AnalyticTools {
     if ((id == null) == (def == null)) {
       throw ToolFailure('Pass exactly one of "id" (saved funnel) or "def" (inline definition)');
     }
-    final body = {'def': def ?? await _savedDef(id as int), ..._filterQuery(a)};
+    final body = {
+      'def': def ?? await _savedDef(id as int),
+      ..._filterQuery(a),
+      if (a['breakdown_by'] case final String by)
+        'breakdown': {
+          'by': by,
+          if (a['breakdown_key'] case final String key) 'key': key,
+        },
+    };
     return _send('POST', 'funnels/run', body: jsonEncode(body));
   }
 

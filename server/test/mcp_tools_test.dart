@@ -39,15 +39,15 @@ void main() {
 
   setUp(serve);
 
-  test('all 14 tools, spec order, with annotations', () {
+  test('all 15 tools, spec order, with annotations', () {
     expect(tools.all.keys, [
       'data_health', 'filter_options', 'list_events', 'overview', 'retention', 'progression',
-      'event_counts', 'param_keys', 'param_values', 'list_funnels', 'run_funnel', 'save_funnel',
+      'event_counts', 'param_keys', 'param_values', 'user_prop_keys', 'list_funnels', 'run_funnel', 'save_funnel',
       'delete_funnel', 'import_export',
     ]);
     bool? readOnly(String n) => tools.all[n]!.$1.toolAnnotations?.readOnlyHint;
     bool? destructive(String n) => tools.all[n]!.$1.toolAnnotations?.destructiveHint;
-    for (final n in ['data_health', 'overview', 'run_funnel', 'list_funnels', 'param_values']) {
+    for (final n in ['data_health', 'overview', 'run_funnel', 'list_funnels', 'param_values', 'user_prop_keys']) {
       expect(readOnly(n), isTrue, reason: n);
     }
     expect(readOnly('save_funnel'), isFalse);
@@ -56,6 +56,7 @@ void main() {
     expect(destructive('import_export'), isTrue);
     expect(tools.all['overview']!.$1.inputSchema.required, ['from', 'to']);
     expect(tools.all['param_values']!.$1.inputSchema.required, ['from', 'to', 'event', 'key']);
+    expect(tools.all['user_prop_keys']!.$1.inputSchema.required, ['from', 'to']);
   });
 
   group('filters', () {
@@ -82,10 +83,12 @@ void main() {
       await tools.call('event_counts', {...range, 'name': 'tut'});
       await tools.call('param_keys', {...range, 'event': 'tut'});
       await tools.call('param_values', {...range, 'event': 'tut', 'key': 'step'});
-      expect([for (final r in seen) r.url.path], ['/events/count', '/events/param-keys', '/events/param']);
+      await tools.call('user_prop_keys', range);
+      expect([for (final r in seen) r.url.path], ['/events/count', '/events/param-keys', '/events/param', '/events/user-prop-keys']);
       expect(seen[0].url.queryParameters, {...range, 'name': 'tut'});
       expect(seen[1].url.queryParameters, {...range, 'name': 'tut'});
       expect(seen[2].url.queryParameters, {...range, 'name': 'tut', 'key': 'step'});
+      expect(seen[3].url.queryParameters, range);
     });
   });
 
@@ -116,6 +119,23 @@ void main() {
       expect(seen.single.method, 'POST');
       expect(seen.single.url.path, '/funnels/run');
       expect(jsonDecode(seen.single.body), {'def': def, ...range, 'test': '1'});
+    });
+
+    test('breakdown parameters pass breakdown object', () async {
+      const def = {'name': 'x', 'windowMinutes': null, 'steps': [{'event': 'a', 'params': []}]};
+      await tools.call('run_funnel', {
+        ...range,
+        'def': def,
+        'breakdown_by': 'param',
+        'breakdown_key': 'vip',
+      });
+      expect(seen.single.method, 'POST');
+      expect(seen.single.url.path, '/funnels/run');
+      expect(jsonDecode(seen.single.body), {
+        'def': def,
+        ...range,
+        'breakdown': {'by': 'param', 'key': 'vip'},
+      });
     });
 
     test('saved id fetches /funnels then runs its def', () async {

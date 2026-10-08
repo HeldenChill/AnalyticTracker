@@ -8,7 +8,7 @@ import 'package:stream_channel/stream_channel.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('MCP protocol: initialize, list 14 tools, call one, schema validation', () async {
+  test('MCP protocol: initialize, list 15 tools, call one, schema validation', () async {
     final channel = StreamChannelController<String>();
     final api = MockClient((req) async => http.Response(jsonEncode({'path': req.url.path}), 200));
     AnalyticMcpServer(channel.local, AnalyticTools('http://h:8080', api));
@@ -27,7 +27,7 @@ void main() {
     server.notifyInitialized();
 
     final list = await server.listTools(ListToolsRequest());
-    expect(list.tools.length, 14);
+    expect(list.tools.length, 15);
     expect(list.tools.map((t) => t.name), contains('import_export'));
 
     final ok = await server.callTool(CallToolRequest(

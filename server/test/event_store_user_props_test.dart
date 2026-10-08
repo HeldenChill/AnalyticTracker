@@ -1,5 +1,4 @@
 import 'package:analytic_server/analytic_server.dart';
-import 'package:analytic_shared/analytic_shared.dart';
 import 'package:test/test.dart';
 
 void main() {
