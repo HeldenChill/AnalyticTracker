@@ -426,22 +426,136 @@ class FunnelStepResult {
       };
 }
 
+enum FunnelBreakdownBy {
+  platform('platform', 'Platform'),
+  version('version', 'App version'),
+  param('param', 'Event parameter'),
+  userProp('userProp', 'User property');
+
+  const FunnelBreakdownBy(this.wire, this.label);
+  final String wire;
+  final String label;
+
+  static FunnelBreakdownBy parse(Object? v) {
+    for (final b in values) {
+      if (b.wire == v) return b;
+    }
+    throw FormatException('Unknown breakdown dimension "$v"');
+  }
+}
+
+class FunnelBreakdown {
+  const FunnelBreakdown({required this.by, this.key});
+
+  final FunnelBreakdownBy by;
+  final String? key;
+
+  String? validate() {
+    if (by == FunnelBreakdownBy.param || by == FunnelBreakdownBy.userProp) {
+      if (key == null || key!.isEmpty) return 'Breakdown by ${by.wire} requires a parameter key';
+      if (!_paramKeyRe.hasMatch(key!)) return 'Invalid parameter key "$key"';
+    }
+    return null;
+  }
+
+  factory FunnelBreakdown.fromJson(Map<String, dynamic> j) => FunnelBreakdown(
+        by: FunnelBreakdownBy.parse(j['by']),
+        key: _trimmedOrNull(j['key']),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'by': by.wire,
+        if (key != null) 'key': key,
+      };
+}
+
+class FunnelSegmentStepResult {
+  const FunnelSegmentStepResult({
+    required this.players,
+    required this.fromPrevious,
+    required this.fromFirst,
+    required this.dropped,
+    required this.medianSeconds,
+  });
+
+  final int players;
+  final double? fromPrevious;
+  final double? fromFirst;
+  final int? dropped;
+  final double? medianSeconds;
+
+  factory FunnelSegmentStepResult.fromJson(Map<String, dynamic> j) => FunnelSegmentStepResult(
+        players: j['players'] as int,
+        fromPrevious: _optDouble(j['fromPrevious']),
+        fromFirst: _optDouble(j['fromFirst']),
+        dropped: j['dropped'] as int?,
+        medianSeconds: _optDouble(j['medianSeconds']),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'players': players,
+        'fromPrevious': fromPrevious,
+        'fromFirst': fromFirst,
+        'dropped': dropped,
+        'medianSeconds': medianSeconds,
+      };
+}
+
+class FunnelSegmentResult {
+  const FunnelSegmentResult({
+    required this.value,
+    required this.steps,
+    required this.totalConversion,
+  });
+
+  final String value;
+  final List<FunnelSegmentStepResult> steps;
+  final double? totalConversion;
+
+  factory FunnelSegmentResult.fromJson(Map<String, dynamic> j) => FunnelSegmentResult(
+        value: j['value'] as String,
+        steps: [
+          for (final s in (j['steps'] as List?) ?? const [])
+            FunnelSegmentStepResult.fromJson(s as Map<String, dynamic>)
+        ],
+        totalConversion: _optDouble(j['totalConversion']),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'value': value,
+        'steps': [for (final s in steps) s.toJson()],
+        'totalConversion': totalConversion,
+      };
+}
+
 class FunnelResult {
-  const FunnelResult({required this.steps, required this.totalConversion, required this.biggestDropIndex});
+  const FunnelResult({
+    required this.steps,
+    required this.totalConversion,
+    required this.biggestDropIndex,
+    this.segments = const [],
+  });
 
   final List<FunnelStepResult> steps;
   final double? totalConversion;
   final int? biggestDropIndex;
+  final List<FunnelSegmentResult> segments;
 
   factory FunnelResult.fromJson(Map<String, dynamic> j) => FunnelResult(
         steps: [for (final s in j['steps'] as List) FunnelStepResult.fromJson(s as Map<String, dynamic>)],
         totalConversion: _optDouble(j['totalConversion']),
         biggestDropIndex: j['biggestDropIndex'] as int?,
+        segments: [
+          for (final s in (j['segments'] as List?) ?? const [])
+            FunnelSegmentResult.fromJson(s as Map<String, dynamic>)
+        ],
       );
 
   Map<String, dynamic> toJson() => {
         'steps': [for (final s in steps) s.toJson()],
         'totalConversion': totalConversion,
         'biggestDropIndex': biggestDropIndex,
+        if (segments.isNotEmpty) 'segments': [for (final s in segments) s.toJson()],
       };
 }
+
