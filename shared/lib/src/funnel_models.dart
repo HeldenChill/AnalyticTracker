@@ -528,18 +528,75 @@ class FunnelSegmentResult {
       };
 }
 
+enum FunnelInterval {
+  day('day', 'Day'),
+  week('week', 'Week');
+
+  const FunnelInterval(this.wire, this.label);
+  final String wire;
+  final String label;
+
+  static FunnelInterval parse(Object? v) {
+    for (final it in values) {
+      if (it.wire == v) return it;
+    }
+    throw FormatException('Unknown interval "$v"');
+  }
+}
+
+class FunnelTrendPoint {
+  const FunnelTrendPoint({
+    required this.start,
+    required this.players,
+    required this.totalConversion,
+    required this.incomplete,
+  });
+
+  final String start;
+  final List<int> players;
+  final double? totalConversion;
+  final bool incomplete;
+
+  factory FunnelTrendPoint.fromJson(Map<String, dynamic> j) => FunnelTrendPoint(
+        start: j['start'] as String,
+        players: [for (final p in (j['players'] as List?) ?? const []) p as int],
+        totalConversion: _optDouble(j['totalConversion']),
+        incomplete: (j['incomplete'] as bool?) ?? false,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'start': start,
+        'players': players,
+        'totalConversion': totalConversion,
+        'incomplete': incomplete,
+      };
+
+  @override
+  bool operator ==(Object other) =>
+      other is FunnelTrendPoint &&
+      other.start == start &&
+      _sameList(other.players, players) &&
+      other.totalConversion == totalConversion &&
+      other.incomplete == incomplete;
+
+  @override
+  int get hashCode => Object.hash(start, Object.hashAll(players), totalConversion, incomplete);
+}
+
 class FunnelResult {
   const FunnelResult({
     required this.steps,
     required this.totalConversion,
     required this.biggestDropIndex,
     this.segments = const [],
+    this.trend = const [],
   });
 
   final List<FunnelStepResult> steps;
   final double? totalConversion;
   final int? biggestDropIndex;
   final List<FunnelSegmentResult> segments;
+  final List<FunnelTrendPoint> trend;
 
   factory FunnelResult.fromJson(Map<String, dynamic> j) => FunnelResult(
         steps: [for (final s in j['steps'] as List) FunnelStepResult.fromJson(s as Map<String, dynamic>)],
@@ -549,6 +606,10 @@ class FunnelResult {
           for (final s in (j['segments'] as List?) ?? const [])
             FunnelSegmentResult.fromJson(s as Map<String, dynamic>)
         ],
+        trend: [
+          for (final t in (j['trend'] as List?) ?? const [])
+            FunnelTrendPoint.fromJson(t as Map<String, dynamic>)
+        ],
       );
 
   Map<String, dynamic> toJson() => {
@@ -556,6 +617,8 @@ class FunnelResult {
         'totalConversion': totalConversion,
         'biggestDropIndex': biggestDropIndex,
         if (segments.isNotEmpty) 'segments': [for (final s in segments) s.toJson()],
+        if (trend.isNotEmpty) 'trend': [for (final t in trend) t.toJson()],
       };
 }
+
 
