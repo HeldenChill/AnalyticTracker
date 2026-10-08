@@ -9,6 +9,7 @@ import '../widgets/error_retry.dart';
 import '../widgets/format.dart';
 import '../widgets/funnel_chart.dart';
 import '../widgets/funnel_editor.dart';
+import '../widgets/funnel_segment_table.dart';
 import '../widgets/funnel_step_table.dart';
 
 class FunnelPage extends ConsumerStatefulWidget {
@@ -141,15 +142,37 @@ class _FunnelPageState extends ConsumerState<FunnelPage> {
   }
 }
 
-class _FunnelResultView extends ConsumerWidget {
+class _FunnelResultView extends ConsumerStatefulWidget {
   const _FunnelResultView({required this.def});
   final FunnelDef def;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_FunnelResultView> createState() => _FunnelResultViewState();
+}
+
+class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
+  FunnelBreakdownBy? _breakdownBy;
+  String? _paramKey;
+  String? _userPropKey;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tokens = AnalyticsTokens.of(context);
-    final q = (def: def, filters: ref.watch(filtersProvider), breakdown: null);
+    final filters = ref.watch(filtersProvider);
+
+    FunnelBreakdown? breakdown;
+    if (_breakdownBy == FunnelBreakdownBy.platform) {
+      breakdown = const FunnelBreakdown(by: FunnelBreakdownBy.platform);
+    } else if (_breakdownBy == FunnelBreakdownBy.version) {
+      breakdown = const FunnelBreakdown(by: FunnelBreakdownBy.version);
+    } else if (_breakdownBy == FunnelBreakdownBy.param && _paramKey != null) {
+      breakdown = FunnelBreakdown(by: FunnelBreakdownBy.param, key: _paramKey);
+    } else if (_breakdownBy == FunnelBreakdownBy.userProp && _userPropKey != null) {
+      breakdown = FunnelBreakdown(by: FunnelBreakdownBy.userProp, key: _userPropKey);
+    }
+
+    final q = (def: widget.def, filters: filters, breakdown: breakdown);
     return ref.watch(funnelResultProvider(q)).when(
           loading: () => const Padding(
             padding: EdgeInsets.all(32),
@@ -159,6 +182,13 @@ class _FunnelResultView extends ConsumerWidget {
           data: (r) {
             final first = r.steps.isEmpty ? 0 : r.steps.first.players;
             final drop = r.biggestDropIndex;
+
+            final step1Event = widget.def.steps.isEmpty ? null : widget.def.steps.first.event;
+            final step1ParamKeys = step1Event == null
+                ? const <String>[]
+                : ref.watch(paramKeysProvider((event: step1Event, filters: filters))).valueOrNull ?? const [];
+            final userPropKeys = ref.watch(userPropKeysProvider(filters)).valueOrNull ?? const [];
+
             return Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -170,9 +200,57 @@ class _FunnelResultView extends ConsumerWidget {
                       runSpacing: 8,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Text(def.name, style: theme.textTheme.titleLarge),
-                        Chip(label: Text(funnelWindowLabel(def.windowMinutes))),
-                        Chip(label: Text(def.order.label)),
+                        Text(widget.def.name, style: theme.textTheme.titleLarge),
+                        Chip(label: Text(funnelWindowLabel(widget.def.windowMinutes))),
+                        Chip(label: Text(widget.def.order.label)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Breakdown selector row
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        const Text('Breakdown:'),
+                        DropdownButton<FunnelBreakdownBy?>(
+                          value: _breakdownBy,
+                          hint: const Text('None'),
+                          items: [
+                            const DropdownMenuItem(value: null, child: Text('None')),
+                            for (final b in FunnelBreakdownBy.values)
+                              DropdownMenuItem(value: b, child: Text(b.label)),
+                          ],
+                          onChanged: (val) {
+                            setState(() {
+                              _breakdownBy = val;
+                              _paramKey = null;
+                              _userPropKey = null;
+                            });
+                          },
+                        ),
+                        if (_breakdownBy == FunnelBreakdownBy.param) ...[
+                          DropdownButton<String>(
+                            value: _paramKey,
+                            hint: const Text('Pick param'),
+                            items: [
+                              for (final k in step1ParamKeys)
+                                DropdownMenuItem(value: k, child: Text(k)),
+                            ],
+                            onChanged: (k) => setState(() => _paramKey = k),
+                          ),
+                        ],
+                        if (_breakdownBy == FunnelBreakdownBy.userProp) ...[
+                          DropdownButton<String>(
+                            value: _userPropKey,
+                            hint: const Text('Pick user property'),
+                            items: [
+                              for (final k in userPropKeys)
+                                DropdownMenuItem(value: k, child: Text(k)),
+                            ],
+                            onChanged: (k) => setState(() => _userPropKey = k),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -193,9 +271,20 @@ class _FunnelResultView extends ConsumerWidget {
                     const SizedBox(height: 16),
                     FunnelChart(result: r),
                     const SizedBox(height: 16),
+                    if (r.segments.isNotEmpty) ...[
+                      Text('Segments', style: theme.textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: FunnelSegmentTable(result: r),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    Text('Steps', style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 8),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      child: FunnelStepTable(result: r, order: def.order),
+                      child: FunnelStepTable(result: r, order: widget.def.order),
                     ),
                   ],
                 ),
