@@ -158,12 +158,14 @@ class ApiClient {
           j as String,
       ];
 
-  Future<FunnelResult> runFunnel(FunnelDef def, Filters f, {FunnelBreakdown? breakdown}) async =>
+  Future<FunnelResult> runFunnel(FunnelDef def, Filters f,
+          {FunnelBreakdown? breakdown, FunnelInterval? interval}) async =>
       FunnelResult.fromJson(await _map(
           await _send('POST', 'funnels/run', body: {
             'def': def.toJson(),
             ...f.toQuery(),
             if (breakdown != null) 'breakdown': breakdown.toJson(),
+            if (interval != null) 'interval': interval.wire,
           }),
           'funnels/run'));
 }

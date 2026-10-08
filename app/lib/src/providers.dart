@@ -63,9 +63,12 @@ final userPropKeysProvider = FutureProvider.autoDispose.family<List<String>, Fil
     ref.watch(apiClientProvider).userPropKeys(f.from, f.to,
         platform: f.platform, version: f.version, includeTest: f.includeTest));
 
+final funnelIntervalProvider = StateProvider.autoDispose<FunnelInterval>((ref) => FunnelInterval.day);
+
 final funnelResultProvider = FutureProvider.autoDispose
-    .family<FunnelResult, ({FunnelDef def, Filters filters, FunnelBreakdown? breakdown})>(
-        (ref, q) => ref.watch(apiClientProvider).runFunnel(q.def, q.filters, breakdown: q.breakdown));
+    .family<FunnelResult, ({FunnelDef def, Filters filters, FunnelBreakdown? breakdown, FunnelInterval? interval})>(
+        (ref, q) => ref.watch(apiClientProvider).runFunnel(q.def, q.filters,
+            breakdown: q.breakdown, interval: q.interval));
 
 final paramKeysProvider = FutureProvider.family<List<String>, ({String event, Filters filters})>(
     (ref, q) => ref.watch(apiClientProvider).paramKeys(q.event, q.filters));

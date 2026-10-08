@@ -172,7 +172,7 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
       breakdown = FunnelBreakdown(by: FunnelBreakdownBy.userProp, key: _userPropKey);
     }
 
-    final q = (def: widget.def, filters: filters, breakdown: breakdown);
+    final q = (def: widget.def, filters: filters, breakdown: breakdown, interval: null);
     return ref.watch(funnelResultProvider(q)).when(
           loading: () => const Padding(
             padding: EdgeInsets.all(32),
