@@ -96,6 +96,14 @@ final survivalProvider = FutureProvider.family<SurvivalResult, ({Filters filters
 final versionImpactProvider = FutureProvider.family<VersionImpactResult, ({Filters filters, String? version})>(
     (ref, q) => ref.watch(apiClientProvider).versionImpact(q.filters, version: q.version));
 
+/// Event association rules for the Analytic page.
+final associationsProvider = FutureProvider.family<AssociationResult, Filters>(
+    (ref, f) => ref.watch(apiClientProvider).associations(f));
+
+/// Anomaly alerts for the Analytic page.
+final anomaliesProvider = FutureProvider.family<AnomalyResult, Filters>(
+    (ref, f) => ref.watch(apiClientProvider).anomalies(f));
+
 final paramKeysProvider = FutureProvider.family<List<String>, ({String event, Filters filters})>(
     (ref, q) => ref.watch(apiClientProvider).paramKeys(q.event, q.filters));
 

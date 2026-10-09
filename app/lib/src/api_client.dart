@@ -179,6 +179,12 @@ class ApiClient {
         if (version != null) 'version': version,
       }));
 
+  Future<AssociationResult> associations(Filters f) async =>
+      AssociationResult.fromJson(await _getMap('analysis/associations', f.toQuery()));
+
+  Future<AnomalyResult> anomalies(Filters f) async =>
+      AnomalyResult.fromJson(await _getMap('analysis/anomalies', f.toQuery()));
+
   Future<FunnelResult> runFunnel(FunnelDef def, Filters f,
           {FunnelBreakdown? breakdown, FunnelInterval? interval}) async =>
       FunnelResult.fromJson(await _map(
