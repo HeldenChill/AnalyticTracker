@@ -1,6 +1,7 @@
 import 'package:analytic_shared/analytic_shared.dart';
 
 import 'bootstrap.dart';
+import 'levels.dart';
 import 'survival.dart';
 
 class PlayerVersionData {
@@ -10,6 +11,7 @@ class PlayerVersionData {
     required this.sessions,
     required this.playtimeMin,
     required this.survivedD1,
+    this.d1Observable = true,
     required this.levelAttempts,
   });
 
@@ -18,6 +20,7 @@ class PlayerVersionData {
   final int sessions;
   final double playtimeMin;
   final bool survivedD1;
+  final bool d1Observable;
   final Map<int, ({int completes, int fails})> levelAttempts;
 }
 
@@ -106,8 +109,11 @@ VersionImpactResult analyzeVersionImpactData({
 
   if (eligibleVersions.length < 2) {
     return VersionImpactResult(
-      targetVersion: targetVersion ?? (eligibleVersions.isEmpty ? '' : eligibleVersions.last),
-      targetPlayers: targetVersion != null ? (playersByVersion[targetVersion]?.length ?? 0) : 0,
+      targetVersion: targetVersion ??
+          (eligibleVersions.isEmpty ? '' : eligibleVersions.last),
+      targetPlayers: targetVersion != null
+          ? (playersByVersion[targetVersion]?.length ?? 0)
+          : 0,
       baselineVersion: '',
       baselinePlayers: 0,
       metrics: const [],
@@ -117,9 +123,10 @@ VersionImpactResult analyzeVersionImpactData({
   }
 
   // Resolve target version (default = newest eligible)
-  final resolvedTarget = (targetVersion != null && eligibleVersions.contains(targetVersion))
-      ? targetVersion
-      : eligibleVersions.last;
+  final resolvedTarget =
+      (targetVersion != null && eligibleVersions.contains(targetVersion))
+          ? targetVersion
+          : eligibleVersions.last;
 
   final targetIndex = eligibleVersions.indexOf(resolvedTarget);
   if (targetIndex <= 0) {
@@ -138,23 +145,32 @@ VersionImpactResult analyzeVersionImpactData({
   final targetList = playersByVersion[resolvedTarget]!;
   final baselineList = playersByVersion[baselineVersion]!;
 
-  double mean(List<double> xs) => xs.isEmpty ? 0.0 : xs.reduce((a, b) => a + b) / xs.length;
+  double mean(List<double> xs) =>
+      xs.isEmpty ? 0.0 : xs.reduce((a, b) => a + b) / xs.length;
 
   final metrics = <VersionMetricImpact>[];
 
   // 1. D1 Survival
-  final d1Target = [for (final p in targetList) p.survivedD1 ? 1.0 : 0.0];
-  final d1Baseline = [for (final p in baselineList) p.survivedD1 ? 1.0 : 0.0];
-  final d1Boot = bootstrapCi(d1Target, d1Baseline, mean);
-  metrics.add(VersionMetricImpact(
-    metric: 'D1 survival',
-    baselineValue: mean(d1Baseline),
-    targetValue: mean(d1Target),
-    difference: d1Boot.difference,
-    ciLower: d1Boot.ciLower,
-    ciUpper: d1Boot.ciUpper,
-    significant: d1Boot.significant,
-  ));
+  final d1Target = [
+    for (final p in targetList)
+      if (p.d1Observable) p.survivedD1 ? 1.0 : 0.0
+  ];
+  final d1Baseline = [
+    for (final p in baselineList)
+      if (p.d1Observable) p.survivedD1 ? 1.0 : 0.0
+  ];
+  if (d1Target.isNotEmpty && d1Baseline.isNotEmpty) {
+    final d1Boot = bootstrapCi(d1Target, d1Baseline, mean);
+    metrics.add(VersionMetricImpact(
+      metric: 'D1 survival',
+      baselineValue: mean(d1Baseline),
+      targetValue: mean(d1Target),
+      difference: d1Boot.difference,
+      ciLower: d1Boot.ciLower,
+      ciUpper: d1Boot.ciUpper,
+      significant: d1Boot.significant,
+    ));
+  }
 
   // 2. Sessions per player
   final sessTarget = [for (final p in targetList) p.sessions.toDouble()];
@@ -195,37 +211,19 @@ VersionImpactResult analyzeVersionImpactData({
 
   final sortedLevels = allLevels.toList()..sort();
   for (final lvl in sortedLevels) {
-    final tAttempts = <double>[];
-    for (final p in targetList) {
-      final att = p.levelAttempts[lvl];
-      if (att != null) {
-        for (var i = 0; i < att.completes; i++) {
-          tAttempts.add(1.0);
-        }
-        for (var i = 0; i < att.fails; i++) {
-          tAttempts.add(0.0);
-        }
-      }
-    }
-    final bAttempts = <double>[];
-    for (final p in baselineList) {
-      final att = p.levelAttempts[lvl];
-      if (att != null) {
-        for (var i = 0; i < att.completes; i++) {
-          bAttempts.add(1.0);
-        }
-        for (var i = 0; i < att.fails; i++) {
-          bAttempts.add(0.0);
-        }
-      }
-    }
+    int attempts(List<PlayerVersionData> players) => players.fold(0, (sum, p) {
+          final a = p.levelAttempts[lvl];
+          return sum + (a == null ? 0 : a.completes + a.fails);
+        });
 
-    if (tAttempts.length >= 10 && bAttempts.length >= 10) {
-      final lvlBoot = bootstrapCi(tAttempts, bAttempts, mean);
+    if (attempts(targetList) >= 10 && attempts(baselineList) >= 10) {
+      double rate(List<PlayerVersionData> players) =>
+          _smoothedLevelRate(players, lvl);
+      final lvlBoot = bootstrapCi(targetList, baselineList, rate);
       metrics.add(VersionMetricImpact(
         metric: 'Level $lvl win rate',
-        baselineValue: mean(bAttempts),
-        targetValue: mean(tAttempts),
+        baselineValue: rate(baselineList),
+        targetValue: rate(targetList),
         difference: lvlBoot.difference,
         ciLower: lvlBoot.ciLower,
         ciUpper: lvlBoot.ciUpper,
@@ -243,4 +241,25 @@ VersionImpactResult analyzeVersionImpactData({
     availableVersions: eligibleVersions,
     reason: null,
   );
+}
+
+/// Refit the same empirical Beta prior used by level analysis on each player sample.
+double _smoothedLevelRate(List<PlayerVersionData> players, int level) {
+  final totals = <int, ({int completes, int fails})>{};
+  for (final player in players) {
+    for (final entry in player.levelAttempts.entries) {
+      final previous = totals[entry.key] ?? (completes: 0, fails: 0);
+      totals[entry.key] = (
+        completes: previous.completes + entry.value.completes,
+        fails: previous.fails + entry.value.fails,
+      );
+    }
+  }
+  final rates = [
+    for (final a in totals.values)
+      if (a.completes + a.fails >= 5) a.completes / (a.completes + a.fails),
+  ];
+  final (alpha, beta) = fitBetaPrior(rates);
+  final a = totals[level] ?? (completes: 0, fails: 0);
+  return (a.completes + alpha) / (a.completes + a.fails + alpha + beta);
 }

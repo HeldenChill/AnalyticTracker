@@ -5,22 +5,29 @@ import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class _FakeApiClient extends ApiClient {
-  _FakeApiClient(this.survivalResult, this.versionImpactResult) : super('http://dummy');
+  _FakeApiClient(this.survivalResult, this.versionImpactResult)
+      : super('http://dummy');
 
   final SurvivalResult survivalResult;
   final VersionImpactResult versionImpactResult;
 
   @override
-  Future<SurvivalResult> survival(Filters f, {String by = 'version'}) async => survivalResult;
+  Future<SurvivalResult> survival(Filters f, {String by = 'version'}) async =>
+      survivalResult;
 
   @override
-  Future<VersionImpactResult> versionImpact(Filters f, {String? version}) async => versionImpactResult;
+  Future<VersionImpactResult> versionImpact(Filters f,
+          {String? version}) async =>
+      versionImpactResult;
 }
 
 void main() {
-  testWidgets('SurvivalTab renders curves chart, log-rank info, and version impact card', (tester) async {
+  testWidgets(
+      'SurvivalTab renders curves chart, log-rank info, and version impact card',
+      (tester) async {
     const fakePoint = SurvivalPoint(
       day: 1,
       survival: 0.85,
@@ -37,7 +44,14 @@ void main() {
       censored: 40,
       medianDays: 14.0,
       points: [
-        SurvivalPoint(day: 0, survival: 1.0, ciLower: 1.0, ciUpper: 1.0, atRisk: 50, events: 0, censored: 0),
+        SurvivalPoint(
+            day: 0,
+            survival: 1.0,
+            ciLower: 1.0,
+            ciUpper: 1.0,
+            atRisk: 50,
+            events: 0,
+            censored: 0),
         fakePoint,
       ],
     );
@@ -90,6 +104,15 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    final chart = tester.widget<LineChart>(find.byType(LineChart));
+    expect(chart.data.betweenBarsData, hasLength(1));
+    final band = chart.data.betweenBarsData.single;
+    expect(chart.data.lineBarsData[band.fromIndex].spots.last.y, 0.75);
+    expect(chart.data.lineBarsData[band.toIndex].spots.last.y, 0.95);
+    expect(band.color!.a, greaterThan(0));
+    expect(chart.data.lineBarsData.any((line) => line.spots.last.y == 0.85),
+        isTrue);
+
     expect(find.textContaining('Kaplan–Meier survival curves'), findsOneWidget);
     expect(find.textContaining('Difference likely real'), findsOneWidget);
 
@@ -103,7 +126,8 @@ void main() {
     expect(find.textContaining('+25%'), findsOneWidget);
   });
 
-  testWidgets('SurvivalTab displays too_few_players state gracefully', (tester) async {
+  testWidgets('SurvivalTab displays too_few_players state gracefully',
+      (tester) async {
     const emptySurvival = SurvivalResult(
       players: 12,
       by: 'version',
@@ -136,6 +160,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Not enough players in this range to analyze survival'), findsOneWidget);
+    expect(
+        find.textContaining(
+            'Not enough players in this range to analyze survival'),
+        findsOneWidget);
   });
 }

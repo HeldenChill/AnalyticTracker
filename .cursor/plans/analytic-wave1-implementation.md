@@ -1,6 +1,6 @@
 # Analytic Tab Wave 1 — Player Clusters + `weekly_insights` Prompt — Implementation Plan
 
-> **For agentic workers:** Implement task-by-task with superpowers:executing-plans (inline, no subagent-driven-development — project rule). Steps use checkbox (`- [ ]`) syntax for tracking. Executor: Gemini. Do every step in order. Do not skip the "run test, expect FAIL" steps. Do not invent APIs not shown here; if a package or Flutter API differs from this plan, STOP and report the exact error instead of improvising. **Never change an expected value in a test to make it pass** — if a test fails after implementing exactly what is shown, STOP and report. When a step says "replace this exact text" and the text is not found, STOP and report. Do not edit anything under `.cursor/memory/` (Claude updates memory at review). **All code in this plan was compiled, analyzed and its tests run green by Claude on 2026-10-07 in a throwaway worktree, task by task in this order (shared 42 → 44 / server 158 → 167 → 176 → 180 → 184 / app 76 → 80), and each task's new tests were seen failing before its code was added — type it exactly.**
+> **For agentic workers:** Implement task-by-task with superpowers:executing-plans (inline, no subagent-driven-development — project rule). Steps use checkbox (`- [ ]`) syntax for tracking. Executor: Gemini. Do every step in order. Do not skip the "run test, expect FAIL" steps. Do not invent APIs not shown here; if a package or Flutter API differs from this plan, STOP and report the exact error instead of improvising. **Never change an expected value in a test to make it pass** — if a test fails after implementing exactly what is shown, STOP and report. When a step says "replace this exact text" and the text is not found, STOP and report. Do not edit anything under `.cursor/memory/` (Claude updates memory at review). **All code in this plan was compiled, analyzed and its tests run green by Claude on 2026-10-07 in a throwaway worktree, re-verified for current baseline on 2026-10-09 (shared 57 → 58 / server 181 → 190 → 199 → 203 → 207 / app 88 → 92), and each task's new tests were seen failing before its code was added — type it exactly.**
 
 **Goal:** A new sidebar page **Analytic** whose first tab, **Clusters**, groups players by behaviour with k-means and shows what sets each group apart; the same result is available to Claude through the MCP tool `analysis_clusters` and the MCP prompt `weekly_insights`.
 
@@ -19,7 +19,7 @@
 - k-means++: seed **42**, 10 restarts, max 100 iterations. Auto k = 2..6 (capped at players − 1), best mean silhouette, smaller k on tie. Forced k = 2..8. Reported `k` = number of non-empty groups.
 - Fewer than **20** players → `reason: "too_few_players"`; no varying feature → `reason: "no_variance"`.
 - Route `GET /analysis/clusters` with the standard filters + optional `k` (`auto` or 2..8); any other `k` → 400 `{"error":"Invalid k"}`.
-- MCP: tool `analysis_clusters` (15th tool, last in the list), prompt `weekly_insights` (arguments `from`, `to`).
+- MCP: tool `analysis_clusters` (18th tool, last in the list), prompt `weekly_insights` (arguments `from`, `to`).
 - App: sidebar item `Analytic` (icon `Icons.insights_outlined`) right after `Funnels`; tab `Clusters`; "small sample" badge on groups with < 10 players; separation words `weak` (< 0.25) / `ok` (< 0.5) / `strong`.
 - No literal `Colors.*` in widgets; use `Theme.of(context)` / `AnalyticsTokens.of(context)` (existing rule).
 - One commit per task, message given in the task, on the current branch. Each commit stages only `shared`, `server` or `app` as shown — never `.cursor/`. Do not push (owner pushes).
@@ -78,7 +78,7 @@ git status --short
 git log --oneline -3
 ```
 
-Expected: the branch the owner has checked out (`main` on 2026-10-07, after the owner merged `feature/flutter-local-server`); HEAD at or after `b8829f5 ~FIX: Update Memory`. This plan and the spec amendment may be uncommitted docs under `.cursor/plans/` — that is fine, leave them (the owner commits docs). Untracked `AGENTS.md`, `GEMINI.md`, `.agents/` are the owner's — leave them. If any **tracked** file under `shared/`, `server/` or `app/` is modified, STOP and report.
+Expected: the branch the owner has checked out (`main` on 2026-10-09, after v5 Wave 4 completion); HEAD at or after `2e3f2d6 +ADD: Plan`. This plan and the spec amendment may be uncommitted docs under `.cursor/plans/` — that is fine, leave them (the owner commits docs). Untracked `AGENTS.md`, `GEMINI.md`, `.agents/` are the owner's — leave them. If any **tracked** file under `shared/`, `server/` or `app/` is modified, STOP and report.
 
 - [ ] **Step 2: Gates before any change**
 
@@ -87,7 +87,7 @@ $env:Path = "D:\flutter\bin;$env:Path"
 cd shared; dart analyze; dart test; cd ..\server; dart analyze; dart test; cd ..\app; flutter analyze; flutter test; cd ..
 ```
 
-Expected: shared `+42: All tests passed!`, server `+158: All tests passed!`, app `+76: All tests passed!`, analyzer clean ×3. Different counts → STOP and report.
+Expected: shared `+57: All tests passed!`, server `+181: All tests passed!`, app `+88: All tests passed!`, analyzer clean ×3. Different counts → STOP and report.
 
 ---
 
@@ -299,7 +299,7 @@ export 'src/dashboard_models.dart';
 dart analyze; dart test
 ```
 
-Expected: `No issues found!` and `+44: All tests passed!`.
+Expected: `No issues found!` and `+58: All tests passed!`.
 
 - [ ] **Step 5: Commit**
 
@@ -643,7 +643,7 @@ export 'src/api.dart';
 dart analyze; dart test
 ```
 
-Expected: `No issues found!` and `+167: All tests passed!`.
+Expected: `No issues found!` and `+190: All tests passed!`.
 
 - [ ] **Step 5: Commit**
 
@@ -1139,7 +1139,7 @@ export 'src/analysis/kmeans.dart';
 dart analyze; dart test
 ```
 
-Expected: `No issues found!` and `+176: All tests passed!`.
+Expected: `No issues found!` and `+199: All tests passed!`.
 
 - [ ] **Step 5: Commit**
 
@@ -1301,7 +1301,7 @@ with:
 dart analyze; dart test
 ```
 
-Expected: `No issues found!` and `+180: All tests passed!`.
+Expected: `No issues found!` and `+203: All tests passed!`.
 
 - [ ] **Step 5: Commit**
 
@@ -1361,48 +1361,55 @@ void main() {
 In `server/test/mcp_tools_test.dart`, replace this exact text (it appears once):
 
 ```dart
-  test('all 14 tools, spec order, with annotations', () {
+  test('all 17 tools, spec order, with annotations', () {
     expect(tools.all.keys, [
       'data_health', 'filter_options', 'list_events', 'overview', 'retention', 'progression',
-      'event_counts', 'param_keys', 'param_values', 'list_funnels', 'run_funnel', 'save_funnel',
-      'delete_funnel', 'import_export',
+      'event_counts', 'param_keys', 'param_values', 'user_prop_keys', 'list_funnels', 'run_funnel',
+      'funnel_players', 'player_events', 'save_funnel', 'delete_funnel', 'import_export',
     ]);
 ```
 
 with:
 
 ```dart
-  test('all 15 tools, spec order, with annotations', () {
+  test('all 18 tools, spec order, with annotations', () {
     expect(tools.all.keys, [
       'data_health', 'filter_options', 'list_events', 'overview', 'retention', 'progression',
-      'event_counts', 'param_keys', 'param_values', 'list_funnels', 'run_funnel', 'save_funnel',
-      'delete_funnel', 'import_export', 'analysis_clusters',
+      'event_counts', 'param_keys', 'param_values', 'user_prop_keys', 'list_funnels', 'run_funnel',
+      'funnel_players', 'player_events', 'save_funnel', 'delete_funnel', 'import_export',
+      'analysis_clusters',
     ]);
 ```
 
 In `server/test/mcp_tools_test.dart`, replace this exact text (it appears once):
 
 ```dart
-    for (final n in ['data_health', 'overview', 'run_funnel', 'list_funnels', 'param_values']) {
+    for (final n in [
+      'data_health', 'overview', 'run_funnel', 'list_funnels', 'param_values', 'user_prop_keys',
+      'funnel_players', 'player_events',
+    ]) {
 ```
 
 with:
 
 ```dart
-    for (final n in ['data_health', 'overview', 'run_funnel', 'list_funnels', 'param_values', 'analysis_clusters']) {
+    for (final n in [
+      'data_health', 'overview', 'run_funnel', 'list_funnels', 'param_values', 'user_prop_keys',
+      'funnel_players', 'player_events', 'analysis_clusters',
+    ]) {
 ```
 
 In `server/test/mcp_tools_test.dart`, replace this exact text (it appears once):
 
 ```dart
-    expect(tools.all['param_values']!.$1.inputSchema.required, ['from', 'to', 'event', 'key']);
+    expect(tools.all['player_events']!.$1.inputSchema.required, ['uid', 'from_ts', 'to_ts']);
   });
 ```
 
 with:
 
 ```dart
-    expect(tools.all['param_values']!.$1.inputSchema.required, ['from', 'to', 'event', 'key']);
+    expect(tools.all['player_events']!.$1.inputSchema.required, ['uid', 'from_ts', 'to_ts']);
     expect(tools.all['analysis_clusters']!.$1.inputSchema.required, ['from', 'to']);
   });
 
@@ -1418,13 +1425,13 @@ with:
 In `server/test/mcp_e2e_test.dart`, replace this exact text (it appears once):
 
 ```dart
-test('MCP protocol: initialize, list 14 tools, call one, schema validation'
+test('MCP protocol: initialize, list 17 tools, call one, schema validation'
 ```
 
 with:
 
 ```dart
-test('MCP protocol: initialize, list 15 tools and the prompt, call one, schema validation'
+test('MCP protocol: initialize, list 18 tools and the prompt, call one, schema validation'
 ```
 
 In `server/test/mcp_e2e_test.dart`, replace this exact text (it appears once):
@@ -1443,14 +1450,14 @@ with:
 In `server/test/mcp_e2e_test.dart`, replace this exact text (it appears once):
 
 ```dart
-    expect(list.tools.length, 14);
+    expect(list.tools.length, 17);
     expect(list.tools.map((t) => t.name), contains('import_export'));
 ```
 
 with:
 
 ```dart
-    expect(list.tools.length, 15);
+    expect(list.tools.length, 18);
     expect(list.tools.map((t) => t.name), containsAll(['import_export', 'analysis_clusters']));
 
     final prompts = await server.listPrompts(ListPromptsRequest());
@@ -1468,7 +1475,7 @@ with:
 cd D:\Projects\AnalyticTracker\server; dart test test/mcp_prompts_test.dart test/mcp_tools_test.dart test/mcp_e2e_test.dart
 ```
 
-Expected: FAIL — `weeklyInsights` not defined (compile error) and the tool lists still have 14 entries.
+Expected: FAIL — `weeklyInsights` not defined (compile error) and the tool lists still have 17 entries.
 
 - [ ] **Step 3: Implement**
 
@@ -1624,7 +1631,7 @@ export 'src/mcp_server.dart';
 dart analyze; dart test
 ```
 
-Expected: `No issues found!` and `+184: All tests passed!`.
+Expected: `No issues found!` and `+207: All tests passed!`.
 
 - [ ] **Step 5: Commit**
 
@@ -2111,7 +2118,7 @@ $env:Path = "D:\flutter\bin;$env:Path"
 cd D:\Projects\AnalyticTracker\shared; dart analyze; dart test; cd ..\server; dart analyze; dart test; cd ..\app; flutter analyze; flutter test; cd ..
 ```
 
-Expected: analyzer clean ×3; shared `+44`, server `+184`, app `+80`, all passed.
+Expected: analyzer clean ×3; shared `+58`, server `+207`, app `+92`, all passed.
 
 - [ ] **Step 5: Commit**
 
@@ -2184,4 +2191,4 @@ cd D:\Projects\AnalyticTracker; git status --short; git log --oneline -8
 
 Expected: 6 new commits (Tasks 1–6), no modified tracked files under `shared/`, `server/`, `app/`. Report and stop — Claude reviews next.
 
-**Note for the owner (not a Gemini step):** restart the Claude Code session after this lands so the `analytic-tracker` MCP server is reloaded; it should then list 15 tools and the `weekly_insights` prompt.
+**Note for the owner (not a Gemini step):** restart the Claude Code session after this lands so the `analytic-tracker` MCP server is reloaded; it should then list 18 tools and the `weekly_insights` prompt.

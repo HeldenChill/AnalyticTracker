@@ -1,7 +1,14 @@
+import 'dart:math';
+
 import 'package:analytic_server/analytic_server.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('chi-square upper tails match exact even-degree oracles', () {
+    expect(chiSquarePValue(2, 2), closeTo(0.36787944117144233, 1e-10));
+    expect(chiSquarePValue(6, 2), closeTo(0.049787068367863944, 1e-10));
+    expect(chiSquarePValue(2, 4), closeTo(0.7357588823428847, 1e-10));
+  });
   group('Kaplan-Meier and Log-Rank tests', () {
     test('Kleinbaum textbook leukemia data benchmark', () {
       // Group 1: 6-MP treatment (n=21)
@@ -115,13 +122,16 @@ void main() {
       expect(lr, isNotNull);
       expect(lr!.degreesOfFreedom, 2);
       expect(lr.chiSquare, greaterThan(0.0));
-      expect(lr.significant, isTrue);
+      // For df=2 the exact upper tail is exp(-chiSquare/2).
+      expect(lr.pValue, closeTo(exp(-lr.chiSquare / 2), 1e-10));
+      expect(lr.significant, isFalse);
     });
 
     test('Single group returns null log-rank', () {
-      final lr = computeLogRank({'All': [(duration: 1, isEvent: true)]});
+      final lr = computeLogRank({
+        'All': [(duration: 1, isEvent: true)]
+      });
       expect(lr, isNull);
     });
   });
 }
-

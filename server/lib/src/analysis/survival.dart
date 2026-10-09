@@ -277,9 +277,10 @@ double _logGamma(double x) {
     9.9843695780195716e-6,
     1.5056327351493116e-7,
   ];
-  var y = x;
-  var tmp = x + 7.5;
-  tmp = (x - 0.5) * log(tmp) - tmp;
+  final shifted = x - 1.0;
+  var y = shifted;
+  var tmp = shifted + 7.5;
+  tmp = (shifted + 0.5) * log(tmp) - tmp;
   var ser = 0.99999999999980993;
   for (var i = 0; i < p.length; i++) {
     ser += p[i] / ++y;

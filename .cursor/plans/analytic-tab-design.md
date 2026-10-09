@@ -187,6 +187,7 @@ flowchart TD
 
 - Groups = players by their first `app_version`. Compare each version with the previous version that has ≥ 20 players.
 - Metrics: D1 survival (from §6c), sessions per player, playtime per player, smoothed win rate per level (§6a, levels with ≥ 10 attempts in both versions).
+- Owner clarification (2026-10-09): version-impact D1 uses players with at least one complete follow-up day. Exclude players first seen on the selected range end; omit the D1 comparison if either cohort has no observable players. Other version metrics retain the full cohort.
 - Difference + 95% CI by percentile bootstrap: 1,000 resamples of players, **seed 42**. Reported only when the CI excludes 0. Each row shows n per version.
 - `server/lib/src/analysis/bootstrap.dart` is a pure helper: `bootstrapCi(List<double> a, List<double> b, double Function(List<double>) stat)`.
 

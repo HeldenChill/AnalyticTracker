@@ -176,7 +176,7 @@ LevelResult analyzeLevels({
   final levelStatsList = <LevelStats>[];
   for (final lvl in allLevels) {
     final s = levelRawStats[lvl]!;
-    final isWall = s.reached >= 10 && (medianHazard > 0.0 ? s.hazard >= 2.0 * medianHazard : false);
+    final isWall = s.reached >= 10 && s.hazard > 2.0 * medianHazard;
     levelStatsList.add(LevelStats(
       level: lvl,
       attempts: s.attempts,

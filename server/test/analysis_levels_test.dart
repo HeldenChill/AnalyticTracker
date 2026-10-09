@@ -2,6 +2,27 @@ import 'package:analytic_server/analytic_server.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('positive quit hazard is a wall when the median is zero', () {
+    final players = [for (var i = 0; i < 20; i++) 'p$i'];
+    final result = analyzeLevels(
+      totalPlayers: 20,
+      players: players,
+      playerEvents: {
+        for (final p in players)
+          p: [
+            for (var level = 1; level <= 3; level++)
+              PlayerRawEvent(p, 'level_${level}_start', level),
+          ],
+      },
+      activeAtEnd: players.skip(10).toSet(),
+      observable: players.toSet(),
+      churned: players.take(10).toSet(),
+    );
+    expect(result.medianHazard, 0);
+    expect(result.levels.firstWhere((l) => l.level == 3).hazard, 0.5);
+    expect(result.levels.firstWhere((l) => l.level == 3).wall, isTrue);
+    expect(result.levels.firstWhere((l) => l.level == 1).wall, isFalse);
+  });
   group('fitBetaPrior', () {
     test('falls back to 1.0, 1.0 when fewer than 3 values', () {
       final (a, b) = fitBetaPrior([0.5, 0.6]);
@@ -26,7 +47,7 @@ void main() {
   });
 
   group('analyzeLevels logic', () {
-    test('computes attempts, win rate, quit hazard and detects wall', () {
+    test('computes rates and excludes hazard equal to twice the median', () {
       // 12 players: all reach level 1.
       // 10 players reach level 2 and stop there (quit hazard 10/10 = 1.0).
       // 2 players continue to level 3.
@@ -83,8 +104,9 @@ void main() {
       expect(l2.reached, 12);
       expect(l2.stopped, 10);
       expect(l2.hazard, closeTo(10 / 12, 0.01));
-      // Level 2 has reached >= 10 and hazard > 2 * median -> wall!
-      expect(l2.wall, isTrue);
+      // The two qualifying hazards are 0 and 10/12, so twice their median
+      // equals level 2's hazard. The wall threshold is strictly greater.
+      expect(l2.wall, isFalse);
 
       final l3 = res.levels.firstWhere((l) => l.level == 3);
       expect(l3.reached, 2);
@@ -126,8 +148,10 @@ void main() {
         churned: churned,
       );
 
-      expect(res.exitEvents.any((e) => e.eventName == 'battle_boss_fail'), isTrue);
-      final exit = res.exitEvents.firstWhere((e) => e.eventName == 'battle_boss_fail');
+      expect(
+          res.exitEvents.any((e) => e.eventName == 'battle_boss_fail'), isTrue);
+      final exit =
+          res.exitEvents.firstWhere((e) => e.eventName == 'battle_boss_fail');
       expect(exit.churnedCount, 5);
       expect(exit.stayedCount, 0);
       expect(exit.lift, isNull); // stayedShare is 0

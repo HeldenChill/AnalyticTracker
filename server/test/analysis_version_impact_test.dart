@@ -2,6 +2,54 @@ import 'package:analytic_server/analytic_server.dart';
 import 'package:test/test.dart';
 
 void main() {
+  List<PlayerVersionData> cohort(String version, int winners, int attempts) => [
+        for (var i = 0; i < 20; i++)
+          PlayerVersionData(
+            uid: '$version-$i',
+            version: version,
+            sessions: 1,
+            playtimeMin: 1,
+            survivedD1: true,
+            levelAttempts: {
+              1: (
+                completes: i < winners ? attempts : 0,
+                fails: i < winners ? 0 : attempts
+              )
+            },
+          ),
+      ];
+
+  test(
+      'level significance reflects independent players despite repeated attempts',
+      () {
+    final result = analyzeVersionImpactData(
+      chronologicalVersions: ['old', 'new'],
+      playersByVersion: {
+        'old': cohort('old', 10, 100),
+        'new': cohort('new', 12, 100)
+      },
+    );
+    final level =
+        result.metrics.firstWhere((m) => m.metric == 'Level 1 win rate');
+    expect(level.significant, isFalse);
+    expect(level.ciLower, lessThan(0));
+    expect(level.ciUpper, greaterThan(0));
+  });
+
+  test('version level rates apply the Beta fallback prior', () {
+    final result = analyzeVersionImpactData(
+      chronologicalVersions: ['old', 'new'],
+      playersByVersion: {
+        'old': cohort('old', 0, 1),
+        'new': cohort('new', 20, 1)
+      },
+    );
+    final level =
+        result.metrics.firstWhere((m) => m.metric == 'Level 1 win rate');
+    // One level gives Beta(1,1): (completes+1)/(20+2).
+    expect(level.baselineValue, closeTo(1 / 22, 1e-12));
+    expect(level.targetValue, closeTo(21 / 22, 1e-12));
+  });
   group('Version Impact and Grouped Survival analysis', () {
     test('Groups under 10 merged to Other in survival', () {
       final durations = <String, SubjectDuration>{};
@@ -35,7 +83,8 @@ void main() {
       expect(groupNames, isNot(contains('iOS')));
     });
 
-    test('Version impact compares target with previous version >= 20 players', () {
+    test('Version impact compares target with previous version >= 20 players',
+        () {
       final v10 = <PlayerVersionData>[
         for (var i = 0; i < 25; i++)
           PlayerVersionData(
@@ -76,12 +125,14 @@ void main() {
       expect(d1.difference, closeTo(0.40, 0.01));
       expect(d1.significant, isTrue);
 
-      final sess = res.metrics.firstWhere((m) => m.metric == 'Sessions / player');
+      final sess =
+          res.metrics.firstWhere((m) => m.metric == 'Sessions / player');
       expect(sess.difference, closeTo(2.0, 0.01));
       expect(sess.significant, isTrue);
     });
 
-    test('Fewer than 2 versions with >= 20 players returns too_few_players', () {
+    test('Fewer than 2 versions with >= 20 players returns too_few_players',
+        () {
       final res = analyzeVersionImpactData(
         chronologicalVersions: ['1.0.0'],
         playersByVersion: {

@@ -2,10 +2,10 @@ import 'dart:math';
 
 /// Percentile bootstrap confidence interval for difference (target - baseline) (spec §6d).
 /// Deterministic with [seed] = 42.
-({double difference, double ciLower, double ciUpper, bool significant}) bootstrapCi(
-  List<double> target,
-  List<double> baseline,
-  double Function(List<double>) stat, {
+({double difference, double ciLower, double ciUpper, bool significant}) bootstrapCi<T>(
+  List<T> target,
+  List<T> baseline,
+  double Function(List<T>) stat, {
   int resamples = 1000,
   int seed = 42,
 }) {

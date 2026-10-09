@@ -44,6 +44,8 @@ List<AnomalyAlert> detectAnomalies(
   int maxBaselineDays = 14,
   double thresholdZ = 3.0,
   int limit = 30,
+  String? fromDay,
+  String? toDay,
 }) {
   final alerts = <AnomalyAlert>[];
 
@@ -54,6 +56,9 @@ List<AnomalyAlert> detectAnomalies(
 
     for (var i = 0; i < points.length; i++) {
       final target = points[i];
+      // Warmup points remain available as history, but cannot consume the cap.
+      if (fromDay != null && target.day.compareTo(fromDay) < 0) continue;
+      if (toDay != null && target.day.compareTo(toDay) > 0) continue;
       final startIdx = max(0, i - maxBaselineDays);
       final baselinePoints = points.sublist(startIdx, i);
 

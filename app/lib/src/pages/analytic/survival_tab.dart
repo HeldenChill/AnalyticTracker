@@ -159,10 +159,29 @@ class _SurvivalChart extends StatelessWidget {
                   maxX: maxDay.toDouble(),
                   minY: 0.0,
                   maxY: 1.05,
-                  gridData: const FlGridData(show: true, drawVerticalLine: false),
+                  lineTouchData: LineTouchData(
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipColor: (_) => theme.colorScheme.inverseSurface,
+                      getTooltipItems: (spots) => [
+                        for (final spot in spots)
+                          spot.barIndex % 3 != 0
+                              ? null
+                              : LineTooltipItem(
+                                  '${curves[spot.barIndex ~/ 3].group}\nD${spot.x.toInt()}: ${(spot.y * 100).round()}%',
+                                  TextStyle(
+                                      color:
+                                          theme.colorScheme.onInverseSurface),
+                                ),
+                      ],
+                    ),
+                  ),
+                  gridData:
+                      const FlGridData(show: true, drawVerticalLine: false),
                   titlesData: FlTitlesData(
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
@@ -185,7 +204,7 @@ class _SurvivalChart extends StatelessWidget {
                     ),
                   ),
                   lineBarsData: [
-                    for (var i = 0; i < curves.length; i++)
+                    for (var i = 0; i < curves.length; i++) ...[
                       LineChartBarData(
                         spots: [
                           for (final p in curves[i].points)
@@ -195,6 +214,29 @@ class _SurvivalChart extends StatelessWidget {
                         isStepLineChart: true,
                         barWidth: 2.5,
                         dotData: const FlDotData(show: false),
+                      ),
+                      for (final upper in [false, true])
+                        LineChartBarData(
+                          spots: [
+                            for (final p in curves[i].points)
+                              FlSpot(p.day.toDouble(),
+                                  upper ? p.ciUpper : p.ciLower),
+                          ],
+                          color: tokens.chart[i % tokens.chart.length]
+                              .withValues(alpha: 0.35),
+                          isStepLineChart: true,
+                          barWidth: 0.8,
+                          dotData: const FlDotData(show: false),
+                        ),
+                    ],
+                  ],
+                  betweenBarsData: [
+                    for (var i = 0; i < curves.length; i++)
+                      BetweenBarsData(
+                        fromIndex: i * 3 + 1,
+                        toIndex: i * 3 + 2,
+                        color: tokens.chart[i % tokens.chart.length]
+                            .withValues(alpha: 0.12),
                       ),
                   ],
                 ),

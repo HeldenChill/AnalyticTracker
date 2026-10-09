@@ -61,6 +61,11 @@ class _AppShellState extends ConsumerState<AppShell> {
     ref.invalidate(paramValuesProvider);
     ref.invalidate(clustersProvider);
     ref.invalidate(churnProvider);
+    ref.invalidate(levelsProvider);
+    ref.invalidate(survivalProvider);
+    ref.invalidate(versionImpactProvider);
+    ref.invalidate(associationsProvider);
+    ref.invalidate(anomaliesProvider);
     // Data often comes back identical in <1 ms, so confirm visibly.
     final messenger = ScaffoldMessenger.of(context);
     try {

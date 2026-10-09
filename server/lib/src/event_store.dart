@@ -68,16 +68,16 @@ class EventStore {
 
   Database get db => _db;
 
-  /// Per-player features for the Analytic tab (spec §3).
+  /// Per-player features for the Analytic tab (spec Ã‚Â§3).
   PlayerFeatures playerFeatures(Filters f) => extractFeatures(_db, f);
 
-  /// Per-player first-24h features for churn analysis (spec §5).
+  /// Per-player first-24h features for churn analysis (spec Ã‚Â§5).
   PlayerFeatures firstDayFeatures(Filters f) => extractFirstDayFeatures(_db, f);
 
-  /// Player clusters (spec §4); [k] null = auto.
+  /// Player clusters (spec Ã‚Â§4); [k] null = auto.
   ClusterResult clusters(Filters f, {int? k}) => clusterPlayers(playerFeatures(f), k: k);
 
-  /// Churn drivers and rules (spec §5, §5a).
+  /// Churn drivers and rules (spec Ã‚Â§5, Ã‚Â§5a).
   ChurnResult churn(Filters f) {
     final where = StringBuffer("day BETWEEN ? AND ? AND user_pseudo_id <> ''");
     final args = <Object?>[f.from, f.to];
@@ -119,7 +119,7 @@ class EventStore {
     return analyzeChurn(pf, churnLabels, excluded, totalPlayers);
   }
 
-  /// Level difficulty, quit hazard, exits, and transitions (spec §6a, §6b).
+  /// Level difficulty, quit hazard, exits, and transitions (spec Ã‚Â§6a, Ã‚Â§6b).
   LevelResult levels(Filters f) {
     final where = StringBuffer("day BETWEEN ? AND ? AND user_pseudo_id <> ''");
     final args = <Object?>[f.from, f.to];
@@ -153,7 +153,7 @@ class EventStore {
     final players = byPlayer.keys.toList()..sort();
     final totalPlayers = players.length;
 
-    // Observability & churn logic matching §5
+    // Observability & churn logic matching Ã‚Â§5
     final activeEndDay = addDays(f.to, -6);
     final observableCutoffDay = addDays(f.to, -7);
 
@@ -193,7 +193,7 @@ class EventStore {
     );
   }
 
-  /// Kaplan-Meier survival curves and log-rank test (spec §6c).
+  /// Kaplan-Meier survival curves and log-rank test (spec Ã‚Â§6c).
   SurvivalResult survival(Filters f, {String by = 'version'}) {
     final where = StringBuffer("day BETWEEN ? AND ? AND user_pseudo_id <> ''");
     final args = <Object?>[f.from, f.to];
@@ -259,19 +259,32 @@ class EventStore {
           ]..removeWhere((g) => g.isEmpty);
           groups.sort((a, b) => a.length != b.length ? b.length.compareTo(a.length) : a.first.compareTo(b.first));
 
-          for (final g in groups) {
+          for (var clusterIndex = 0;
+              clusterIndex < groups.length;
+              clusterIndex++) {
+            final g = groups[clusterIndex];
             final z = {
               for (var j = 0; j < zCols.length; j++)
-                used[j]: g.map((i) => std.rows[i][zCols[j]]).fold(0.0, (a, b) => a + b) / g.length,
+                used[j]: g
+                        .map((i) => std.rows[i][zCols[j]])
+                        .fold(0.0, (a, b) => a + b) /
+                    g.length,
             };
             final top = (List.of(used)
                   ..sort((a, b) {
                     final byZ = z[b]!.abs().compareTo(z[a]!.abs());
-                    return byZ != 0 ? byZ : used.indexOf(a).compareTo(used.indexOf(b));
+                    return byZ != 0
+                        ? byZ
+                        : used.indexOf(a).compareTo(used.indexOf(b));
                   }))
                 .take(2)
                 .toList();
-            final label = top.isEmpty ? 'Cluster' : top.map((k) => k.startsWith('ev:') ? k.substring(3) : k).join(' · ');
+            final description = top.map((k) {
+              final name = k.startsWith('ev:') ? k.substring(3) : k;
+              return '${z[k]! >= 0 ? 'High' : 'Low'} $name';
+            }).join(' · ');
+            // Cluster identity must remain unique even when descriptions match.
+            final label = 'Cluster ${clusterIndex + 1}: $description';
             for (final i in g) {
               playerClusters[pf.players[i]] = label;
             }
@@ -316,7 +329,7 @@ class EventStore {
     );
   }
 
-  /// Version impact comparisons with bootstrap CI (spec §6d).
+  /// Version impact comparisons with bootstrap CI (spec Ã‚Â§6d).
   VersionImpactResult versionImpact(Filters f, {String? version}) {
     final where = StringBuffer("day BETWEEN ? AND ? AND user_pseudo_id <> ''");
     final args = <Object?>[f.from, f.to];
@@ -403,6 +416,7 @@ class EventStore {
         sessions: sessions,
         playtimeMin: playtimeMs / 60000,
         survivedD1: survivedD1,
+        d1Observable: sortedDays.first.compareTo(f.to) < 0,
         levelAttempts: levelAttempts,
       );
       playersByVersion.putIfAbsent(v, () => []).add(data);
@@ -415,7 +429,7 @@ class EventStore {
     );
   }
 
-  /// Discovers event associations and lift (spec §6).
+  /// Discovers event associations and lift (spec Ã‚Â§6).
   AssociationResult associations(Filters f) {
     final where = StringBuffer("day BETWEEN ? AND ? AND user_pseudo_id <> ''");
     final args = <Object?>[f.from, f.to];
@@ -489,7 +503,7 @@ class EventStore {
     return AssociationResult(players: totalPlayers, rules: rules, reason: null);
   }
 
-  /// Detects daily metric anomalies using a rolling 14-day robust z baseline (spec §7).
+  /// Detects daily metric anomalies using a rolling 14-day robust z baseline (spec Ã‚Â§7).
   AnomalyResult anomalies(Filters f) {
     final rangeDays = daysBetween(f.from, f.to);
     if (rangeDays.length < 8) {
@@ -500,7 +514,11 @@ class EventStore {
       );
     }
 
-    final historyStart = addDays(f.from, -14);
+    final priorDays = _db.select(
+      'SELECT day FROM pulled_days WHERE day < ? ORDER BY day DESC LIMIT 14;',
+      [f.from],
+    );
+    final historyStart = priorDays.isEmpty ? f.from : priorDays.last['day'] as String;
     final where = StringBuffer('day BETWEEN ? AND ?');
     final args = <Object?>[historyStart, f.to];
     if (f.platform != null) {
@@ -564,7 +582,13 @@ class EventStore {
       }
     }
 
-    final allDays = daysBetween(historyStart, f.to);
+    // Stored empty days are observations; unpulled days are unavailable data.
+    final allDays = [
+      for (final row in _db.select(
+        'SELECT day FROM pulled_days WHERE day BETWEEN ? AND ? ORDER BY day;',
+        [historyStart, f.to],
+      )) row['day'] as String,
+    ];
     final seriesMap = <String, List<AnomalyAlertPoint>>{};
 
     seriesMap['DAU'] = [
@@ -620,12 +644,8 @@ class EventStore {
       }
     }
 
-    final alerts = detectAnomalies(seriesMap);
-    final filteredAlerts = alerts
-        .where((a) => a.day.compareTo(f.from) >= 0 && a.day.compareTo(f.to) <= 0)
-        .toList();
-
-    return AnomalyResult(days: rangeDays.length, alerts: filteredAlerts, reason: null);
+    final alerts = detectAnomalies(seriesMap, fromDay: f.from, toDay: f.to);
+    return AnomalyResult(days: rangeDays.length, alerts: alerts, reason: null);
   }
 
   /// Atomically replaces every row of [day] with [events].
