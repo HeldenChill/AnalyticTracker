@@ -70,6 +70,10 @@ final funnelResultProvider = FutureProvider.autoDispose
         (ref, q) => ref.watch(apiClientProvider).runFunnel(q.def, q.filters,
             breakdown: q.breakdown, interval: q.interval));
 
+/// Player clusters (auto k) for the Analytic page.
+final clustersProvider = FutureProvider.family<ClusterResult, Filters>(
+    (ref, f) => ref.watch(apiClientProvider).clusters(f));
+
 final paramKeysProvider = FutureProvider.family<List<String>, ({String event, Filters filters})>(
     (ref, q) => ref.watch(apiClientProvider).paramKeys(q.event, q.filters));
 

@@ -38,6 +38,9 @@ void main() {
         progressionProvider.overrideWith((ref, f) async => const ProgressionData(stages: [])),
         countsProvider.overrideWith((ref, q) async => const <EventCount>[]),
         savedFunnelsProvider.overrideWith((ref) async => const <SavedFunnel>[]),
+        clustersProvider.overrideWith((ref, f) async => const ClusterResult(
+            players: 3, k: 0, silhouette: null, features: [], droppedFeatures: [], overall: {}, clusters: [],
+            reason: 'too_few_players')),
       ],
       child: const MaterialApp(home: AppShell()),
     ));
@@ -47,7 +50,7 @@ void main() {
   testWidgets('sidebar navigates between pages', (t) async {
     await pumpShell(t);
     expect(find.text('DAU (avg)'), findsOneWidget);
-    for (final label in ['Overview', 'Retention', 'Progression', 'EXPLORE', 'Funnels', 'Events', 'Parameters', 'Data health', 'Settings']) {
+    for (final label in ['Overview', 'Retention', 'Progression', 'EXPLORE', 'Funnels', 'Analytic', 'Events', 'Parameters', 'Data health', 'Settings']) {
       expect(find.text(label), findsWidgets, reason: label);
     }
     await t.tap(find.text('Retention'));
@@ -56,6 +59,9 @@ void main() {
     await t.tap(find.text('Progression'));
     await t.pumpAndSettle();
     expect(find.textContaining('No stage events yet'), findsOneWidget);
+    await t.tap(find.text('Analytic'));
+    await t.pumpAndSettle();
+    expect(find.textContaining('Not enough players to find groups: 3'), findsOneWidget);
   });
 
   testWidgets('preset change refetches overview', (t) async {

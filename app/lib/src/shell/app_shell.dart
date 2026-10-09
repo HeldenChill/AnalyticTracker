@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../pages/analytic/analytic_page.dart';
 import '../pages/funnel_page.dart';
 import '../pages/overview_page.dart';
 import '../pages/progression_page.dart';
@@ -25,6 +26,7 @@ const _items = [
   _NavItem('Retention', Icons.people_outline, RetentionPage()),
   _NavItem('Progression', Icons.stairs_outlined, ProgressionPage()),
   _NavItem('Funnels', Icons.filter_alt_outlined, FunnelPage()),
+  _NavItem('Analytic', Icons.insights_outlined, AnalyticPage()),
   _NavItem('Events', Icons.show_chart, CountsScreen()),
   _NavItem('Parameters', Icons.bar_chart, ParamScreen()),
   _NavItem('Data health', Icons.calendar_month_outlined, DaysScreen()),
@@ -33,7 +35,7 @@ const _items = [
 
 /// Index of the first Explore item and of the first item after the divider.
 const _exploreStart = 3;
-const _footerStart = 6;
+const _footerStart = 7;
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -57,6 +59,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     ref.invalidate(funnelResultProvider);
     ref.invalidate(paramKeysProvider);
     ref.invalidate(paramValuesProvider);
+    ref.invalidate(clustersProvider);
     // Data often comes back identical in <1 ms, so confirm visibly.
     final messenger = ScaffoldMessenger.of(context);
     try {
