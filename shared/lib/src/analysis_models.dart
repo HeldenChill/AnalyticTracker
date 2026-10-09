@@ -105,3 +105,169 @@ class ClusterResult {
         'reason': reason,
       };
 }
+
+/// One churn driver comparing first-24h feature distributions (spec §5).
+class ChurnDriver {
+  const ChurnDriver({
+    required this.feature,
+    required this.meanChurned,
+    required this.meanStayed,
+    required this.ratio,
+    required this.cohensD,
+    required this.churnedRate,
+    required this.stayedRate,
+    required this.smallSample,
+  });
+
+  final String feature;
+  final double meanChurned;
+  final double meanStayed;
+  final double? ratio;
+  final double cohensD;
+  final double churnedRate;
+  final double stayedRate;
+  final bool smallSample;
+
+  factory ChurnDriver.fromJson(Map<String, dynamic> j) => ChurnDriver(
+        feature: j['feature'] as String,
+        meanChurned: (j['meanChurned'] as num).toDouble(),
+        meanStayed: (j['meanStayed'] as num).toDouble(),
+        ratio: j['ratio'] == null ? null : (j['ratio'] as num).toDouble(),
+        cohensD: (j['cohensD'] as num).toDouble(),
+        churnedRate: (j['churnedRate'] as num).toDouble(),
+        stayedRate: (j['stayedRate'] as num).toDouble(),
+        smallSample: j['smallSample'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'feature': feature,
+        'meanChurned': meanChurned,
+        'meanStayed': meanStayed,
+        'ratio': ratio,
+        'cohensD': cohensD,
+        'churnedRate': churnedRate,
+        'stayedRate': stayedRate,
+        'smallSample': smallSample,
+      };
+}
+
+/// One condition in a decision tree path (spec §5a).
+class ChurnRuleCondition {
+  const ChurnRuleCondition({
+    required this.feature,
+    required this.op,
+    required this.threshold,
+  });
+
+  final String feature;
+  final String op;
+  final double threshold;
+
+  factory ChurnRuleCondition.fromJson(Map<String, dynamic> j) => ChurnRuleCondition(
+        feature: j['feature'] as String,
+        op: j['op'] as String,
+        threshold: (j['threshold'] as num).toDouble(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'feature': feature,
+        'op': op,
+        'threshold': threshold,
+      };
+}
+
+/// One IF-THEN rule from CART decision tree leaf (spec §5a).
+class ChurnRule {
+  const ChurnRule({
+    required this.text,
+    required this.conditions,
+    required this.size,
+    required this.churned,
+    required this.churnRate,
+    required this.lift,
+  });
+
+  final String text;
+  final List<ChurnRuleCondition> conditions;
+  final int size;
+  final int churned;
+  final double churnRate;
+  final double lift;
+
+  factory ChurnRule.fromJson(Map<String, dynamic> j) => ChurnRule(
+        text: j['text'] as String,
+        conditions: [
+          for (final c in j['conditions'] as List)
+            ChurnRuleCondition.fromJson(c as Map<String, dynamic>),
+        ],
+        size: j['size'] as int,
+        churned: j['churned'] as int,
+        churnRate: (j['churnRate'] as num).toDouble(),
+        lift: (j['lift'] as num).toDouble(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'text': text,
+        'conditions': [for (final c in conditions) c.toJson()],
+        'size': size,
+        'churned': churned,
+        'churnRate': churnRate,
+        'lift': lift,
+      };
+}
+
+/// Response of `GET /analysis/churn` (spec §5, §5a).
+class ChurnResult {
+  const ChurnResult({
+    required this.players,
+    required this.observable,
+    required this.churned,
+    required this.stayed,
+    required this.excluded,
+    required this.churnRate,
+    required this.drivers,
+    required this.rules,
+    required this.reason,
+  });
+
+  final int players;
+  final int observable;
+  final int churned;
+  final int stayed;
+  final int excluded;
+  final double churnRate;
+  final List<ChurnDriver> drivers;
+  final List<ChurnRule> rules;
+  final String? reason;
+
+  factory ChurnResult.fromJson(Map<String, dynamic> j) => ChurnResult(
+        players: j['players'] as int,
+        observable: j['observable'] as int,
+        churned: j['churned'] as int,
+        stayed: j['stayed'] as int,
+        excluded: j['excluded'] as int,
+        churnRate: (j['churnRate'] as num).toDouble(),
+        drivers: [
+          for (final d in j['drivers'] as List)
+            ChurnDriver.fromJson(d as Map<String, dynamic>),
+        ],
+        rules: [
+          for (final r in j['rules'] as List)
+            ChurnRule.fromJson(r as Map<String, dynamic>),
+        ],
+        reason: j['reason'] as String?,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'players': players,
+        'observable': observable,
+        'churned': churned,
+        'stayed': stayed,
+        'excluded': excluded,
+        'churnRate': churnRate,
+        'drivers': [for (final d in drivers) d.toJson()],
+        'rules': [for (final r in rules) r.toJson()],
+        'reason': reason,
+      };
+}
+

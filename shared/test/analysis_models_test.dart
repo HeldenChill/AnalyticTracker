@@ -48,4 +48,62 @@ void main() {
     expect(r.overall['sessions'], 2.0);
     expect(r.clusters, isEmpty);
   });
+
+  test('ChurnResult round trip with drivers and rules', () {
+    const r = ChurnResult(
+      players: 100,
+      observable: 75,
+      churned: 25,
+      stayed: 50,
+      excluded: 25,
+      churnRate: 0.333333,
+      drivers: [
+        ChurnDriver(
+          feature: 'level_fails',
+          meanChurned: 3.5,
+          meanStayed: 1.2,
+          ratio: 2.916667,
+          cohensD: 0.85,
+          churnedRate: 0.8,
+          stayedRate: 0.4,
+          smallSample: false,
+        ),
+      ],
+      rules: [
+        ChurnRule(
+          text: 'IF level_fails >= 3 -> 82% left (n = 17)',
+          conditions: [
+            ChurnRuleCondition(feature: 'level_fails', op: '>=', threshold: 3.0),
+          ],
+          size: 17,
+          churned: 14,
+          churnRate: 0.823529,
+          lift: 2.470588,
+        ),
+      ],
+      reason: null,
+    );
+    final back = ChurnResult.fromJson(roundTrip(r.toJson()));
+    expect(back.toJson(), r.toJson());
+    expect(back.drivers.single.feature, 'level_fails');
+    expect(back.rules.single.conditions.single.op, '>=');
+  });
+
+  test('ChurnResult with reason: not_observable', () {
+    final r = ChurnResult.fromJson({
+      'players': 10,
+      'observable': 0,
+      'churned': 0,
+      'stayed': 0,
+      'excluded': 10,
+      'churnRate': 0.0,
+      'drivers': <Object>[],
+      'rules': <Object>[],
+      'reason': 'not_observable',
+    });
+    expect(r.reason, 'not_observable');
+    expect(r.observable, 0);
+    expect(r.drivers, isEmpty);
+  });
 }
+
