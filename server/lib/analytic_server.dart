@@ -1,8 +1,10 @@
+export 'src/analysis/bootstrap.dart';
 export 'src/analysis/churn.dart';
 export 'src/analysis/clusters.dart';
 export 'src/analysis/features.dart';
 export 'src/analysis/kmeans.dart';
 export 'src/analysis/levels.dart';
+export 'src/analysis/survival.dart';
 export 'src/analysis/tree.dart';
 export 'src/api.dart';
 export 'src/bigquery_source.dart';
