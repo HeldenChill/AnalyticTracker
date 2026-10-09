@@ -55,6 +55,15 @@ Filters _filters(Map<String, String> q) {
   );
 }
 
+/// `k` query: missing or "auto" → null (auto); else an integer 2..8.
+int? _clusterK(Map<String, String> q) {
+  final v = _optional(q, 'k');
+  if (v == null || v == 'auto') return null;
+  final k = int.tryParse(v);
+  if (k == null || k < 2 || k > 8) throw _BadRequest('Invalid k');
+  return k;
+}
+
 Future<Map<String, dynamic>> _jsonBody(Request req) async {
   final text = await req.readAsString();
   try {
@@ -237,6 +246,11 @@ Handler buildHandler(EventStore store) {
         _json(store.metrics.retention(_filters(req.url.queryParameters)).toJson()))
     ..get('/progression', (Request req) =>
         _json(store.metrics.progression(_filters(req.url.queryParameters)).toJson()))
+    ..get('/analysis/clusters', (Request req) {
+      final q = req.url.queryParameters;
+      final f = _filters(q);
+      return _json(store.clusters(f, k: _clusterK(q)).toJson());
+    })
     ..get('/events/count', (Request req) {
       final q = req.url.queryParameters;
       final f = _filters(q);

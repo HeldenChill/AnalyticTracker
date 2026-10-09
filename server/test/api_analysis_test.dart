@@ -1,0 +1,79 @@
+import 'dart:convert';
+
+import 'package:analytic_server/analytic_server.dart';
+import 'package:analytic_shared/analytic_shared.dart';
+import 'package:shelf/shelf.dart';
+import 'package:test/test.dart';
+
+import 'helpers.dart';
+
+const d1 = '2026-10-01';
+
+void main() {
+  late EventStore store;
+  late Handler handler;
+
+  setUp(() {
+    store = EventStore.inMemory();
+    // 24 players: p00..p07 play 20 sessions with level fails, p08..p23 play 1 session.
+    store.replaceDay(d1, [
+      for (var i = 0; i < 24; i++) ...[
+        for (var s = 0; s < (i < 8 ? 20 : 1); s++) ev(d1, i * 1000 + s, 'session_start', 'p$i'),
+        if (i < 8) for (var s = 0; s < 5; s++) ev(d1, i * 1000 + 500 + s, 'level_1_fail', 'p$i'),
+      ],
+      // A test-device player, excluded by default.
+      ev(d1, 99999, 'session_start', 'tester', {'debug_event': 1}),
+    ]);
+    handler = buildHandler(store);
+  });
+  tearDown(() => store.close());
+
+  Future<(int, Object?)> getJson(String path) async {
+    final res = await handler(Request('GET', Uri.parse('http://localhost$path')));
+    return (res.statusCode, jsonDecode(await res.readAsString()));
+  }
+
+  test('GET /analysis/clusters auto k', () async {
+    final (status, body) = await getJson('/analysis/clusters?from=$d1&to=$d1');
+    expect(status, 200);
+    final r = ClusterResult.fromJson(body as Map<String, dynamic>);
+    expect(r.players, 24);
+    expect(r.k, 2);
+    expect(r.clusters.map((c) => c.size), [16, 8]);
+    // active_days, tenure_days, playtime_min and max_level are the same for everyone.
+    expect(r.features, ['sessions', 'level_fails']);
+    expect(r.droppedFeatures, ['active_days', 'playtime_min', 'max_level', 'tenure_days']);
+  });
+
+  test('GET /analysis/clusters k=auto, forced k and test devices', () async {
+    final (_, auto) = await getJson('/analysis/clusters?from=$d1&to=$d1&k=auto');
+    expect((auto as Map)['k'], 2);
+    final (_, two) = await getJson('/analysis/clusters?from=$d1&to=$d1&k=2');
+    expect((two as Map)['k'], 2);
+    // Only two distinct kinds of player exist, so k=3 cannot make a third
+    // group: k reports the non-empty groups.
+    final (_, three) = await getJson('/analysis/clusters?from=$d1&to=$d1&k=3');
+    expect((three as Map)['k'], 2);
+    expect((three['clusters'] as List).length, 2);
+    final (_, withTest) = await getJson('/analysis/clusters?from=$d1&to=$d1&test=1');
+    expect((withTest as Map)['players'], 25);
+  });
+
+  test('GET /analysis/clusters too few players', () async {
+    final (status, body) = await getJson('/analysis/clusters?from=$d1&to=$d1&platform=IOS');
+    expect(status, 200);
+    expect(body, containsPair('reason', 'too_few_players'));
+    expect(body, containsPair('players', 0));
+  });
+
+  test('GET /analysis/clusters bad k and missing range → 400', () async {
+    for (final k in ['1', '9', 'abc', '2.5']) {
+      final (status, body) = await getJson('/analysis/clusters?from=$d1&to=$d1&k=$k');
+      expect(status, 400, reason: k);
+      expect(body, {'error': 'Invalid k'});
+    }
+    final (status, body) = await getJson('/analysis/clusters?from=$d1');
+    expect(status, 400);
+    expect(body, {'error': '"to" is required'});
+  });
+}
