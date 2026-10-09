@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import 'analysis/clusters.dart';
+import 'analysis/features.dart';
 import 'funnel_engine.dart';
 import 'funnel_store.dart';
 import 'metrics_store.dart';
@@ -55,6 +57,12 @@ class EventStore {
 
   /// Funnel computation over the same connection.
   late final FunnelEngine funnelEngine = FunnelEngine(_db);
+
+  /// Per-player features for the Analytic tab (spec §3).
+  PlayerFeatures playerFeatures(Filters f) => extractFeatures(_db, f);
+
+  /// Player clusters (spec §4); [k] null = auto.
+  ClusterResult clusters(Filters f, {int? k}) => clusterPlayers(playerFeatures(f), k: k);
 
   /// Atomically replaces every row of [day] with [events].
   void replaceDay(String day, List<RawEvent> events, {DateTime? now}) {

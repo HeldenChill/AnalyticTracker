@@ -1,3 +1,5 @@
+export 'src/analysis/clusters.dart';
+export 'src/analysis/features.dart';
 export 'src/analysis/kmeans.dart';
 export 'src/api.dart';
 export 'src/bigquery_source.dart';
