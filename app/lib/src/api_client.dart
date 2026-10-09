@@ -164,6 +164,9 @@ class ApiClient {
   Future<ChurnResult> churn(Filters f) async =>
       ChurnResult.fromJson(await _getMap('analysis/churn', f.toQuery()));
 
+  Future<LevelResult> levels(Filters f) async =>
+      LevelResult.fromJson(await _getMap('analysis/levels', f.toQuery()));
+
   Future<FunnelResult> runFunnel(FunnelDef def, Filters f,
           {FunnelBreakdown? breakdown, FunnelInterval? interval}) async =>
       FunnelResult.fromJson(await _map(

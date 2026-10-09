@@ -78,6 +78,10 @@ final clustersProvider = FutureProvider.family<ClusterResult, Filters>(
 final churnProvider = FutureProvider.family<ChurnResult, Filters>(
     (ref, f) => ref.watch(apiClientProvider).churn(f));
 
+/// Level difficulty, quit hazard, and exit actions for the Analytic page.
+final levelsProvider = FutureProvider.family<LevelResult, Filters>(
+    (ref, f) => ref.watch(apiClientProvider).levels(f));
+
 final paramKeysProvider = FutureProvider.family<List<String>, ({String event, Filters filters})>(
     (ref, q) => ref.watch(apiClientProvider).paramKeys(q.event, q.filters));
 
