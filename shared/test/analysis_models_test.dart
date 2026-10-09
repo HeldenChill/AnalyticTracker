@@ -222,5 +222,70 @@ void main() {
     expect(viParsed.metrics.single.significant, isTrue);
     expect(viParsed.availableVersions, ['1.0.3', '1.0.4']);
   });
+
+  test('AssociationResult roundtrip', () {
+    const json = {
+      'players': 120,
+      'rules': [
+        {
+          'antecedent': 'Reward_request_success',
+          'consequent': 'pet_buy',
+          'support': 8,
+          'confidence': 0.615,
+          'lift': 3.12,
+          'sentence': 'Players who do Reward_request_success are 3.1× more likely to do pet_buy (8 players)',
+          'smallSample': true,
+        },
+      ],
+      'reason': null,
+    };
+    final res = AssociationResult.fromJson(json);
+    expect(res.players, 120);
+    expect(res.rules.length, 1);
+    final r = res.rules.first;
+    expect(r.antecedent, 'Reward_request_success');
+    expect(r.consequent, 'pet_buy');
+    expect(r.support, 8);
+    expect(r.confidence, 0.615);
+    expect(r.lift, 3.12);
+    expect(r.smallSample, isTrue);
+    expect(res.toJson(), json);
+  });
+
+  test('AnomalyResult roundtrip', () {
+    const json = {
+      'days': 30,
+      'alerts': [
+        {
+          'series': 'level_5_fail',
+          'day': '2026-10-03',
+          'value': 23.0,
+          'median': 4.0,
+          'mad': 1.5,
+          'z': 5.2,
+          'message': 'level_5_fail: 23 on 2026-10-03, usual ~4, z = 5.2',
+          'history': [
+            {'day': '2026-10-01', 'value': 4.0},
+            {'day': '2026-10-02', 'value': 5.0},
+            {'day': '2026-10-03', 'value': 23.0},
+          ],
+        },
+      ],
+      'reason': null,
+    };
+    final res = AnomalyResult.fromJson(json);
+    expect(res.days, 30);
+    expect(res.alerts.length, 1);
+    final a = res.alerts.first;
+    expect(a.series, 'level_5_fail');
+    expect(a.day, '2026-10-03');
+    expect(a.value, 23.0);
+    expect(a.median, 4.0);
+    expect(a.mad, 1.5);
+    expect(a.z, 5.2);
+    expect(a.history.length, 3);
+    expect(a.history.first.day, '2026-10-01');
+    expect(res.toJson(), json);
+  });
 }
 

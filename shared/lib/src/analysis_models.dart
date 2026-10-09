@@ -659,3 +659,166 @@ class VersionImpactResult {
       };
 }
 
+/// One discovered event association rule (spec §6).
+class AssociationRule {
+  const AssociationRule({
+    required this.antecedent,
+    required this.consequent,
+    required this.support,
+    required this.confidence,
+    required this.lift,
+    required this.sentence,
+    required this.smallSample,
+  });
+
+  final String antecedent;
+  final String consequent;
+  final int support;
+  final double confidence;
+  final double lift;
+  final String sentence;
+  final bool smallSample;
+
+  factory AssociationRule.fromJson(Map<String, dynamic> j) => AssociationRule(
+        antecedent: j['antecedent'] as String,
+        consequent: j['consequent'] as String,
+        support: j['support'] as int,
+        confidence: (j['confidence'] as num).toDouble(),
+        lift: (j['lift'] as num).toDouble(),
+        sentence: j['sentence'] as String,
+        smallSample: j['smallSample'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'antecedent': antecedent,
+        'consequent': consequent,
+        'support': support,
+        'confidence': confidence,
+        'lift': lift,
+        'sentence': sentence,
+        'smallSample': smallSample,
+      };
+}
+
+/// Response of `GET /analysis/associations` (spec §6, §8).
+class AssociationResult {
+  const AssociationResult({
+    required this.players,
+    required this.rules,
+    required this.reason,
+  });
+
+  final int players;
+  final List<AssociationRule> rules;
+  final String? reason;
+
+  factory AssociationResult.fromJson(Map<String, dynamic> j) => AssociationResult(
+        players: j['players'] as int,
+        rules: [
+          for (final r in j['rules'] as List) AssociationRule.fromJson(r as Map<String, dynamic>),
+        ],
+        reason: j['reason'] as String?,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'players': players,
+        'rules': [for (final r in rules) r.toJson()],
+        'reason': reason,
+      };
+}
+
+/// One history point for an anomaly series chart.
+class AnomalyAlertPoint {
+  const AnomalyAlertPoint({
+    required this.day,
+    required this.value,
+  });
+
+  final String day;
+  final double value;
+
+  factory AnomalyAlertPoint.fromJson(Map<String, dynamic> j) => AnomalyAlertPoint(
+        day: j['day'] as String,
+        value: (j['value'] as num).toDouble(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'day': day,
+        'value': value,
+      };
+}
+
+/// One flagged anomaly alert (spec §7).
+class AnomalyAlert {
+  const AnomalyAlert({
+    required this.series,
+    required this.day,
+    required this.value,
+    required this.median,
+    required this.mad,
+    required this.z,
+    required this.message,
+    required this.history,
+  });
+
+  final String series;
+  final String day;
+  final double value;
+  final double median;
+  final double mad;
+  final double z;
+  final String message;
+  final List<AnomalyAlertPoint> history;
+
+  factory AnomalyAlert.fromJson(Map<String, dynamic> j) => AnomalyAlert(
+        series: j['series'] as String,
+        day: j['day'] as String,
+        value: (j['value'] as num).toDouble(),
+        median: (j['median'] as num).toDouble(),
+        mad: (j['mad'] as num).toDouble(),
+        z: (j['z'] as num).toDouble(),
+        message: j['message'] as String,
+        history: [
+          for (final h in j['history'] as List) AnomalyAlertPoint.fromJson(h as Map<String, dynamic>),
+        ],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'series': series,
+        'day': day,
+        'value': value,
+        'median': median,
+        'mad': mad,
+        'z': z,
+        'message': message,
+        'history': [for (final h in history) h.toJson()],
+      };
+}
+
+/// Response of `GET /analysis/anomalies` (spec §7, §8).
+class AnomalyResult {
+  const AnomalyResult({
+    required this.days,
+    required this.alerts,
+    required this.reason,
+  });
+
+  final int days;
+  final List<AnomalyAlert> alerts;
+  final String? reason;
+
+  factory AnomalyResult.fromJson(Map<String, dynamic> j) => AnomalyResult(
+        days: j['days'] as int,
+        alerts: [
+          for (final a in j['alerts'] as List) AnomalyAlert.fromJson(a as Map<String, dynamic>),
+        ],
+        reason: j['reason'] as String?,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'days': days,
+        'alerts': [for (final a in alerts) a.toJson()],
+        'reason': reason,
+      };
+}
+
