@@ -39,18 +39,19 @@ void main() {
 
   setUp(serve);
 
-  test('all 20 tools, spec order, with annotations', () {
+  test('all 22 tools, spec order, with annotations', () {
     expect(tools.all.keys, [
       'data_health', 'filter_options', 'list_events', 'overview', 'retention', 'progression',
       'event_counts', 'param_keys', 'param_values', 'user_prop_keys', 'list_funnels', 'run_funnel',
       'funnel_players', 'player_events', 'save_funnel', 'delete_funnel', 'import_export',
-      'analysis_clusters', 'analysis_churn', 'analysis_levels',
+      'analysis_clusters', 'analysis_churn', 'analysis_levels', 'analysis_survival', 'analysis_version_impact',
     ]);
     bool? readOnly(String n) => tools.all[n]!.$1.toolAnnotations?.readOnlyHint;
     bool? destructive(String n) => tools.all[n]!.$1.toolAnnotations?.destructiveHint;
     for (final n in [
       'data_health', 'overview', 'run_funnel', 'list_funnels', 'param_values', 'user_prop_keys',
       'funnel_players', 'player_events', 'analysis_clusters', 'analysis_churn', 'analysis_levels',
+      'analysis_survival', 'analysis_version_impact',
     ]) {
       expect(readOnly(n), isTrue, reason: n);
     }
@@ -64,6 +65,8 @@ void main() {
     expect(tools.all['analysis_clusters']!.$1.inputSchema.required, ['from', 'to']);
     expect(tools.all['analysis_churn']!.$1.inputSchema.required, ['from', 'to']);
     expect(tools.all['analysis_levels']!.$1.inputSchema.required, ['from', 'to']);
+    expect(tools.all['analysis_survival']!.$1.inputSchema.required, ['from', 'to']);
+    expect(tools.all['analysis_version_impact']!.$1.inputSchema.required, ['from', 'to']);
   });
 
   test('analysis_clusters sends filters and optional k', () async {
@@ -84,6 +87,18 @@ void main() {
     await tools.call('analysis_levels', {...range, 'include_test': true});
     expect(seen.single.url.path, '/analysis/levels');
     expect(seen.single.url.queryParameters, {...range, 'test': '1'});
+  });
+
+  test('analysis_survival sends filters and optional by', () async {
+    await tools.call('analysis_survival', {...range, 'include_test': true, 'by': 'platform'});
+    expect(seen.single.url.path, '/analysis/survival');
+    expect(seen.single.url.queryParameters, {...range, 'test': '1', 'by': 'platform'});
+  });
+
+  test('analysis_version_impact sends filters and optional version', () async {
+    await tools.call('analysis_version_impact', {...range, 'include_test': true, 'version': '1.0.4'});
+    expect(seen.single.url.path, '/analysis/version-impact');
+    expect(seen.single.url.queryParameters, {...range, 'test': '1', 'version': '1.0.4'});
   });
 
   group('filters', () {

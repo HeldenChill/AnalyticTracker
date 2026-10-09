@@ -28,9 +28,9 @@ void main() {
     server.notifyInitialized();
 
     final list = await server.listTools(ListToolsRequest());
-    expect(list.tools.length, 20);
+    expect(list.tools.length, 22);
     expect(list.tools.map((t) => t.name),
-        containsAll(['import_export', 'analysis_clusters', 'analysis_churn', 'analysis_levels']));
+        containsAll(['import_export', 'analysis_clusters', 'analysis_churn', 'analysis_levels', 'analysis_survival', 'analysis_version_impact']));
 
     final prompts = await server.listPrompts(ListPromptsRequest());
     expect(prompts.prompts.map((p) => p.name), ['weekly_insights']);
@@ -41,6 +41,8 @@ void main() {
     expect(text, contains('analysis_clusters'));
     expect(text, contains('analysis_churn'));
     expect(text, contains('analysis_levels'));
+    expect(text, contains('analysis_survival'));
+    expect(text, contains('analysis_version_impact'));
 
     final ok = await server.callTool(CallToolRequest(
       name: 'overview',
@@ -55,6 +57,20 @@ void main() {
     ));
     expect(levelsOk.isError, isNot(true));
     expect((levelsOk.content.single as TextContent).text, '{"path":"/analysis/levels"}');
+
+    final survivalOk = await server.callTool(CallToolRequest(
+      name: 'analysis_survival',
+      arguments: {'from': '2026-10-01', 'to': '2026-10-07', 'by': 'version'},
+    ));
+    expect(survivalOk.isError, isNot(true));
+    expect((survivalOk.content.single as TextContent).text, '{"path":"/analysis/survival"}');
+
+    final versionImpactOk = await server.callTool(CallToolRequest(
+      name: 'analysis_version_impact',
+      arguments: {'from': '2026-10-01', 'to': '2026-10-07'},
+    ));
+    expect(versionImpactOk.isError, isNot(true));
+    expect((versionImpactOk.content.single as TextContent).text, '{"path":"/analysis/version-impact"}');
 
     // Missing required "to": rejected by schema validation, API never called.
     final bad = await server.callTool(CallToolRequest(name: 'overview', arguments: {'from': '2026-10-01'}));

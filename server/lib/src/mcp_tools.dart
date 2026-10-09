@@ -334,6 +334,41 @@ class AnalyticTools {
           ),
           (a) => _send('GET', 'analysis/levels', query: _filterQuery(a)),
         ),
+        (
+          Tool(
+            name: 'analysis_survival',
+            description: 'Kaplan-Meier survival curves S(t) and log-rank test grouped by version, platform, or cluster. '
+                'Curves show retention over days with Greenwood 95% confidence intervals. '
+                '"reason" too_few_players (< 20).',
+            inputSchema: _filtered({
+              'by': EnumSchema.untitledSingleSelect(
+                description: 'Grouping dimension ("version", "platform", or "cluster"). Default "version".',
+                values: ['version', 'platform', 'cluster'],
+              ),
+            }),
+            annotations: _read,
+          ),
+          (a) => _send('GET', 'analysis/survival', query: {
+            ..._filterQuery(a),
+            if (a['by'] != null) 'by': '${a['by']}',
+          }),
+        ),
+        (
+          Tool(
+            name: 'analysis_version_impact',
+            description: 'Evaluates impact of an app version compared to its predecessor using 1,000 bootstrap resamples (95% CI). '
+                'Compares D1 survival, sessions, playtime, and level win rates. '
+                '"reason" too_few_players (< 2 versions with >= 20 players).',
+            inputSchema: _filtered({
+              'version': Schema.string(description: 'Target version to evaluate. Omit for newest version with >= 20 players.'),
+            }),
+            annotations: _read,
+          ),
+          (a) => _send('GET', 'analysis/version-impact', query: {
+            ..._filterQuery(a),
+            if (a['version'] != null) 'version': '${a['version']}',
+          }),
+        ),
       ];
 
   // ---- handlers ----
