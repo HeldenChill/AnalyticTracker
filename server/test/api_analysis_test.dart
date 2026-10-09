@@ -96,5 +96,25 @@ void main() {
     expect(map['reason'], 'not_observable');
     expect(map['observable'], 0);
   });
+
+  test('GET /analysis/levels serves LevelResult', () async {
+    final (status, body) = await getJson('/analysis/levels?from=$d1&to=$d1');
+    expect(status, 200);
+    final map = body as Map<String, dynamic>;
+    expect(map['players'], 24);
+    expect(map['levels'], isA<List>());
+    expect(map['exitEvents'], isA<List>());
+    expect(map['transitions'], isA<List>());
+    final parsed = LevelResult.fromJson(map);
+    expect(parsed.players, 24);
+  });
+
+  test('GET /analysis/levels too few players', () async {
+    final (status, body) = await getJson('/analysis/levels?from=$d1&to=$d1&platform=IOS');
+    expect(status, 200);
+    final map = body as Map<String, dynamic>;
+    expect(map['reason'], 'too_few_players');
+    expect(map['levels'], isEmpty);
+  });
 }
 

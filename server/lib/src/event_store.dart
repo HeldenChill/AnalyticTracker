@@ -7,6 +7,7 @@ import 'package:sqlite3/sqlite3.dart';
 import 'analysis/churn.dart';
 import 'analysis/clusters.dart';
 import 'analysis/features.dart';
+import 'analysis/levels.dart';
 import 'funnel_engine.dart';
 import 'funnel_store.dart';
 import 'metrics_store.dart';
@@ -110,6 +111,80 @@ class EventStore {
 
     final excluded = totalPlayers - pf.players.length;
     return analyzeChurn(pf, churnLabels, excluded, totalPlayers);
+  }
+
+  /// Level difficulty, quit hazard, exits, and transitions (spec §6a, §6b).
+  LevelResult levels(Filters f) {
+    final where = StringBuffer("day BETWEEN ? AND ? AND user_pseudo_id <> ''");
+    final args = <Object?>[f.from, f.to];
+    if (f.platform != null) {
+      where.write(' AND platform = ?');
+      args.add(f.platform);
+    }
+    if (f.version != null) {
+      where.write(' AND app_version = ?');
+      args.add(f.version);
+    }
+    where.write(testEventsClause(f.includeTest));
+
+    final rows = _db.select(
+      'SELECT user_pseudo_id AS u, event_name AS n, day AS d, ts_micros AS ts '
+      'FROM events WHERE $where ORDER BY u, ts_micros, id;',
+      args,
+    );
+
+    final byPlayer = <String, List<PlayerRawEvent>>{};
+    final playerDays = <String, Set<String>>{};
+    for (final r in rows) {
+      final u = r['u'] as String;
+      final n = r['n'] as String;
+      final d = r['d'] as String;
+      final ts = r['ts'] as int;
+      byPlayer.putIfAbsent(u, () => []).add(PlayerRawEvent(u, n, ts));
+      playerDays.putIfAbsent(u, () => {}).add(d);
+    }
+
+    final players = byPlayer.keys.toList()..sort();
+    final totalPlayers = players.length;
+
+    // Observability & churn logic matching §5
+    final activeEndDay = addDays(f.to, -6);
+    final observableCutoffDay = addDays(f.to, -7);
+
+    final activeAtEnd = <String>{};
+    final observable = <String>{};
+    final churned = <String>{};
+
+    for (final p in players) {
+      final days = playerDays[p]!;
+      final sortedDays = days.toList()..sort();
+      final firstDay = sortedDays.first;
+
+      final isObservable = firstDay.compareTo(observableCutoffDay) <= 0;
+      if (isObservable) {
+        observable.add(p);
+      }
+
+      final isActive = days.any((d) => d.compareTo(activeEndDay) >= 0);
+      if (isActive) {
+        activeAtEnd.add(p);
+      }
+
+      final events = byPlayer[p]!;
+      final hasAppRemove = events.any((e) => e.name == 'app_remove');
+      if (isObservable && (hasAppRemove || !isActive)) {
+        churned.add(p);
+      }
+    }
+
+    return analyzeLevels(
+      totalPlayers: totalPlayers,
+      players: players,
+      playerEvents: byPlayer,
+      activeAtEnd: activeAtEnd,
+      observable: observable,
+      churned: churned,
+    );
   }
 
   /// Atomically replaces every row of [day] with [events].
