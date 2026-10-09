@@ -28,8 +28,8 @@ void main() {
     server.notifyInitialized();
 
     final list = await server.listTools(ListToolsRequest());
-    expect(list.tools.length, 18);
-    expect(list.tools.map((t) => t.name), containsAll(['import_export', 'analysis_clusters']));
+    expect(list.tools.length, 19);
+    expect(list.tools.map((t) => t.name), containsAll(['import_export', 'analysis_clusters', 'analysis_churn']));
 
     final prompts = await server.listPrompts(ListPromptsRequest());
     expect(prompts.prompts.map((p) => p.name), ['weekly_insights']);
@@ -38,6 +38,7 @@ void main() {
     final text = (prompt.messages.single.content as TextContent).text;
     expect(text, contains('from 2026-09-08 to 2026-10-07'));
     expect(text, contains('analysis_clusters'));
+    expect(text, contains('analysis_churn'));
 
     final ok = await server.callTool(CallToolRequest(
       name: 'overview',

@@ -312,6 +312,17 @@ class AnalyticTools {
             if (a['k'] != null) 'k': '${a['k']}',
           }),
         ),
+        (
+          Tool(
+            name: 'analysis_churn',
+            description: 'Compares first-24h behavior of churned vs stayed players (Cohen\'s d effect size) '
+                'and extracts CART decision tree churn rules. Churned = app_remove or no event in last 7 days of range. '
+                '"reason" not_observable (< 8 days range) or too_few_players (< 20 observable).',
+            inputSchema: _filtered({}),
+            annotations: _read,
+          ),
+          (a) => _send('GET', 'analysis/churn', query: _filterQuery(a)),
+        ),
       ];
 
   // ---- handlers ----

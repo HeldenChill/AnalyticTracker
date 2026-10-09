@@ -39,18 +39,18 @@ void main() {
 
   setUp(serve);
 
-  test('all 18 tools, spec order, with annotations', () {
+  test('all 19 tools, spec order, with annotations', () {
     expect(tools.all.keys, [
       'data_health', 'filter_options', 'list_events', 'overview', 'retention', 'progression',
       'event_counts', 'param_keys', 'param_values', 'user_prop_keys', 'list_funnels', 'run_funnel',
       'funnel_players', 'player_events', 'save_funnel', 'delete_funnel', 'import_export',
-      'analysis_clusters',
+      'analysis_clusters', 'analysis_churn',
     ]);
     bool? readOnly(String n) => tools.all[n]!.$1.toolAnnotations?.readOnlyHint;
     bool? destructive(String n) => tools.all[n]!.$1.toolAnnotations?.destructiveHint;
     for (final n in [
       'data_health', 'overview', 'run_funnel', 'list_funnels', 'param_values', 'user_prop_keys',
-      'funnel_players', 'player_events', 'analysis_clusters',
+      'funnel_players', 'player_events', 'analysis_clusters', 'analysis_churn',
     ]) {
       expect(readOnly(n), isTrue, reason: n);
     }
@@ -62,6 +62,7 @@ void main() {
     expect(tools.all['param_values']!.$1.inputSchema.required, ['from', 'to', 'event', 'key']);
     expect(tools.all['user_prop_keys']!.$1.inputSchema.required, ['from', 'to']);
     expect(tools.all['analysis_clusters']!.$1.inputSchema.required, ['from', 'to']);
+    expect(tools.all['analysis_churn']!.$1.inputSchema.required, ['from', 'to']);
   });
 
   test('analysis_clusters sends filters and optional k', () async {
@@ -70,6 +71,12 @@ void main() {
     expect(seen[0].url.path, '/analysis/clusters');
     expect(seen[0].url.queryParameters, {...range, 'test': '1'});
     expect(seen[1].url.queryParameters, {...range, 'k': '3'});
+  });
+
+  test('analysis_churn sends filters', () async {
+    await tools.call('analysis_churn', {...range, 'include_test': true});
+    expect(seen.single.url.path, '/analysis/churn');
+    expect(seen.single.url.queryParameters, {...range, 'test': '1'});
   });
 
   group('filters', () {
