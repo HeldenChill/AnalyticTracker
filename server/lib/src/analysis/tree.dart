@@ -147,7 +147,8 @@ DecisionTreeFit fitChurnTree(
       if (node.conditions.isNotEmpty) {
         final leafChurned = node.indices.where((i) => y[i]).length;
         final leafRate = leafChurned / node.indices.length;
-        final lift = overallChurnRate > 0 ? (leafRate / overallChurnRate) : 1.0;
+        final rawLift = overallChurnRate > 0 ? (leafRate / overallChurnRate) : 1.0;
+        final lift = (rawLift.isNaN || rawLift.isInfinite) ? 1.0 : rawLift;
         rules.add(ChurnRule(
           text: _formatRuleText(node.conditions, leafRate, node.indices.length),
           conditions: node.conditions,

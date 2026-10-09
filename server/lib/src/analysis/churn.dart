@@ -12,7 +12,7 @@ const churnInactivityDays = 7;
 double cohensD(List<double> churned, List<double> stayed) {
   final nc = churned.length;
   final ns = stayed.length;
-  if (nc + ns <= 2) return 0.0;
+  if (nc == 0 || ns == 0 || nc + ns <= 2) return 0.0;
 
   final mc = churned.fold(0.0, (a, b) => a + b) / nc;
   final ms = stayed.fold(0.0, (a, b) => a + b) / ns;
@@ -29,10 +29,13 @@ double cohensD(List<double> churned, List<double> stayed) {
   final varC = nc > 1 ? sqC / (nc - 1) : 0.0;
   final varS = ns > 1 ? sqS / (ns - 1) : 0.0;
 
-  final pooledSd = sqrt(((nc - 1) * varC + (ns - 1) * varS) / (nc + ns - 2));
-  if (pooledSd < 1e-12) return 0.0;
+  final pooledVar = ((nc - 1) * varC + (ns - 1) * varS) / (nc + ns - 2);
+  if (pooledVar <= 0.0 || pooledVar.isNaN) return 0.0;
+  final pooledSd = sqrt(pooledVar);
+  if (pooledSd < 1e-12 || pooledSd.isNaN) return 0.0;
 
-  return (mc - ms) / pooledSd;
+  final d = (mc - ms) / pooledSd;
+  return (d.isNaN || d.isInfinite) ? 0.0 : d;
 }
 
 ChurnResult analyzeChurn(
@@ -76,13 +79,14 @@ ChurnResult analyzeChurn(
     final cVals = [for (final i in churnedIndices) pf.rows[i][col]];
     final sVals = [for (final i in stayedIndices) pf.rows[i][col]];
 
-    final mc = cVals.isEmpty ? 0.0 : cVals.fold(0.0, (a, b) => a + b) / (nc == 0 ? 1 : nc);
-    final ms = sVals.isEmpty ? 0.0 : sVals.fold(0.0, (a, b) => a + b) / (ns == 0 ? 1 : ns);
+    final mc = nc > 0 ? cVals.fold(0.0, (a, b) => a + b) / nc : 0.0;
+    final ms = ns > 0 ? sVals.fold(0.0, (a, b) => a + b) / ns : 0.0;
 
-    final ratio = ms > 0 ? (mc / ms) : null;
+    final rawRatio = ms > 0 ? (mc / ms) : null;
+    final ratio = (rawRatio == null || rawRatio.isNaN || rawRatio.isInfinite) ? null : rawRatio;
     final d = cohensD(cVals, sVals);
-    final cRate = cVals.isEmpty ? 0.0 : cVals.where((v) => v > 0).length / (nc == 0 ? 1 : nc);
-    final sRate = sVals.isEmpty ? 0.0 : sVals.where((v) => v > 0).length / (ns == 0 ? 1 : ns);
+    final cRate = nc > 0 ? cVals.where((v) => v > 0).length / nc : 0.0;
+    final sRate = ns > 0 ? sVals.where((v) => v > 0).length / ns : 0.0;
 
     drivers.add(ChurnDriver(
       feature: feature,
