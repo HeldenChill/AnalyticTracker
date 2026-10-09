@@ -90,6 +90,7 @@ double? computeMedianSurvivalDays(List<SurvivalPoint> points) {
 }
 
 /// Computes log-rank test across K groups (spec §6c).
+/// Uses full (K-1) x (K-1) variance-covariance matrix formulation.
 LogRankTest? computeLogRank(Map<String, List<SubjectDuration>> groups) {
   final activeGroups = groups.entries.where((e) => e.value.isNotEmpty).toList();
   if (activeGroups.length < 2) return null;
@@ -105,86 +106,102 @@ LogRankTest? computeLogRank(Map<String, List<SubjectDuration>> groups) {
 
   final sortedDays = allEventDays.toList()..sort();
   final k = activeGroups.length;
+  final m = k - 1; // degrees of freedom
 
-  if (k == 2) {
-    // Exact 2-group Mantel-Haenszel log-rank test
-    final g1 = activeGroups[0].value;
-    final g2 = activeGroups[1].value;
+  // v = O_i - E_i for first (K-1) groups
+  final v = List.filled(m, 0.0);
+  // V = covariance matrix of size (K-1) x (K-1)
+  final cov = List.generate(m, (_) => List.filled(m, 0.0));
 
-    var o1 = 0.0;
-    var e1 = 0.0;
-    var v1 = 0.0;
+  for (final t in sortedDays) {
+    final risks = List.generate(k, (i) => activeGroups[i].value.where((s) => s.duration >= t).length);
+    final events = List.generate(k, (i) => activeGroups[i].value.where((s) => s.duration == t && s.isEvent).length);
 
-    for (final t in sortedDays) {
-      final n1 = g1.where((s) => s.duration >= t).length;
-      final n2 = g2.where((s) => s.duration >= t).length;
-      final d1 = g1.where((s) => s.duration == t && s.isEvent).length;
-      final d2 = g2.where((s) => s.duration == t && s.isEvent).length;
+    final totalRisk = risks.fold(0, (a, b) => a + b);
+    final totalEvents = events.fold(0, (a, b) => a + b);
 
-      final n = n1 + n2;
-      final d = d1 + d2;
+    if (totalRisk > 1 && totalEvents > 0) {
+      final n = totalRisk.toDouble();
+      final d = totalEvents.toDouble();
+      final factor = (d * (n - d)) / (n * n * (n - 1));
 
-      if (n > 1 && d > 0) {
-        o1 += d1;
-        final exp1 = n1 * (d / n);
-        e1 += exp1;
-        v1 += (n1 * n2 * d * (n - d)) / (n * n * (n - 1));
+      for (var i = 0; i < m; i++) {
+        final ni = risks[i].toDouble();
+        final di = events[i].toDouble();
+        final ei = ni * (d / n);
+        v[i] += di - ei;
+
+        for (var j = 0; j < m; j++) {
+          final nj = risks[j].toDouble();
+          if (i == j) {
+            cov[i][j] += (ni * (n - ni)) * factor;
+          } else {
+            cov[i][j] -= (ni * nj) * factor;
+          }
+        }
       }
-    }
-
-    if (v1 <= 0.0) return null;
-    final chiSq = ((o1 - e1) * (o1 - e1)) / v1;
-    final pVal = chiSquarePValue(chiSq, 1);
-    return LogRankTest(
-      chiSquare: chiSq,
-      degreesOfFreedom: 1,
-      pValue: pVal,
-      significant: pVal < 0.05,
-    );
-  }
-
-  // Multi-group (K > 2) log-rank test
-  var totalChiSq = 0.0;
-  for (var i = 0; i < k; i++) {
-    final gi = activeGroups[i].value;
-    final others = [for (var j = 0; j < k; j++) if (j != i) ...activeGroups[j].value];
-
-    var oi = 0.0;
-    var ei = 0.0;
-    var vi = 0.0;
-
-    for (final t in sortedDays) {
-      final ni = gi.where((s) => s.duration >= t).length;
-      final no = others.where((s) => s.duration >= t).length;
-      final di = gi.where((s) => s.duration == t && s.isEvent).length;
-      final do_ = others.where((s) => s.duration == t && s.isEvent).length;
-
-      final n = ni + no;
-      final d = di + do_;
-
-      if (n > 1 && d > 0) {
-        oi += di;
-        ei += ni * (d / n);
-        vi += (ni * no * d * (n - d)) / (n * n * (n - 1));
-      }
-    }
-
-    if (vi > 0.0) {
-      totalChiSq += ((oi - ei) * (oi - ei)) / vi;
     }
   }
 
-  // Adjust for (K - 1) degrees of freedom
-  final df = k - 1;
-  final chiSq = totalChiSq * (df / k);
-  final pVal = chiSquarePValue(chiSq, df);
+  // Solve V * x = v for x, then chiSq = v^T * x
+  final x = _solveLinearSystem(cov, v);
+  if (x == null) return null;
+
+  var chiSq = 0.0;
+  for (var i = 0; i < m; i++) {
+    chiSq += v[i] * x[i];
+  }
+  if (chiSq < 0.0) chiSq = 0.0;
+
+  final pVal = chiSquarePValue(chiSq, m);
 
   return LogRankTest(
     chiSquare: chiSq,
-    degreesOfFreedom: df,
+    degreesOfFreedom: m,
     pValue: pVal,
     significant: pVal < 0.05,
   );
+}
+
+/// Solves A * x = b using Gaussian elimination with partial pivoting.
+List<double>? _solveLinearSystem(List<List<double>> a, List<double> b) {
+  final n = b.length;
+  final mat = List.generate(n, (i) => List.generate(n + 1, (j) => j < n ? a[i][j] : b[i]));
+
+  for (var i = 0; i < n; i++) {
+    var maxRow = i;
+    var maxVal = mat[i][i].abs();
+    for (var r = i + 1; r < n; r++) {
+      if (mat[r][i].abs() > maxVal) {
+        maxVal = mat[r][i].abs();
+        maxRow = r;
+      }
+    }
+    if (maxVal < 1e-12) return null; // Singular matrix
+
+    if (maxRow != i) {
+      final tmp = mat[i];
+      mat[i] = mat[maxRow];
+      mat[maxRow] = tmp;
+    }
+
+    final pivot = mat[i][i];
+    for (var j = i; j <= n; j++) {
+      mat[i][j] /= pivot;
+    }
+    for (var r = 0; r < n; r++) {
+      if (r != i) {
+        final factor = mat[r][i];
+        if (factor.abs() > 1e-15) {
+          for (var j = i; j <= n; j++) {
+            mat[r][j] -= factor * mat[i][j];
+          }
+        }
+      }
+    }
+  }
+
+  return List.generate(n, (i) => mat[i][n]);
 }
 
 /// Chi-square survival function P(X >= chiSquare, df) (upper tail p-value).

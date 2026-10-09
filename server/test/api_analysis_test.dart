@@ -143,5 +143,27 @@ void main() {
     final parsed = VersionImpactResult.fromJson(map);
     expect(parsed.availableVersions, isA<List>());
   });
+
+  test('GET /analysis/version-impact sorts versions chronologically by global release day with semver tie-breaker', () async {
+    const d0 = '2026-09-20';
+    const d2 = '2026-10-02';
+    // Version 1.0.0 appeared globally on d0
+    store.replaceDay(d0, [
+      for (var i = 0; i < 20; i++) evx(d0, i * 100, 'session_start', 'u$i', version: '1.0.0'),
+    ]);
+    // Version 1.0.1 on d1 (already has 24 players with 1.0.0) -> add 1.0.1
+    store.replaceDay(d2, [
+      for (var i = 0; i < 20; i++) evx(d2, i * 100, 'session_start', 'w$i', version: '1.0.1'),
+    ]);
+
+    final (status, body) = await getJson('/analysis/version-impact?from=$d1&to=$d2');
+    expect(status, 200);
+    final parsed = VersionImpactResult.fromJson(body as Map<String, dynamic>);
+    // 1.0.0 appeared before 1.0.1 globally
+    expect(parsed.availableVersions, ['1.0.0', '1.0.1']);
+    expect(parsed.targetVersion, '1.0.1');
+    expect(parsed.baselineVersion, '1.0.0');
+  });
 }
+
 

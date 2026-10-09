@@ -95,9 +95,33 @@ void main() {
       expect(pts.last.ciUpper, 0.0);
     });
 
+    test('Three-group log-rank test computes chi-square with df = 2', () {
+      final g1 = <SubjectDuration>[
+        (duration: 1, isEvent: true),
+        (duration: 2, isEvent: true),
+        (duration: 5, isEvent: false),
+      ];
+      final g2 = <SubjectDuration>[
+        (duration: 3, isEvent: true),
+        (duration: 4, isEvent: true),
+        (duration: 6, isEvent: false),
+      ];
+      final g3 = <SubjectDuration>[
+        (duration: 10, isEvent: true),
+        (duration: 12, isEvent: true),
+        (duration: 15, isEvent: false),
+      ];
+      final lr = computeLogRank({'Early': g1, 'Mid': g2, 'Late': g3});
+      expect(lr, isNotNull);
+      expect(lr!.degreesOfFreedom, 2);
+      expect(lr.chiSquare, greaterThan(0.0));
+      expect(lr.significant, isTrue);
+    });
+
     test('Single group returns null log-rank', () {
       final lr = computeLogRank({'All': [(duration: 1, isEvent: true)]});
       expect(lr, isNull);
     });
   });
 }
+

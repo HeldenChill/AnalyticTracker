@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -341,6 +342,16 @@ class EventStore {
       playerFirstVersion.putIfAbsent(u, () => v);
     }
 
+    final globalMinDays = <String, String>{};
+    final globalMinRows = _db.select(
+      "SELECT app_version AS v, MIN(day) AS min_d FROM events WHERE app_version IS NOT NULL AND app_version <> '' GROUP BY app_version;",
+    );
+    for (final gr in globalMinRows) {
+      final gv = gr['v'] as String?;
+      final gd = gr['min_d'] as String?;
+      if (gv != null && gd != null) globalMinDays[gv] = gd;
+    }
+
     final versionFirstSeen = <String, String>{};
     for (final r in rows) {
       final v = (r['v'] as String?) ?? 'Unknown';
@@ -351,7 +362,7 @@ class EventStore {
       }
     }
     final chronologicalVersions = versionFirstSeen.keys.toList()
-      ..sort((a, b) => versionFirstSeen[a]!.compareTo(versionFirstSeen[b]!));
+      ..sort((a, b) => _compareVersionsChronologically(a, b, globalMinDays, versionFirstSeen));
 
     final playersByVersion = <String, List<PlayerVersionData>>{};
 
@@ -595,3 +606,31 @@ class EventStore {
 }
 
 final _keyRe = RegExp(r'^[A-Za-z0-9_]+$');
+
+int _compareVersionsChronologically(
+  String a,
+  String b,
+  Map<String, String> globalMinDays,
+  Map<String, String> localMinDays,
+) {
+  final dayA = globalMinDays[a] ?? localMinDays[a];
+  final dayB = globalMinDays[b] ?? localMinDays[b];
+  if (dayA != null && dayB != null && dayA != dayB) {
+    return dayA.compareTo(dayB);
+  }
+
+  // Fallback tie-breaker: compare semantic version numbers [major, minor, patch, ...]
+  final partsA = a.split(RegExp(r'[^\d]+')).where((s) => s.isNotEmpty).map(int.tryParse).toList();
+  final partsB = b.split(RegExp(r'[^\d]+')).where((s) => s.isNotEmpty).map(int.tryParse).toList();
+  final len = min(partsA.length, partsB.length);
+  for (var i = 0; i < len; i++) {
+    final numA = partsA[i] ?? 0;
+    final numB = partsB[i] ?? 0;
+    if (numA != numB) return numA.compareTo(numB);
+  }
+  if (partsA.length != partsB.length) {
+    return partsA.length.compareTo(partsB.length);
+  }
+  return a.compareTo(b);
+}
+
