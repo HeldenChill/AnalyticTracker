@@ -294,6 +294,24 @@ class AnalyticTools {
           ),
           _importExport,
         ),
+        (
+          Tool(
+            name: 'analysis_clusters',
+            description: 'Groups players with similar behaviour (k-means++ on per-player features: sessions, '
+                'active_days, playtime_min, max_level, level_fails, tenure_days, plus counts of the top 10 events '
+                'done by 10+ players). Each cluster: label, size, share, top 3 distinguishing features, raw means '
+                '(compare with "overall"). k = number of non-empty groups; silhouette < 0.25 = weak separation. '
+                '"reason" too_few_players (< 20) or no_variance means no clusters.',
+            inputSchema: _filtered({
+              'k': Schema.int(description: 'Number of groups, 2..8. Omit for auto (2..6, best silhouette).'),
+            }),
+            annotations: _read,
+          ),
+          (a) => _send('GET', 'analysis/clusters', query: {
+            ..._filterQuery(a),
+            if (a['k'] != null) 'k': '${a['k']}',
+          }),
+        ),
       ];
 
   // ---- handlers ----
