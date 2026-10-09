@@ -76,4 +76,25 @@ void main() {
     expect(status, 400);
     expect(body, {'error': '"to" is required'});
   });
+
+  test('GET /analysis/churn serves ChurnResult', () async {
+    const d10 = '2026-10-10';
+    store.replaceDay(d10, [ev(d10, 999999, 'session_start', 'p0')]);
+    final (status, body) = await getJson('/analysis/churn?from=$d1&to=$d10');
+    expect(status, 200);
+    final map = body as Map<String, dynamic>;
+    expect(map['players'], isA<int>());
+    expect(map['observable'], isA<int>());
+    expect(map['churnRate'], isA<num>());
+    expect(map['drivers'], isA<List>());
+  });
+
+  test('GET /analysis/churn with short range (< 8 days) returns not_observable', () async {
+    final (status, body) = await getJson('/analysis/churn?from=$d1&to=$d1');
+    expect(status, 200);
+    final map = body as Map<String, dynamic>;
+    expect(map['reason'], 'not_observable');
+    expect(map['observable'], 0);
+  });
 }
+

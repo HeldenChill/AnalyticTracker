@@ -251,6 +251,11 @@ Handler buildHandler(EventStore store) {
       final f = _filters(q);
       return _json(store.clusters(f, k: _clusterK(q)).toJson());
     })
+    ..get('/analysis/churn', (Request req) {
+      final q = req.url.queryParameters;
+      final f = _filters(q);
+      return _json(store.churn(f).toJson());
+    })
     ..get('/events/count', (Request req) {
       final q = req.url.queryParameters;
       final f = _filters(q);
