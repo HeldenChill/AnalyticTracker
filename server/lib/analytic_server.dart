@@ -1,3 +1,5 @@
+export 'src/analysis/anomalies.dart';
+export 'src/analysis/associations.dart';
 export 'src/analysis/bootstrap.dart';
 export 'src/analysis/churn.dart';
 export 'src/analysis/clusters.dart';
