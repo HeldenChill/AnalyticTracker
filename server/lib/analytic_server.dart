@@ -6,6 +6,7 @@ export 'src/analysis/kmeans.dart';
 export 'src/analysis/levels.dart';
 export 'src/analysis/survival.dart';
 export 'src/analysis/tree.dart';
+export 'src/analysis/version_impact.dart';
 export 'src/api.dart';
 export 'src/bigquery_source.dart';
 export 'src/config.dart';
