@@ -4,7 +4,7 @@
 
 ## Project
 
-Cross-platform (Windows, Android, iOS, Web) team dashboard that pulls game analytics (Firebase -> BigQuery export) daily and shows basic analysis. First consumer: PetVsMonster tracking events. Built (v1–v5 + v6 Waves 1–5 complete, implemented by Gemini, reviewed by Claude): Flutter app (Windows first) + local Dart shelf server + SQLite raw events + daily pull / manual BigQuery export import; GameAnalytics-style Overview, Retention, Progression, Funnels (multi-param steps, segments, trend, drill-down), Analytic tab (Player Clusters, Churn Drivers & Rules, Level Difficulty & Quit Walls, Survival Curves & Version Impact, Event Associations & Anomaly Alerts); test devices excluded by default; four switchable styles; **stdio MCP server `analytic-tracker` (24 tools + `weekly_insights` prompt) so Claude can query/manage the app**. Current status + next steps: `mem-project-intent-and-origin.md` → "START HERE".
+Cross-platform team dashboard for PetVsMonster: Windows-first Flutter app, Dart shelf server, SQLite raw events, BigQuery daily pull/manual import, Overview/Retention/Progression/Funnels and six-tab Analytic page. Existing four themes and24 MCP tools remain. The2026-10-09 review's nine analytics/UI defects were fixed with431 passing tests; stale-server404 resolved. Owner approved **Analytics Studio A retaining all four themes**, and six detailed Gemini wave plans are ready; **UI upgrade and ten-player gates are not implemented yet**. Current status: `mem-project-intent-and-origin.md` and `mem-ui-upgrade-and-review-handoff.md`.
 
 ## Memory index
 
@@ -16,3 +16,4 @@ Cross-platform (Windows, Android, iOS, Web) team dashboard that pulls game analy
 | Firebase BigQuery data playbook — sandbox 60 days, service account 403 IAM roles, manual export import query, real PVM data shape, tut, debug_event, platforms versions user properties | `mem-lessons-firebase-bigquery-data.md` |
 | Windows Flutter Dart environment playbook — PATH, Developer Mode, Visual Studio C++, build, stale server port 8080, screenshots, riverpod fl_chart traps | `mem-lessons-windows-flutter-environment.md` |
 | Spec plan Gemini review workflow playbook — writing plans for Gemini, review checklist, plan-vs-repo identity diff, Task 7 runtime checks, owner UI report debugging, Gemini habits | `mem-lessons-gemini-plan-review-workflow.md` |
+| Analytics Studio UI upgrade handoff, session2026-10-09, A approved retain four themes, animations charts graphs wrapping tables Data health Events ten-player gates, Gemini six-wave plan, review fixes431 tests, stale404, next session continuation | `mem-ui-upgrade-and-review-handoff.md` |

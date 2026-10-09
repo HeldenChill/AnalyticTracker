@@ -3,7 +3,7 @@
 **ID:** `mem-lessons-gemini-plan-review-workflow`
 **Parent:** `mem-project-index`
 **Last updated:** 2026-10-09
-**Used for:** v1–v5, and v6 Analytic Waves 1–5 (all 5 waves executed and verified, 420 tests passing; 24 MCP tools, 6-tab AnalyticPage).
+**Used for:** v1-v6 Gemini planning/review; post-review fixes verified at431 tests; approved Analytics Studio six-wave plan awaiting implementation.
 
 ## Loop
 
@@ -59,10 +59,23 @@
 
 - **Pure statistical modules:** Keeping all core math (CART `tree.dart`, Beta estimation `levels.dart`, Kaplan–Meier `survival.dart`, percentile bootstrap `bootstrap.dart`, association mining `associations.dart`, robust z-score `anomalies.dart`) in pure Dart functions taking primitive lists allowed 100% deterministic test coverage before database integration.
 - **Robust Z-Score MAD = 0 fallback:** When 14-day history is constant (e.g., all 0s or identical counts), MAD is 0. Division by zero yields infinity or NaN. Handled by fallback to relative difference $|x - \text{median}| / \max(|\text{median}|, 1.0) \ge 0.5$ to detect sudden spikes while ignoring flat baselines.
-- **Beta prior estimation safety:** Method of moments can yield negative $\alpha, \beta$ if sample variance exceeds $\bar{p}(1 - \bar{p})$. Clamping variance to $0.99 \times \bar{p}(1 - \bar{p})$ prevents NaN and preserves valid prior smoothing across sparse levels.
+- **Beta prior estimation safety:** Check actual `fitBetaPrior` behavior rather than prior status prose: invalid/insufficient/zero-variance inputs fall back to Beta1,1. Do not assume the implementation clamps variance.
 - **Cohen's d pooled SD:** When both groups have identical zero variance, pooled SD is 0. Returning 0.0 avoids NaN.
-- **App theme tokens:** `Theme.of(context).extension<AppThemeExtension>()` exposes `tokens.good` and `tokens.bad` (not `kpiPositive`/`kpiNegative`).
+- **App theme tokens:** `Theme.of(context).extension<AnalyticsTokens>()` exposes `tokens.good` and `tokens.bad` (not `kpiPositive`/`kpiNegative`).
 - **Tab count matching:** `DefaultTabController(length: 6)` must match exactly the number of tabs in `TabBar` and `TabBarView` to prevent assertion crashes.
+
+
+## 2026-10-09 review and Analytics Studio planning lessons
+
+- A plan-identity check and green suite do not establish analytical correctness. The five-wave implementation passed420 tests but independent review still found nine important issues. Preserve external numeric oracles and verify population, censoring and resampling semantics against the design.
+- The new Analytics Studio plans are **contract/algorithm/fixture plans**, not precompiled full-file snapshots. They have not been executed/replayed. Use their TDD steps, meaningful assertions and runtime checklist; do not claim byte identity or expected future test counts as verification.
+- The owner wants Gemini to implement one wave at a time and report commits/tests before proceeding. Master `.cursor/plans/analytics-studio-ui-implementation.md`; six linked wave files; spec approved. Implementation has not started.
+- Capture both conceptual choice and written-spec approval. Owner selected A, confirmed four current themes retained, then approved the written spec before detailed planning.
+- Treat illustrative demo numbers/status as synthetic. Derive real metrics from API rows and stored-day metadata; never copy preview claims into production.
+- Check intermediate consumers when a shared chart changes: the old anomaly wrapper fixed height220 must be removed in the chart wave, not deferred until its later redesign.
+- Keep user-facing MCP descriptions aligned with population gates; changing20 to10 must not change top20 associations or tree leaf support10.
+- Long-name regression coverage must include unbroken identifiers, header controls, legends, larger text, nonempty funnels, and all four themes; existence-only widget tests are insufficient.
+- Run the new app build and restart the current Dart server. Live404 can be a stale process despite routes being present in source. Test results are not proof the running app loaded the new code.
 
 ## Gemini habits observed
 

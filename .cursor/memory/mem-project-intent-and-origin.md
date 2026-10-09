@@ -2,7 +2,7 @@
 
 **ID:** `mem-project-intent-and-origin`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-08
+**Last updated:** 2026-10-09
 **Related:** `mem-system-architecture` (what exists now), `mem-lessons-firebase-bigquery-data`, `mem-lessons-windows-flutter-environment`, `mem-lessons-gemini-plan-review-workflow`, `mem-known-bugs-index`
 
 ## Intent (owner-stated)
@@ -17,7 +17,7 @@
 | Who | Does |
 |---|---|
 | Owner | Decides every design fork; runs Gemini; performs IAM/OS/installer steps |
-| Claude | Research, brainstorming, specs, step-by-step plans, code review, runtime verification, small fixes on request |
+| Claude / Codex | Research, brainstorming, specs, detailed Gemini plans, review, verification and fixes on request |
 | Gemini 3.8 | Implements the plans task-by-task (v1–v5 wave 3), commits per task |
 
 ## Decision timeline (2026-10-06 unless dated)
@@ -43,32 +43,33 @@
 | v6 Wave 3 (10-09) | Analytic Tab: Level Difficulty & Drop-off Bottlenecks (Beta-smoothed win rates, quit hazard, quit walls >= 2x median, exits with lift, Markov transitions to quit, GET /analysis/levels, MCP tool analysis_levels, LevelsTab) | Implemented by Gemini (5 commits `1660b25`..`c84e6d6`), gates 62/225/98 (385 total) clean |
 | v6 Wave 4 (10-09) | Analytic Tab: Survival Curves & Version Impact (Kaplan-Meier, Greenwood 95% band, log-rank chi-square p-value, 1000-resample bootstrap CI seed 42, GET /analysis/survival, GET /analysis/version-impact, MCP tools 21 & 22, SurvivalTab) | Implemented by Gemini, gates 64/241/100 (405 total) clean |
 | v6 Wave 5 (10-09) | Analytic Tab: Event Associations & Anomaly Alerts (support >= 5, lift >= 1.5 / <= 0.67, rolling 14-day robust z median/MAD, GET /analysis/associations, GET /analysis/anomalies, MCP tools 23 & 24, AssociationsTab & AnomaliesTab with MetricLineChart) | Implemented by Gemini (5 commits `eaf3966`..`c83a6b8`), gates 65/253/102 (420 total) clean |
+| v6 review/fixes (10-09) | Owner asked review all today's Gemini work, then fix all nine findings using systematic-debugging; D1 cutoff chosen as one complete follow-up day | BUG-0012..0020 RESOLVED; gates65/263/103; review artifact in docs/reviews |
+| Runtime report (10-09) | Survival/Associations/Anomalies404 | Stale server restarted; four affected endpoints200; BUG-0021 RESOLVED |
+| Analytics Studio (10-09) | More informative Data health/Events, chart variety plus series distinction, motion, wrapping and10-player gates; chose A while retaining all four themes; approved written spec | Six-wave Gemini implementation plan delivered; implementation NOT started; BUG-0022 SUSPECTED |
 
-## Status (end of 2026-10-09 Analytic Wave 5 session) — START HERE
+## Status - START HERE (2026-10-09 review and UI planning)
 
-- **Branch:** `main` (working tree clean). Commits for Analytic Tab Wave 5: `eaf3966`..`c83a6b8`.
-- **v6 Analytic Tab Waves 1–5 COMPLETE (full design spec delivered):**
-  - Shared: `analysis_models.dart` (complete result models for all 5 waves).
-  - Server: pure Dart analysis modules in `server/lib/src/analysis/` (`kmeans.dart`, `features.dart`, `clusters.dart`, `churn.dart`, `tree.dart`, `levels.dart`, `survival.dart`, `bootstrap.dart`, `version_impact.dart`, `associations.dart`, `anomalies.dart`).
-  - Server API: all analysis endpoints live with standard filters (`/analysis/clusters`, `/analysis/churn`, `/analysis/levels`, `/analysis/survival`, `/analysis/version-impact`, `/analysis/associations`, `/analysis/anomalies`).
-  - MCP: 24 tools total (all analysis endpoints exposed as readOnly tools), prompt `weekly_insights` runs all `analysis_*` tools.
-  - App: `AnalyticPage` with all 6 tabs (`DefaultTabController(length: 6)`): `ClustersTab`, `ChurnTab`, `LevelsTab`, `SurvivalTab`, `AssociationsTab`, and `AnomaliesTab`.
-  - Test gates: shared **65**, server **253**, app **102** (total **420** tests pass, all 3 analyzers say `No issues found!`).
-  - Code review: completed, verdict Ready to Merge.
-- **Next up: verification and operationalization:**
-  - Verify in Windows app runtime (`flutter run -d windows` / release build).
-  - Review known bugs (`mem-known-bugs-index.md`).
-  - Plan next phase (API auth BUG-0010, `pull_now` tool after IAM, multi-platform builds).
+- **Read first:** `mem-ui-upgrade-and-review-handoff.md` for the complete current handoff.
+- **Existing v6 Analytic Waves 1-5 are implemented.** The review found nine important defects; owner requested fixes, and BUG-0012 through BUG-0020 are RESOLVED with regression evidence.
+- **Last verified gates:** shared65 / server263 / app103 = **431 tests**, analyzers clean. This evidence predates any future Gemini UI implementation; rerun current gates when reviewing later work.
+- **D1 owner decision:** one complete follow-up day; final-day first-seen players excluded from version D1, and no comparison when either cohort is unobservable.
+- **Runtime 404:** BUG-0021 RESOLVED after restarting the stale Dart server; survival/version-impact/associations/anomalies returned200. The current app was not freshly rebuilt during UI planning.
+- **UI redesign:** owner approved A / Analytics Studio and the written spec. **All four current color themes remain.** Requests include richer Data health/Events, varied and distinct charts, smooth motion, long-name wrapping and ten-player eligibility.
+- **Implementation not started:** the approved ten-player gates and new widgets are planned, not present in current product code. Existing population/version gates remain20.
+- **Gemini plan delivered:** `.cursor/plans/analytics-studio-ui-implementation.md` links six detailed waves. Start Wave1 only and report before continuing, unless the owner supplies later implementation work.
+- **BUG-0022 SUSPECTED:** owner-reported table overlap/wrapping; exact reproduction still required.
+- **Workspace:** main branch; inspect Git status. The preview-ignore `.gitignore` change remains a separate pending file; memory handoff does not include product-code edits. Never overwrite/stage unrelated changes automatically.
 
 ## Next-step candidates (owner picks)
 
 | Item | Note |
 |---|---|
-| **App runtime verification** | Run release build or `flutter run -d windows` to test all 6 tabs on live data |
-| Verify BUG-0005..0009, 0011 in app | Release build + manual check |
-| API token (BUG-0010) | Prerequisite before teammates use MCP/API |
-| `pull_now` MCP tool | Only after IAM fixed |
-| Other platforms (Android/iOS/Web) | Owner said after Windows settles |
+| **Gemini Analytics Studio Wave1** | Approved design/master and six wave plans ready; run/review one wave at a time |
+| Review completed Gemini UI work | Determine actual wave, diff, gates and runtime report first |
+| Existing Windows visual checks | Source fixes have automated coverage; current Windows app build/visual walkthrough still needs explicit evidence |
+| Verify BUG-0005..0009,0011 in app | Older VERIFY_PENDING records remain; do not silently mark resolved |
+| API token BUG-0010 | Still deferred; prerequisite for team/LAN deployment |
+| Automatic pull and other platforms | IAM remains unresolved; Windows first |
 
 
 ## v6 Analytic tab — handoff (2026-10-07)

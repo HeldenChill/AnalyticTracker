@@ -2,7 +2,7 @@
 
 **ID:** `mem-lessons-windows-flutter-environment`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-07
+**Last updated:** 2026-10-09
 
 ## Machine facts (owner PC)
 
@@ -26,7 +26,7 @@ Then `flutter build windows --release` (~25–40 s). Ship the **whole** `Release
 - PowerShell 5.1 `Set-Content -Encoding utf8` writes a **BOM** → noisy diffs in Dart files. Edit files with the Edit tool or Python (`newline=''` keeps CRLF/LF as found).
 - `flutter build windows --release` succeeds while the old `analytic_app.exe` is running (it rewrote `data\app.so`); the running app keeps old code until restarted. A 5 s "Built" with unchanged timestamps = nothing to rebuild.
 - **Stale server trap:** an older server left running keeps port 8080 → new process dies with `errno = 10048`, and requests hit OLD code (`Route not found` for new routes). Check with `Get-CimInstance Win32_Process -Filter "Name='dartvm.exe' OR Name='dart.exe'"` (CommandLine shows `bin\server.dart`) and kill before restarting.
-- In the agent's PowerShell tool, `Start-Process … -RedirectStandardOutput` + wait loops tend to hang until timeout; starting via bash `nohup … &` and polling with `curl -s -m 2` is reliable. PowerShell 5.1 `Invoke-WebRequest` to localhost sometimes fails where `curl` works.
+- Historical tooling sometimes hung when process launch and wait loops shared one call. This session successfully used hidden Start-Process with explicit working directory/logs and separate bounded HTTP probes; use the current supported harness rather than assuming bash nohup survives Windows process cleanup.
 - `sqlite3` Dart package (2.x) loads Windows' built-in `winsqlite3`; JSON1 (`json_extract`, `json_each`) available — no dll download needed on this PC.
 
 ## Runtime verification recipe (no human clicks)
@@ -43,3 +43,11 @@ Then `flutter build windows --release` (~25–40 s). Ship the **whole** `Release
 - `find.widgetWithText(TextButton, …)` misses `TextButton.icon` (private subclass) → match `ButtonStyleButton` ancestor.
 - Bundled fonts: Google Fonts CSS API (`curl` without browser UA) returns **static TTF per weight** from fonts.gstatic.com — safer than variable fonts for Flutter weights.
 - Flutter tests make real HTTP return 400 (mock HttpClient) → override every provider a page in an `IndexedStack` watches, or offstage pages show errors.
+
+## 2026-10-09 runtime and preview evidence
+
+- New source routes do not hot-reload an existing Dart process. Owner's three-tab404 report was reproduced on the older server, resolved by a targeted restart, and confirmed by200 JSON responses from survival/version-impact/associations/anomalies. Record live endpoint evidence separately from source/analyzer success.
+- In this session a hidden PowerShell Start-Process of the real Dart executable, with explicit server working directory/config and separate stdout/stderr logs, succeeded. Launch first and probe in later calls with timeouts; do not kill unrelated Dart/MCP processes or wrap the launch in a long blocking loop.
+- Windows app was not rebuilt during the later UI planning; a future Gemini implementation must build/relaunch and inspect the actual current binary.
+- Browser companion used the project's brainstorming script under Git Bash with --open --foreground and persistent `.superpowers/brainstorm/` files. Its URL token lives in local server-info; do not commit it in project memory. The server may expire after inactivity.
+- Browser automation was unavailable in this session. Only preview HTTP delivery and JavaScript/template behavior were checked; no screenshot-based visual sign-off. Use currently supported UI tools in future sessions; older synthetic-click recipes are historical, not authority to bypass tool restrictions.
