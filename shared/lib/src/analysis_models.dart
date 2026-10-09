@@ -271,3 +271,163 @@ class ChurnResult {
       };
 }
 
+/// Level difficulty and quit hazard stats (spec §6a).
+class LevelStats {
+  const LevelStats({
+    required this.level,
+    required this.attempts,
+    required this.completes,
+    required this.fails,
+    required this.rawWinRate,
+    required this.smoothedWinRate,
+    required this.reached,
+    required this.stopped,
+    required this.hazard,
+    required this.wall,
+  });
+
+  final int level;
+  final int attempts;
+  final int completes;
+  final int fails;
+  final double rawWinRate;
+  final double smoothedWinRate;
+  final int reached;
+  final int stopped;
+  final double hazard;
+  final bool wall;
+
+  factory LevelStats.fromJson(Map<String, dynamic> j) => LevelStats(
+        level: j['level'] as int,
+        attempts: j['attempts'] as int,
+        completes: j['completes'] as int,
+        fails: j['fails'] as int,
+        rawWinRate: (j['rawWinRate'] as num).toDouble(),
+        smoothedWinRate: (j['smoothedWinRate'] as num).toDouble(),
+        reached: j['reached'] as int,
+        stopped: j['stopped'] as int,
+        hazard: (j['hazard'] as num).toDouble(),
+        wall: j['wall'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'level': level,
+        'attempts': attempts,
+        'completes': completes,
+        'fails': fails,
+        'rawWinRate': rawWinRate,
+        'smoothedWinRate': smoothedWinRate,
+        'reached': reached,
+        'stopped': stopped,
+        'hazard': hazard,
+        'wall': wall,
+      };
+}
+
+/// Last non-blocklisted event before quitting, comparing churned vs stayed (spec §6b).
+class ExitEvent {
+  const ExitEvent({
+    required this.eventName,
+    required this.churnedCount,
+    required this.stayedCount,
+    required this.churnedShare,
+    required this.stayedShare,
+    required this.lift,
+  });
+
+  final String eventName;
+  final int churnedCount;
+  final int stayedCount;
+  final double churnedShare;
+  final double stayedShare;
+  final double? lift;
+
+  factory ExitEvent.fromJson(Map<String, dynamic> j) => ExitEvent(
+        eventName: j['eventName'] as String,
+        churnedCount: j['churnedCount'] as int,
+        stayedCount: j['stayedCount'] as int,
+        churnedShare: (j['churnedShare'] as num).toDouble(),
+        stayedShare: (j['stayedShare'] as num).toDouble(),
+        lift: j['lift'] == null ? null : (j['lift'] as num).toDouble(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'eventName': eventName,
+        'churnedCount': churnedCount,
+        'stayedCount': stayedCount,
+        'churnedShare': churnedShare,
+        'stayedShare': stayedShare,
+        'lift': lift,
+      };
+}
+
+/// Markov transition between consecutive events (spec §6b).
+class EventTransition {
+  const EventTransition({
+    required this.fromEvent,
+    required this.toEvent,
+    required this.count,
+    required this.probability,
+  });
+
+  final String fromEvent;
+  final String toEvent;
+  final int count;
+  final double probability;
+
+  factory EventTransition.fromJson(Map<String, dynamic> j) => EventTransition(
+        fromEvent: j['fromEvent'] as String,
+        toEvent: j['toEvent'] as String,
+        count: j['count'] as int,
+        probability: (j['probability'] as num).toDouble(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'fromEvent': fromEvent,
+        'toEvent': toEvent,
+        'count': count,
+        'probability': probability,
+      };
+}
+
+/// `GET /analysis/levels` response (spec §6a, §6b, §8).
+class LevelResult {
+  const LevelResult({
+    required this.players,
+    required this.observable,
+    required this.levels,
+    required this.exitEvents,
+    required this.transitions,
+    required this.medianHazard,
+    required this.reason,
+  });
+
+  final int players;
+  final int observable;
+  final List<LevelStats> levels;
+  final List<ExitEvent> exitEvents;
+  final List<EventTransition> transitions;
+  final double medianHazard;
+  final String? reason;
+
+  factory LevelResult.fromJson(Map<String, dynamic> j) => LevelResult(
+        players: j['players'] as int,
+        observable: j['observable'] as int,
+        levels: [for (final l in j['levels'] as List) LevelStats.fromJson(l as Map<String, dynamic>)],
+        exitEvents: [for (final e in j['exitEvents'] as List) ExitEvent.fromJson(e as Map<String, dynamic>)],
+        transitions: [for (final t in j['transitions'] as List) EventTransition.fromJson(t as Map<String, dynamic>)],
+        medianHazard: (j['medianHazard'] as num).toDouble(),
+        reason: j['reason'] as String?,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'players': players,
+        'observable': observable,
+        'levels': [for (final l in levels) l.toJson()],
+        'exitEvents': [for (final e in exitEvents) e.toJson()],
+        'transitions': [for (final t in transitions) t.toJson()],
+        'medianHazard': medianHazard,
+        'reason': reason,
+      };
+}
+

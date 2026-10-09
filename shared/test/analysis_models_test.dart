@@ -105,5 +105,57 @@ void main() {
     expect(r.observable, 0);
     expect(r.drivers, isEmpty);
   });
+
+  test('LevelStats, ExitEvent, EventTransition, LevelResult JSON roundtrip', () {
+    const stats = LevelStats(
+      level: 1,
+      attempts: 20,
+      completes: 15,
+      fails: 5,
+      rawWinRate: 0.75,
+      smoothedWinRate: 0.72,
+      reached: 18,
+      stopped: 2,
+      hazard: 0.1111,
+      wall: false,
+    );
+    const exit = ExitEvent(
+      eventName: 'level_3_fail',
+      churnedCount: 10,
+      stayedCount: 2,
+      churnedShare: 0.5,
+      stayedShare: 0.1,
+      lift: 5.0,
+    );
+    const transition = EventTransition(
+      fromEvent: 'level_3_fail',
+      toEvent: 'quit',
+      count: 8,
+      probability: 0.8,
+    );
+    const result = LevelResult(
+      players: 50,
+      observable: 40,
+      levels: [stats],
+      exitEvents: [exit],
+      transitions: [transition],
+      medianHazard: 0.15,
+      reason: null,
+    );
+
+    final json = result.toJson();
+    final parsed = LevelResult.fromJson(json);
+
+    expect(parsed.players, 50);
+    expect(parsed.observable, 40);
+    expect(parsed.medianHazard, 0.15);
+    expect(parsed.levels.single.level, 1);
+    expect(parsed.levels.single.smoothedWinRate, 0.72);
+    expect(parsed.levels.single.wall, isFalse);
+    expect(parsed.exitEvents.single.eventName, 'level_3_fail');
+    expect(parsed.exitEvents.single.lift, 5.0);
+    expect(parsed.transitions.single.toEvent, 'quit');
+    expect(parsed.transitions.single.probability, 0.8);
+  });
 }
 
