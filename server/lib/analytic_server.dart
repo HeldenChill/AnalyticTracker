@@ -1,3 +1,4 @@
+export 'src/analysis/churn.dart';
 export 'src/analysis/clusters.dart';
 export 'src/analysis/features.dart';
 export 'src/analysis/kmeans.dart';

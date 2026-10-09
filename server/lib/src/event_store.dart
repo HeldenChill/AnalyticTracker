@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import 'analysis/churn.dart';
 import 'analysis/clusters.dart';
 import 'analysis/features.dart';
 import 'funnel_engine.dart';
@@ -58,11 +59,58 @@ class EventStore {
   /// Funnel computation over the same connection.
   late final FunnelEngine funnelEngine = FunnelEngine(_db);
 
+  Database get db => _db;
+
   /// Per-player features for the Analytic tab (spec §3).
   PlayerFeatures playerFeatures(Filters f) => extractFeatures(_db, f);
 
+  /// Per-player first-24h features for churn analysis (spec §5).
+  PlayerFeatures firstDayFeatures(Filters f) => extractFirstDayFeatures(_db, f);
+
   /// Player clusters (spec §4); [k] null = auto.
   ClusterResult clusters(Filters f, {int? k}) => clusterPlayers(playerFeatures(f), k: k);
+
+  /// Churn drivers and rules (spec §5, §5a).
+  ChurnResult churn(Filters f) {
+    final where = StringBuffer("day BETWEEN ? AND ? AND user_pseudo_id <> ''");
+    final args = <Object?>[f.from, f.to];
+    if (f.platform != null) {
+      where.write(' AND platform = ?');
+      args.add(f.platform);
+    }
+    if (f.version != null) {
+      where.write(' AND app_version = ?');
+      args.add(f.version);
+    }
+    where.write(testEventsClause(f.includeTest));
+
+    final allRows = _db.select(
+      'SELECT DISTINCT user_pseudo_id AS u, event_name AS n, day AS d '
+      'FROM events WHERE $where;',
+      args,
+    );
+
+    final byPlayer = <String, List<Row>>{};
+    for (final r in allRows) {
+      byPlayer.putIfAbsent(r['u'] as String, () => []).add(r);
+    }
+    final totalPlayers = byPlayer.length;
+
+    final pf = extractFirstDayFeatures(_db, f);
+    final activeEndDay = addDays(f.to, -6);
+
+    final churnLabels = <bool>[];
+    for (final p in pf.players) {
+      final events = byPlayer[p]!;
+      final hasAppRemove = events.any((r) => r['n'] == 'app_remove');
+      final hasActiveEvent = events.any((r) => (r['d'] as String).compareTo(activeEndDay) >= 0);
+      final isChurned = hasAppRemove || !hasActiveEvent;
+      churnLabels.add(isChurned);
+    }
+
+    final excluded = totalPlayers - pf.players.length;
+    return analyzeChurn(pf, churnLabels, excluded, totalPlayers);
+  }
 
   /// Atomically replaces every row of [day] with [events].
   void replaceDay(String day, List<RawEvent> events, {DateTime? now}) {

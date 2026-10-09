@@ -94,4 +94,30 @@ void main() {
     // e11 (21 players) .. e2 (12 players); e1, e0 fall outside the top 10.
     expect(pf.keys.skip(coreFeatures.length), [for (var i = 11; i >= 2; i--) 'ev:e$i']);
   });
+
+  test('extractFirstDayFeatures: cuts off events past 24 hours and omits whole-life features', () {
+    final s = EventStore.inMemory();
+    addTearDown(s.close);
+    // Player p starts on d1 at ts=1000. Second event 10 hours later. Third event 30 hours later.
+    s.replaceDay(d1, [
+      ev(d1, 1000, 'session_start', 'p'),
+      ev(d1, 1000 + 10 * 3600 * 1000000, 'level_1_fail', 'p'),
+    ]);
+    s.replaceDay(d3, [
+      ev(d3, 1000 + 30 * 3600 * 1000000, 'level_2_fail', 'p'),
+      ev(d3, 1000 + 30 * 3600 * 1000000 + 1, 'session_start', 'p'),
+    ]);
+    // d1=2026-10-01, d10=2026-10-10 so d1 is 7+ days before range end
+    const d10 = '2026-10-10';
+    s.replaceDay(d10, [ev(d10, 999999999, 'session_start', 'other')]);
+    final pf = extractFirstDayFeatures(s.db, const Filters(from: d1, to: d10));
+    expect(pf.players, contains('p'));
+    expect(pf.keys.take(firstDayCoreFeatures.length), firstDayCoreFeatures);
+    // Only level_1_fail counted in first 24h; level_2_fail ignored
+    final pIndex = pf.players.indexOf('p');
+    final row = {for (var j = 0; j < pf.keys.length; j++) pf.keys[j]: pf.rows[pIndex][j]};
+    expect(row['sessions'], 1.0);
+    expect(row['level_fails'], 1.0);
+  });
 }
+
