@@ -167,6 +167,18 @@ class ApiClient {
   Future<LevelResult> levels(Filters f) async =>
       LevelResult.fromJson(await _getMap('analysis/levels', f.toQuery()));
 
+  Future<SurvivalResult> survival(Filters f, {String by = 'version'}) async =>
+      SurvivalResult.fromJson(await _getMap('analysis/survival', {
+        ...f.toQuery(),
+        'by': by,
+      }));
+
+  Future<VersionImpactResult> versionImpact(Filters f, {String? version}) async =>
+      VersionImpactResult.fromJson(await _getMap('analysis/version-impact', {
+        ...f.toQuery(),
+        if (version != null) 'version': version,
+      }));
+
   Future<FunnelResult> runFunnel(FunnelDef def, Filters f,
           {FunnelBreakdown? breakdown, FunnelInterval? interval}) async =>
       FunnelResult.fromJson(await _map(

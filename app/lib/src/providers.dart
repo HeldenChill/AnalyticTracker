@@ -82,6 +82,20 @@ final churnProvider = FutureProvider.family<ChurnResult, Filters>(
 final levelsProvider = FutureProvider.family<LevelResult, Filters>(
     (ref, f) => ref.watch(apiClientProvider).levels(f));
 
+/// Selected grouping dimension for Kaplan-Meier survival curves.
+final survivalByProvider = StateProvider<String>((ref) => 'version');
+
+/// Selected target version for Version Impact analysis (null = default newest).
+final targetVersionProvider = StateProvider<String?>((ref) => null);
+
+/// Kaplan-Meier survival curves for the Analytic page.
+final survivalProvider = FutureProvider.family<SurvivalResult, ({Filters filters, String by})>(
+    (ref, q) => ref.watch(apiClientProvider).survival(q.filters, by: q.by));
+
+/// Version impact comparisons with bootstrap CI for the Analytic page.
+final versionImpactProvider = FutureProvider.family<VersionImpactResult, ({Filters filters, String? version})>(
+    (ref, q) => ref.watch(apiClientProvider).versionImpact(q.filters, version: q.version));
+
 final paramKeysProvider = FutureProvider.family<List<String>, ({String event, Filters filters})>(
     (ref, q) => ref.watch(apiClientProvider).paramKeys(q.event, q.filters));
 

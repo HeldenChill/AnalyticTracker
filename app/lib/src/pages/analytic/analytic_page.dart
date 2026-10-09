@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'churn_tab.dart';
 import 'clusters_tab.dart';
 import 'levels_tab.dart';
+import 'survival_tab.dart';
 
 /// Analytic page (spec .cursor/plans/analytic-tab-design.md §9). Each later
 /// wave adds one tab here.
@@ -12,7 +13,7 @@ class AnalyticPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const DefaultTabController(
-      length: 3,
+      length: 4,
       child: Column(
         children: [
           TabBar(
@@ -22,6 +23,7 @@ class AnalyticPage extends StatelessWidget {
               Tab(text: 'Clusters'),
               Tab(text: 'Churn'),
               Tab(text: 'Levels'),
+              Tab(text: 'Survival'),
             ],
           ),
           Expanded(
@@ -30,6 +32,7 @@ class AnalyticPage extends StatelessWidget {
                 ClustersTab(),
                 ChurnTab(),
                 LevelsTab(),
+                SurvivalTab(),
               ],
             ),
           ),
