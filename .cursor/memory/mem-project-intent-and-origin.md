@@ -37,34 +37,39 @@
 | v4 (10-07) | MCP so Claude can use the app: analysis + manage funnels + data ops; owner now, team later; Dart stdio MCP over HTTP API | spec `mcp-server-design.md`, plan `mcp-server-implementation.md`, Gemini implemented, Claude reviewed OK |
 | v5 Wave 1 (10-07) | Richer matching: param operators, OR alternatives, exclusion steps, Any-order mode | Implemented & reviewed; gates 42/158/76 |
 | v5 Wave 2 (10-08) | Compare segments: Platform, version, step-1 param, user property breakdown; top 5 + Other + (none) | Implemented & reviewed; 15 MCP tools |
-| v5 Wave 3 (10-08) | Trend over time: Day & week bucketing, ISO Monday alignment, empty buckets with nulls, incomplete overflow detection, Steps/Trend view switch, MetricLineChart dashed incomplete lines, entered players bar row | Implemented by Gemini (6 commits `f01f36f`..`91a2826`), gates 51/171/83 (305 total) clean |
-| v6 (10-07, draft) | New **Analytic** tab = data-science "hidden gems". Owner chose: clusters + churn drivers + associations + anomalies, **hybrid** per-player features, **Dart on server**; after research (`docs/research/analytic-ml-methods.md`) added level difficulty + quit wall, churn rules + last actions, survival + version impact, AI narrative = MCP prompt `weekly_insights`. Predictive per-player models out of scope (282 players) | spec `analytic-tab-design.md` (5 waves), awaiting owner spec review + 2 open defaults (§13) |
+| v5 Wave 4 (10-08) | Drill-down: who dropped per step, player event timeline, copy CSV to clipboard | Implemented & reviewed; 18 MCP tools; commits up to `324a7be` |
+| v6 Wave 1 (10-09) | Analytic Tab: Player Clusters (k-means++, silhouette, auto/forced k), `weekly_insights` MCP prompt, Analytic sidebar page with Clusters tab | Implemented by Gemini (6 commits `5a74b3e`..`1986afc`), gates 58/207/92 (357 total) clean |
+| v6 Wave 2 (10-09) | Analytic Tab: Churn Drivers & Rules (first-24h features, Cohen's d effect size, pure CART decision tree, GET /analysis/churn, MCP tool analysis_churn, ChurnTab) | Implemented by Gemini (7 commits `541991d`..`b8e14f8`), gates 61/217/96 (374 total) clean |
+| v6 Wave 3 (10-09) | Analytic Tab: Level Difficulty & Drop-off Bottlenecks (Beta-smoothed win rates, quit hazard, quit walls >= 2x median, exits with lift, Markov transitions to quit, GET /analysis/levels, MCP tool analysis_levels, LevelsTab) | Implemented by Gemini (5 commits `1660b25`..`c84e6d6`), gates 62/225/98 (385 total) clean |
+| v6 Wave 4 (10-09) | Analytic Tab: Survival Curves & Version Impact (Kaplan-Meier, Greenwood 95% band, log-rank chi-square p-value, 1000-resample bootstrap CI seed 42, GET /analysis/survival, GET /analysis/version-impact, MCP tools 21 & 22, SurvivalTab) | Implemented by Gemini, gates 64/241/100 (405 total) clean |
+| v6 Wave 5 (10-09) | Analytic Tab: Event Associations & Anomaly Alerts (support >= 5, lift >= 1.5 / <= 0.67, rolling 14-day robust z median/MAD, GET /analysis/associations, GET /analysis/anomalies, MCP tools 23 & 24, AssociationsTab & AnomaliesTab with MetricLineChart) | Implemented by Gemini (5 commits `eaf3966`..`c83a6b8`), gates 65/253/102 (420 total) clean |
 
-## Status (end of 2026-10-08 Wave 3 session) — START HERE
+## Status (end of 2026-10-09 Analytic Wave 5 session) — START HERE
 
-- **Branch:** `main` (clean working tree). All commits for v5 Wave 1, Wave 2, and Wave 3 committed.
-- **v5 funnel upgrade Wave 3 complete:**
-  - Shared: `FunnelInterval` (`day`, `week`), `FunnelTrendPoint`, `FunnelResult.trend`.
-  - Server: `FunnelEngine.run(..., interval: ...)` aggregates by entry day or ISO week Monday (UTC), covers all buckets in date range (empty buckets preserved with 0 players and null conversion), flags `incomplete` on window overflow or last whole-range bucket.
-  - Server API & MCP: `POST /funnels/run` accepts `interval`; MCP `run_funnel` schema and handler support `interval`.
-  - App: `ApiClient.runFunnel(..., interval: ...)`, `funnelIntervalProvider`, `funnelResultProvider` with interval.
-  - App UI: `FunnelPage` has **Steps / Trend** view switch; in Trend mode renders `FunnelTrendView` with Day/Week toggle, step picker dropdown ("Total conversion" or "Step 1 -> Step k"), `MetricLineChart` with dashed segments for incomplete points and `%` tooltip format, and entered players per bucket bar row.
-  - Test gates: shared **51**, server **171**, app **83** (total **305** tests pass, all 3 analyzers say `No issues found!`).
-- **Next up: v5 Wave 4 — Drill-down:**
-  - Features: player list per step ("who dropped"), in-app event timeline (1h before entry to 24h after last matched step, capped at 300 rows), CSV export via copy to clipboard.
-  - Spec: `.cursor/plans/funnel-upgrade-design.md` §6 (Wave 4) and §8.
-  - Next step: write `.cursor/plans/funnel-wave4-implementation.md`.
+- **Branch:** `main` (working tree clean). Commits for Analytic Tab Wave 5: `eaf3966`..`c83a6b8`.
+- **v6 Analytic Tab Waves 1–5 COMPLETE (full design spec delivered):**
+  - Shared: `analysis_models.dart` (complete result models for all 5 waves).
+  - Server: pure Dart analysis modules in `server/lib/src/analysis/` (`kmeans.dart`, `features.dart`, `clusters.dart`, `churn.dart`, `tree.dart`, `levels.dart`, `survival.dart`, `bootstrap.dart`, `version_impact.dart`, `associations.dart`, `anomalies.dart`).
+  - Server API: all analysis endpoints live with standard filters (`/analysis/clusters`, `/analysis/churn`, `/analysis/levels`, `/analysis/survival`, `/analysis/version-impact`, `/analysis/associations`, `/analysis/anomalies`).
+  - MCP: 24 tools total (all analysis endpoints exposed as readOnly tools), prompt `weekly_insights` runs all `analysis_*` tools.
+  - App: `AnalyticPage` with all 6 tabs (`DefaultTabController(length: 6)`): `ClustersTab`, `ChurnTab`, `LevelsTab`, `SurvivalTab`, `AssociationsTab`, and `AnomaliesTab`.
+  - Test gates: shared **65**, server **253**, app **102** (total **420** tests pass, all 3 analyzers say `No issues found!`).
+  - Code review: completed, verdict Ready to Merge.
+- **Next up: verification and operationalization:**
+  - Verify in Windows app runtime (`flutter run -d windows` / release build).
+  - Review known bugs (`mem-known-bugs-index.md`).
+  - Plan next phase (API auth BUG-0010, `pull_now` tool after IAM, multi-platform builds).
 
 ## Next-step candidates (owner picks)
 
 | Item | Note |
 |---|---|
-| **v5 Funnel Wave 4 plan** | **Planned next:** Write `.cursor/plans/funnel-wave4-implementation.md` (who dropped + timeline + clipboard CSV export) |
-| v6 Analytic wave 1 | Spec `analytic-tab-design.md` + plan `analytic-wave1-implementation.md` ready; waiting on sequencing decision vs v5 waves |
-| Verify BUG-0005..0009, 0011 in app | Release build + screenshots; recipe in `mem-lessons-windows-flutter-environment` |
-| API token (BUG-0010) | Prerequisite before teammates use MCP/API; own spec |
+| **App runtime verification** | Run release build or `flutter run -d windows` to test all 6 tabs on live data |
+| Verify BUG-0005..0009, 0011 in app | Release build + manual check |
+| API token (BUG-0010) | Prerequisite before teammates use MCP/API |
 | `pull_now` MCP tool | Only after IAM fixed |
 | Other platforms (Android/iOS/Web) | Owner said after Windows settles |
+
 
 ## v6 Analytic tab — handoff (2026-10-07)
 

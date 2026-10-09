@@ -4,7 +4,7 @@
 
 ## Project
 
-Cross-platform (Windows, Android, iOS, Web) team dashboard that pulls game analytics (Firebase -> BigQuery export) daily and shows basic analysis. First consumer: PetVsMonster tracking events. Built (v1–v4, implemented by Gemini, reviewed by Claude): Flutter app (Windows first) + local Dart shelf server + SQLite raw events + daily pull / manual BigQuery export import; GameAnalytics-style Overview, Retention, Progression, Funnels (multi-param steps); test devices excluded by default; four switchable styles; **stdio MCP server `analytic-tracker` (14 tools) so Claude can query/manage the app**. Current status + next steps: `mem-project-intent-and-origin.md` → "START HERE".
+Cross-platform (Windows, Android, iOS, Web) team dashboard that pulls game analytics (Firebase -> BigQuery export) daily and shows basic analysis. First consumer: PetVsMonster tracking events. Built (v1–v5 + v6 Waves 1–5 complete, implemented by Gemini, reviewed by Claude): Flutter app (Windows first) + local Dart shelf server + SQLite raw events + daily pull / manual BigQuery export import; GameAnalytics-style Overview, Retention, Progression, Funnels (multi-param steps, segments, trend, drill-down), Analytic tab (Player Clusters, Churn Drivers & Rules, Level Difficulty & Quit Walls, Survival Curves & Version Impact, Event Associations & Anomaly Alerts); test devices excluded by default; four switchable styles; **stdio MCP server `analytic-tracker` (24 tools + `weekly_insights` prompt) so Claude can query/manage the app**. Current status + next steps: `mem-project-intent-and-origin.md` → "START HERE".
 
 ## Memory index
 

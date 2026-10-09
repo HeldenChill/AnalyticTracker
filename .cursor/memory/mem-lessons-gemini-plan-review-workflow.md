@@ -2,8 +2,8 @@
 
 **ID:** `mem-lessons-gemini-plan-review-workflow`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-07
-**Used for:** v1 (10 tasks), v2 (11 tasks), v3 (11 tasks), v4 MCP (5 tasks, code pre-verified in worktree → 7 files byte-identical, zero review findings), v5 funnel wave 1 (Tasks 0–7, pre-verified + replayed per task → 11 whole files byte-identical + 6 exact-edit files verbatim, exact gate counts, zero code findings; the one owner finding was a data/UX gap the fixture tests could not see) — all implemented by Gemini 3.8 correctly on first pass; review found only design/data gaps and cosmetic issues.
+**Last updated:** 2026-10-09
+**Used for:** v1–v5, and v6 Analytic Waves 1–5 (all 5 waves executed and verified, 420 tests passing; 24 MCP tools, 6-tab AnalyticPage).
 
 ## Loop
 
@@ -55,7 +55,17 @@
 - Riverpod widget tests that pump twice with different overrides need `ProviderScope(key: UniqueKey())`, else the first result sticks.
 - Silhouette with many identical rows favours splitting exact duplicates (a = 0 → s = 1); fixtures need spread inside groups, and real-data integer counts can inflate auto k.
 
+## Plan-writing & implementation lessons from v6 Analytic Waves 2–5 (2026-10-09)
+
+- **Pure statistical modules:** Keeping all core math (CART `tree.dart`, Beta estimation `levels.dart`, Kaplan–Meier `survival.dart`, percentile bootstrap `bootstrap.dart`, association mining `associations.dart`, robust z-score `anomalies.dart`) in pure Dart functions taking primitive lists allowed 100% deterministic test coverage before database integration.
+- **Robust Z-Score MAD = 0 fallback:** When 14-day history is constant (e.g., all 0s or identical counts), MAD is 0. Division by zero yields infinity or NaN. Handled by fallback to relative difference $|x - \text{median}| / \max(|\text{median}|, 1.0) \ge 0.5$ to detect sudden spikes while ignoring flat baselines.
+- **Beta prior estimation safety:** Method of moments can yield negative $\alpha, \beta$ if sample variance exceeds $\bar{p}(1 - \bar{p})$. Clamping variance to $0.99 \times \bar{p}(1 - \bar{p})$ prevents NaN and preserves valid prior smoothing across sparse levels.
+- **Cohen's d pooled SD:** When both groups have identical zero variance, pooled SD is 0. Returning 0.0 avoids NaN.
+- **App theme tokens:** `Theme.of(context).extension<AppThemeExtension>()` exposes `tokens.good` and `tokens.bad` (not `kpiPositive`/`kpiNegative`).
+- **Tab count matching:** `DefaultTabController(length: 6)` must match exactly the number of tabs in `TabBar` and `TabBarView` to prevent assertion crashes.
+
 ## Gemini habits observed
+
 
 - Follows plans faithfully, commits per task, writes its own status notes into `.cursor/memory` — **those notes contained errors** (wrong font list, wrong class names, "sliding window"). Review and correct Gemini-written memory.
 - Adds `AGENTS.md`, `GEMINI.md`, `.agents/` to the repo root (untracked).
