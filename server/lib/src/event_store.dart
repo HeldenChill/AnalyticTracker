@@ -5,6 +5,8 @@ import 'dart:math';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import 'analysis/anomalies.dart';
+import 'analysis/associations.dart';
 import 'analysis/churn.dart';
 import 'analysis/clusters.dart';
 import 'analysis/features.dart';
@@ -411,6 +413,219 @@ class EventStore {
       playersByVersion: playersByVersion,
       targetVersion: version,
     );
+  }
+
+  /// Discovers event associations and lift (spec §6).
+  AssociationResult associations(Filters f) {
+    final where = StringBuffer("day BETWEEN ? AND ? AND user_pseudo_id <> ''");
+    final args = <Object?>[f.from, f.to];
+    if (f.platform != null) {
+      where.write(' AND platform = ?');
+      args.add(f.platform);
+    }
+    if (f.version != null) {
+      where.write(' AND app_version = ?');
+      args.add(f.version);
+    }
+    where.write(testEventsClause(f.includeTest));
+
+    final rows = _db.select(
+      'SELECT user_pseudo_id AS u, event_name AS n '
+      'FROM events WHERE $where ORDER BY u, ts_micros, id;',
+      args,
+    );
+
+    final playerEvents = <String, Set<String>>{};
+    final playerMaxLevel = <String, int>{};
+    final playerHasFail = <String, bool>{};
+
+    for (final r in rows) {
+      final u = r['u'] as String;
+      final n = r['n'] as String;
+      playerEvents.putIfAbsent(u, () => {});
+
+      if (n.startsWith('level_')) {
+        final startMatch = RegExp(r'^level_(\d+)_(start|complete)$').firstMatch(n);
+        if (startMatch != null) {
+          final lvl = int.tryParse(startMatch.group(1)!) ?? 0;
+          if (lvl > (playerMaxLevel[u] ?? 0)) {
+            playerMaxLevel[u] = lvl;
+          }
+        }
+        if (RegExp(r'^level_\d+_fail$').hasMatch(n)) {
+          playerHasFail[u] = true;
+        }
+      } else if (!const {
+        'screen_view', 'user_engagement', 'session_start', 'first_open',
+        'app_remove', 'app_clear_data', 'firebase_campaign',
+      }.contains(n)) {
+        playerEvents[u]!.add(n);
+      }
+    }
+
+    final totalPlayers = playerEvents.length;
+    if (totalPlayers < 20) {
+      return AssociationResult(
+        players: totalPlayers,
+        rules: const [],
+        reason: 'too_few_players',
+      );
+    }
+
+    final itemSets = <Set<String>>[];
+    for (final entry in playerEvents.entries) {
+      final u = entry.key;
+      final set = Set<String>.from(entry.value);
+      if ((playerMaxLevel[u] ?? 0) >= 5) {
+        set.add('reached_level_5');
+      }
+      if (playerHasFail[u] == true) {
+        set.add('failed_any_level');
+      }
+      itemSets.add(set);
+    }
+
+    final rules = mineAssociations(itemSets, totalPlayers: totalPlayers);
+    return AssociationResult(players: totalPlayers, rules: rules, reason: null);
+  }
+
+  /// Detects daily metric anomalies using a rolling 14-day robust z baseline (spec §7).
+  AnomalyResult anomalies(Filters f) {
+    final rangeDays = daysBetween(f.from, f.to);
+    if (rangeDays.length < 8) {
+      return AnomalyResult(
+        days: rangeDays.length,
+        alerts: const [],
+        reason: 'too_short',
+      );
+    }
+
+    final historyStart = addDays(f.from, -14);
+    final where = StringBuffer('day BETWEEN ? AND ?');
+    final args = <Object?>[historyStart, f.to];
+    if (f.platform != null) {
+      where.write(' AND platform = ?');
+      args.add(f.platform);
+    }
+    if (f.version != null) {
+      where.write(' AND app_version = ?');
+      args.add(f.version);
+    }
+    where.write(testEventsClause(f.includeTest));
+
+    final rows = _db.select('''
+      SELECT day, event_name,
+        COUNT(DISTINCT CASE WHEN user_pseudo_id <> '' THEN user_pseudo_id END) AS unique_users,
+        COUNT(*) AS total_count
+      FROM events
+      WHERE $where
+      GROUP BY day, event_name;
+    ''', args);
+
+    final dailyDau = <String, Set<String>>{};
+    final dailyNewUsers = <String, int>{};
+    final dailySessions = <String, int>{};
+    final eventDailyCounts = <String, Map<String, int>>{};
+    final levelStarts = <String, Map<int, int>>{};
+    final levelCompletes = <String, Map<int, int>>{};
+
+    final userRows = _db.select(
+      'SELECT DISTINCT day, user_pseudo_id AS u FROM events WHERE $where AND user_pseudo_id <> "";',
+      args,
+    );
+    for (final r in userRows) {
+      final d = r['day'] as String;
+      final u = r['u'] as String;
+      dailyDau.putIfAbsent(d, () => {}).add(u);
+    }
+
+    for (final r in rows) {
+      final d = r['day'] as String;
+      final name = r['event_name'] as String;
+      final count = r['total_count'] as int;
+
+      if (name == 'first_open') {
+        dailyNewUsers[d] = (dailyNewUsers[d] ?? 0) + count;
+      } else if (name == 'session_start') {
+        dailySessions[d] = (dailySessions[d] ?? 0) + count;
+      }
+
+      eventDailyCounts.putIfAbsent(name, () => {})[d] = count;
+
+      final lvlStart = RegExp(r'^level_(\d+)_start$').firstMatch(name);
+      if (lvlStart != null) {
+        final lvl = int.parse(lvlStart.group(1)!);
+        levelStarts.putIfAbsent(d, () => {})[lvl] = count;
+      }
+      final lvlComp = RegExp(r'^level_(\d+)_complete$').firstMatch(name);
+      if (lvlComp != null) {
+        final lvl = int.parse(lvlComp.group(1)!);
+        levelCompletes.putIfAbsent(d, () => {})[lvl] = count;
+      }
+    }
+
+    final allDays = daysBetween(historyStart, f.to);
+    final seriesMap = <String, List<AnomalyAlertPoint>>{};
+
+    seriesMap['DAU'] = [
+      for (final d in allDays)
+        AnomalyAlertPoint(day: d, value: (dailyDau[d]?.length ?? 0).toDouble())
+    ];
+    seriesMap['new_players'] = [
+      for (final d in allDays)
+        AnomalyAlertPoint(day: d, value: (dailyNewUsers[d] ?? 0).toDouble())
+    ];
+    seriesMap['sessions'] = [
+      for (final d in allDays)
+        AnomalyAlertPoint(day: d, value: (dailySessions[d] ?? 0).toDouble())
+    ];
+
+    final eventTotals = <String, int>{};
+    for (final entry in eventDailyCounts.entries) {
+      final name = entry.key;
+      if (const {'screen_view', 'user_engagement', 'session_start', 'first_open',
+                 'app_remove', 'app_clear_data', 'firebase_campaign'}.contains(name)) {
+        continue;
+      }
+      var sum = 0;
+      for (final d in rangeDays) {
+        sum += entry.value[d] ?? 0;
+      }
+      if (sum > 0) eventTotals[name] = sum;
+    }
+    final top15Events = eventTotals.keys.toList()
+      ..sort((a, b) => eventTotals[b]!.compareTo(eventTotals[a]!));
+    for (final name in top15Events.take(15)) {
+      seriesMap[name] = [
+        for (final d in allDays)
+          AnomalyAlertPoint(day: d, value: (eventDailyCounts[name]?[d] ?? 0).toDouble())
+      ];
+    }
+
+    final allLevels = <int>{};
+    for (final dMap in levelStarts.values) {
+      allLevels.addAll(dMap.keys);
+    }
+    for (final lvl in allLevels) {
+      final list = <AnomalyAlertPoint>[];
+      for (final d in allDays) {
+        final starts = levelStarts[d]?[lvl] ?? 0;
+        final completes = levelCompletes[d]?[lvl] ?? 0;
+        if (starts >= 10) {
+          list.add(AnomalyAlertPoint(day: d, value: completes / starts));
+        }
+      }
+      if (list.length >= 7) {
+        seriesMap['level_${lvl}_completion_rate'] = list;
+      }
+    }
+
+    final alerts = detectAnomalies(seriesMap);
+    final filteredAlerts = alerts
+        .where((a) => a.day.compareTo(f.from) >= 0 && a.day.compareTo(f.to) <= 0)
+        .toList();
+
+    return AnomalyResult(days: rangeDays.length, alerts: filteredAlerts, reason: null);
   }
 
   /// Atomically replaces every row of [day] with [events].

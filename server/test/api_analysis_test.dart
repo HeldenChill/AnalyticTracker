@@ -164,6 +164,49 @@ void main() {
     expect(parsed.targetVersion, '1.0.1');
     expect(parsed.baselineVersion, '1.0.0');
   });
+
+  test('GET /analysis/associations serves AssociationResult', () async {
+    final (status, body) = await getJson('/analysis/associations?from=$d1&to=$d1');
+    expect(status, 200);
+    final map = body as Map<String, dynamic>;
+    expect(map['players'], 24);
+    expect(map['rules'], isA<List>());
+    final parsed = AssociationResult.fromJson(map);
+    expect(parsed.players, 24);
+  });
+
+  test('GET /analysis/associations too few players', () async {
+    final (status, body) = await getJson('/analysis/associations?from=$d1&to=$d1&platform=IOS');
+    expect(status, 200);
+    final map = body as Map<String, dynamic>;
+    expect(map['reason'], 'too_few_players');
+    expect(map['rules'], isEmpty);
+  });
+
+  test('GET /analysis/anomalies serves AnomalyResult', () async {
+    for (var i = 1; i <= 15; i++) {
+      final day = '2026-10-${i.toString().padLeft(2, '0')}';
+      store.replaceDay(day, [
+        ev(day, i * 1000, 'session_start', 'u1'),
+        ev(day, i * 1000 + 1, 'first_open', 'u1'),
+      ]);
+    }
+    final (status, body) = await getJson('/analysis/anomalies?from=2026-10-01&to=2026-10-15');
+    expect(status, 200);
+    final map = body as Map<String, dynamic>;
+    expect(map['days'], 15);
+    expect(map['alerts'], isA<List>());
+    final parsed = AnomalyResult.fromJson(map);
+    expect(parsed.days, 15);
+  });
+
+  test('GET /analysis/anomalies too short range returns reason', () async {
+    final (status, body) = await getJson('/analysis/anomalies?from=$d1&to=$d1');
+    expect(status, 200);
+    final map = body as Map<String, dynamic>;
+    expect(map['reason'], 'too_short');
+    expect(map['alerts'], isEmpty);
+  });
 }
 
 

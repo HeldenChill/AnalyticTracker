@@ -276,6 +276,16 @@ Handler buildHandler(EventStore store) {
       final version = _optional(q, 'version');
       return _json(store.versionImpact(f, version: version).toJson());
     })
+    ..get('/analysis/associations', (Request req) {
+      final q = req.url.queryParameters;
+      final f = _filters(q);
+      return _json(store.associations(f).toJson());
+    })
+    ..get('/analysis/anomalies', (Request req) {
+      final q = req.url.queryParameters;
+      final f = _filters(q);
+      return _json(store.anomalies(f).toJson());
+    })
     ..get('/events/count', (Request req) {
       final q = req.url.queryParameters;
       final f = _filters(q);
