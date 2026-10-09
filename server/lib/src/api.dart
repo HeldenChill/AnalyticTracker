@@ -261,6 +261,21 @@ Handler buildHandler(EventStore store) {
       final f = _filters(q);
       return _json(store.levels(f).toJson());
     })
+    ..get('/analysis/survival', (Request req) {
+      final q = req.url.queryParameters;
+      final by = q['by'] ?? 'version';
+      if (by != 'version' && by != 'platform' && by != 'cluster') {
+        throw _BadRequest('Invalid by');
+      }
+      final f = _filters(q);
+      return _json(store.survival(f, by: by).toJson());
+    })
+    ..get('/analysis/version-impact', (Request req) {
+      final q = req.url.queryParameters;
+      final f = _filters(q);
+      final version = _optional(q, 'version');
+      return _json(store.versionImpact(f, version: version).toJson());
+    })
     ..get('/events/count', (Request req) {
       final q = req.url.queryParameters;
       final f = _filters(q);

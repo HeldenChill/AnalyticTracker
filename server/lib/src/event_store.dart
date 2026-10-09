@@ -7,7 +7,10 @@ import 'package:sqlite3/sqlite3.dart';
 import 'analysis/churn.dart';
 import 'analysis/clusters.dart';
 import 'analysis/features.dart';
+import 'analysis/kmeans.dart';
 import 'analysis/levels.dart';
+import 'analysis/survival.dart';
+import 'analysis/version_impact.dart';
 import 'funnel_engine.dart';
 import 'funnel_store.dart';
 import 'metrics_store.dart';
@@ -184,6 +187,218 @@ class EventStore {
       activeAtEnd: activeAtEnd,
       observable: observable,
       churned: churned,
+    );
+  }
+
+  /// Kaplan-Meier survival curves and log-rank test (spec §6c).
+  SurvivalResult survival(Filters f, {String by = 'version'}) {
+    final where = StringBuffer("day BETWEEN ? AND ? AND user_pseudo_id <> ''");
+    final args = <Object?>[f.from, f.to];
+    if (f.platform != null) {
+      where.write(' AND platform = ?');
+      args.add(f.platform);
+    }
+    if (f.version != null) {
+      where.write(' AND app_version = ?');
+      args.add(f.version);
+    }
+    where.write(testEventsClause(f.includeTest));
+
+    final rows = _db.select(
+      'SELECT user_pseudo_id AS u, event_name AS n, day AS d, platform AS p, app_version AS v '
+      'FROM events WHERE $where ORDER BY u, ts_micros, id;',
+      args,
+    );
+
+    final playerDays = <String, Set<String>>{};
+    final playerPlatforms = <String, String>{};
+    final playerVersions = <String, String>{};
+    final playerAppRemove = <String, bool>{};
+
+    for (final r in rows) {
+      final u = r['u'] as String;
+      final d = r['d'] as String;
+      final n = r['n'] as String;
+      final p = (r['p'] as String?) ?? 'Unknown';
+      final v = (r['v'] as String?) ?? 'Unknown';
+
+      playerDays.putIfAbsent(u, () => {}).add(d);
+      playerPlatforms.putIfAbsent(u, () => p);
+      playerVersions.putIfAbsent(u, () => v);
+      if (n == 'app_remove') {
+        playerAppRemove[u] = true;
+      }
+    }
+
+    final totalPlayers = playerDays.length;
+    if (totalPlayers < 20) {
+      return SurvivalResult(
+        players: totalPlayers,
+        by: by,
+        curves: const [],
+        logRank: null,
+        reason: 'too_few_players',
+      );
+    }
+
+    final playerClusters = <String, String>{};
+    if (by == 'cluster') {
+      final pf = playerFeatures(f);
+      if (pf.players.length >= minClusterPlayers) {
+        final std = standardize(pf.rows);
+        if (std.kept.isNotEmpty) {
+          final best = bestK(std.rows);
+          final used = [for (final c in std.kept) pf.keys[c]];
+          final zCols = List.generate(used.length, (j) => j);
+          final groups = <List<int>>[
+            for (var c = 0; c < best.k; c++)
+              [for (var i = 0; i < pf.players.length; i++) if (best.fit.assignments[i] == c) i],
+          ]..removeWhere((g) => g.isEmpty);
+          groups.sort((a, b) => a.length != b.length ? b.length.compareTo(a.length) : a.first.compareTo(b.first));
+
+          for (final g in groups) {
+            final z = {
+              for (var j = 0; j < zCols.length; j++)
+                used[j]: g.map((i) => std.rows[i][zCols[j]]).fold(0.0, (a, b) => a + b) / g.length,
+            };
+            final top = (List.of(used)
+                  ..sort((a, b) {
+                    final byZ = z[b]!.abs().compareTo(z[a]!.abs());
+                    return byZ != 0 ? byZ : used.indexOf(a).compareTo(used.indexOf(b));
+                  }))
+                .take(2)
+                .toList();
+            final label = top.isEmpty ? 'Cluster' : top.map((k) => k.startsWith('ev:') ? k.substring(3) : k).join(' · ');
+            for (final i in g) {
+              playerClusters[pf.players[i]] = label;
+            }
+          }
+        }
+      }
+    }
+
+    final activeEndDay = addDays(f.to, -6);
+    final observableCutoffDay = addDays(f.to, -7);
+
+    final playerDurations = <String, SubjectDuration>{};
+    final playerGroups = <String, String>{};
+
+    for (final p in playerDays.keys) {
+      final sortedDays = playerDays[p]!.toList()..sort();
+      final firstDay = sortedDays.first;
+      final lastDay = sortedDays.last;
+
+      final duration = daysBetween(firstDay, lastDay).length;
+      final isObservable = firstDay.compareTo(observableCutoffDay) <= 0;
+      final hasAppRemove = playerAppRemove[p] == true;
+      final hasActiveEvent = lastDay.compareTo(activeEndDay) >= 0;
+
+      final isChurned = isObservable && (hasAppRemove || !hasActiveEvent);
+      playerDurations[p] = (duration: duration, isEvent: isChurned);
+
+      if (by == 'platform') {
+        playerGroups[p] = playerPlatforms[p] ?? 'Unknown';
+      } else if (by == 'cluster') {
+        playerGroups[p] = playerClusters[p] ?? 'Cluster';
+      } else {
+        playerGroups[p] = playerVersions[p] ?? 'Unknown';
+      }
+    }
+
+    return analyzeSurvivalData(
+      totalPlayers: totalPlayers,
+      playerGroups: playerGroups,
+      playerDurations: playerDurations,
+      by: by,
+    );
+  }
+
+  /// Version impact comparisons with bootstrap CI (spec §6d).
+  VersionImpactResult versionImpact(Filters f, {String? version}) {
+    final where = StringBuffer("day BETWEEN ? AND ? AND user_pseudo_id <> ''");
+    final args = <Object?>[f.from, f.to];
+    if (f.platform != null) {
+      where.write(' AND platform = ?');
+      args.add(f.platform);
+    }
+    where.write(testEventsClause(f.includeTest));
+
+    final rows = _db.select(
+      'SELECT user_pseudo_id AS u, event_name AS n, day AS d, app_version AS v, '
+      "CAST(json_extract(params_json, '\$.engagement_time_msec') AS INTEGER) AS ms "
+      'FROM events WHERE $where ORDER BY u, ts_micros, id;',
+      args,
+    );
+
+    final levelRe = RegExp(r'^level_(\d+)_(complete|fail)$');
+    final byPlayer = <String, List<Row>>{};
+    final playerFirstVersion = <String, String>{};
+
+    for (final r in rows) {
+      final u = r['u'] as String;
+      final v = (r['v'] as String?) ?? 'Unknown';
+      byPlayer.putIfAbsent(u, () => []).add(r);
+      playerFirstVersion.putIfAbsent(u, () => v);
+    }
+
+    final versionFirstSeen = <String, String>{};
+    for (final r in rows) {
+      final v = (r['v'] as String?) ?? 'Unknown';
+      final d = r['d'] as String;
+      final prev = versionFirstSeen[v];
+      if (prev == null || d.compareTo(prev) < 0) {
+        versionFirstSeen[v] = d;
+      }
+    }
+    final chronologicalVersions = versionFirstSeen.keys.toList()
+      ..sort((a, b) => versionFirstSeen[a]!.compareTo(versionFirstSeen[b]!));
+
+    final playersByVersion = <String, List<PlayerVersionData>>{};
+
+    for (final p in byPlayer.keys) {
+      final pRows = byPlayer[p]!;
+      final v = playerFirstVersion[p]!;
+
+      var sessions = 0;
+      var playtimeMs = 0;
+      final days = <String>{};
+      final levelAttempts = <int, ({int completes, int fails})>{};
+
+      for (final r in pRows) {
+        final n = r['n'] as String;
+        days.add(r['d'] as String);
+        if (n == 'session_start') sessions++;
+        if (n == 'user_engagement') playtimeMs += (r['ms'] as int?) ?? 0;
+
+        final m = levelRe.firstMatch(n);
+        if (m != null) {
+          final lvl = int.parse(m.group(1)!);
+          final isComplete = m.group(2) == 'complete';
+          final curr = levelAttempts[lvl] ?? (completes: 0, fails: 0);
+          levelAttempts[lvl] = isComplete
+              ? (completes: curr.completes + 1, fails: curr.fails)
+              : (completes: curr.completes, fails: curr.fails + 1);
+        }
+      }
+
+      final sortedDays = days.toList()..sort();
+      final survivedD1 = daysBetween(sortedDays.first, sortedDays.last).length >= 2;
+
+      final data = PlayerVersionData(
+        uid: p,
+        version: v,
+        sessions: sessions,
+        playtimeMin: playtimeMs / 60000,
+        survivedD1: survivedD1,
+        levelAttempts: levelAttempts,
+      );
+      playersByVersion.putIfAbsent(v, () => []).add(data);
+    }
+
+    return analyzeVersionImpactData(
+      chronologicalVersions: chronologicalVersions,
+      playersByVersion: playersByVersion,
+      targetVersion: version,
     );
   }
 

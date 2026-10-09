@@ -116,5 +116,32 @@ void main() {
     expect(map['reason'], 'too_few_players');
     expect(map['levels'], isEmpty);
   });
+
+  test('GET /analysis/survival serves SurvivalResult', () async {
+    final (status, body) = await getJson('/analysis/survival?from=$d1&to=$d1&by=platform');
+    expect(status, 200);
+    final map = body as Map<String, dynamic>;
+    expect(map['players'], 24);
+    expect(map['by'], 'platform');
+    expect(map['curves'], isA<List>());
+    final parsed = SurvivalResult.fromJson(map);
+    expect(parsed.players, 24);
+    expect(parsed.by, 'platform');
+  });
+
+  test('GET /analysis/survival rejects invalid by parameter', () async {
+    final (status, body) = await getJson('/analysis/survival?from=$d1&to=$d1&by=invalid_by');
+    expect(status, 400);
+    expect((body as Map<String, dynamic>)['error'], 'Invalid by');
+  });
+
+  test('GET /analysis/version-impact serves VersionImpactResult', () async {
+    final (status, body) = await getJson('/analysis/version-impact?from=$d1&to=$d1');
+    expect(status, 200);
+    final map = body as Map<String, dynamic>;
+    expect(map['availableVersions'], isA<List>());
+    final parsed = VersionImpactResult.fromJson(map);
+    expect(parsed.availableVersions, isA<List>());
+  });
 }
 
