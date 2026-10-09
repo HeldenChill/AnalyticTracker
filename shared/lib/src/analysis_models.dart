@@ -431,3 +431,231 @@ class LevelResult {
       };
 }
 
+/// Point on a Kaplan-Meier survival curve (spec §6c).
+class SurvivalPoint {
+  const SurvivalPoint({
+    required this.day,
+    required this.survival,
+    required this.ciLower,
+    required this.ciUpper,
+    required this.atRisk,
+    required this.events,
+    required this.censored,
+  });
+
+  final int day;
+  final double survival;
+  final double ciLower;
+  final double ciUpper;
+  final int atRisk;
+  final int events;
+  final int censored;
+
+  factory SurvivalPoint.fromJson(Map<String, dynamic> j) => SurvivalPoint(
+        day: j['day'] as int,
+        survival: (j['survival'] as num).toDouble(),
+        ciLower: (j['ciLower'] as num).toDouble(),
+        ciUpper: (j['ciUpper'] as num).toDouble(),
+        atRisk: j['atRisk'] as int,
+        events: j['events'] as int,
+        censored: j['censored'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'day': day,
+        'survival': survival,
+        'ciLower': ciLower,
+        'ciUpper': ciUpper,
+        'atRisk': atRisk,
+        'events': events,
+        'censored': censored,
+      };
+}
+
+/// Survival curve for one group (spec §6c).
+class SurvivalCurve {
+  const SurvivalCurve({
+    required this.group,
+    required this.players,
+    required this.events,
+    required this.censored,
+    required this.medianDays,
+    required this.points,
+  });
+
+  final String group;
+  final int players;
+  final int events;
+  final int censored;
+  final double? medianDays;
+  final List<SurvivalPoint> points;
+
+  factory SurvivalCurve.fromJson(Map<String, dynamic> j) => SurvivalCurve(
+        group: j['group'] as String,
+        players: j['players'] as int,
+        events: j['events'] as int,
+        censored: j['censored'] as int,
+        medianDays: j['medianDays'] == null ? null : (j['medianDays'] as num).toDouble(),
+        points: [
+          for (final p in j['points'] as List) SurvivalPoint.fromJson(p as Map<String, dynamic>),
+        ],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'group': group,
+        'players': players,
+        'events': events,
+        'censored': censored,
+        'medianDays': medianDays,
+        'points': [for (final p in points) p.toJson()],
+      };
+}
+
+/// Multi-group or two-group log-rank test result (spec §6c).
+class LogRankTest {
+  const LogRankTest({
+    required this.chiSquare,
+    required this.degreesOfFreedom,
+    required this.pValue,
+    required this.significant,
+  });
+
+  final double chiSquare;
+  final int degreesOfFreedom;
+  final double pValue;
+  final bool significant;
+
+  factory LogRankTest.fromJson(Map<String, dynamic> j) => LogRankTest(
+        chiSquare: (j['chiSquare'] as num).toDouble(),
+        degreesOfFreedom: j['degreesOfFreedom'] as int,
+        pValue: (j['pValue'] as num).toDouble(),
+        significant: j['significant'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'chiSquare': chiSquare,
+        'degreesOfFreedom': degreesOfFreedom,
+        'pValue': pValue,
+        'significant': significant,
+      };
+}
+
+/// Response of `GET /analysis/survival` (spec §6c, §8).
+class SurvivalResult {
+  const SurvivalResult({
+    required this.players,
+    required this.by,
+    required this.curves,
+    required this.logRank,
+    required this.reason,
+  });
+
+  final int players;
+  final String by;
+  final List<SurvivalCurve> curves;
+  final LogRankTest? logRank;
+  final String? reason;
+
+  factory SurvivalResult.fromJson(Map<String, dynamic> j) => SurvivalResult(
+        players: j['players'] as int,
+        by: j['by'] as String,
+        curves: [
+          for (final c in j['curves'] as List) SurvivalCurve.fromJson(c as Map<String, dynamic>),
+        ],
+        logRank: j['logRank'] == null ? null : LogRankTest.fromJson(j['logRank'] as Map<String, dynamic>),
+        reason: j['reason'] as String?,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'players': players,
+        'by': by,
+        'curves': [for (final c in curves) c.toJson()],
+        'logRank': logRank?.toJson(),
+        'reason': reason,
+      };
+}
+
+/// One metric impact comparison with bootstrap CI (spec §6d).
+class VersionMetricImpact {
+  const VersionMetricImpact({
+    required this.metric,
+    required this.baselineValue,
+    required this.targetValue,
+    required this.difference,
+    required this.ciLower,
+    required this.ciUpper,
+    required this.significant,
+  });
+
+  final String metric;
+  final double baselineValue;
+  final double targetValue;
+  final double difference;
+  final double ciLower;
+  final double ciUpper;
+  final bool significant;
+
+  factory VersionMetricImpact.fromJson(Map<String, dynamic> j) => VersionMetricImpact(
+        metric: j['metric'] as String,
+        baselineValue: (j['baselineValue'] as num).toDouble(),
+        targetValue: (j['targetValue'] as num).toDouble(),
+        difference: (j['difference'] as num).toDouble(),
+        ciLower: (j['ciLower'] as num).toDouble(),
+        ciUpper: (j['ciUpper'] as num).toDouble(),
+        significant: j['significant'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'metric': metric,
+        'baselineValue': baselineValue,
+        'targetValue': targetValue,
+        'difference': difference,
+        'ciLower': ciLower,
+        'ciUpper': ciUpper,
+        'significant': significant,
+      };
+}
+
+/// Response of `GET /analysis/version-impact` (spec §6d, §8).
+class VersionImpactResult {
+  const VersionImpactResult({
+    required this.targetVersion,
+    required this.targetPlayers,
+    required this.baselineVersion,
+    required this.baselinePlayers,
+    required this.metrics,
+    required this.availableVersions,
+    required this.reason,
+  });
+
+  final String targetVersion;
+  final int targetPlayers;
+  final String baselineVersion;
+  final int baselinePlayers;
+  final List<VersionMetricImpact> metrics;
+  final List<String> availableVersions;
+  final String? reason;
+
+  factory VersionImpactResult.fromJson(Map<String, dynamic> j) => VersionImpactResult(
+        targetVersion: j['targetVersion'] as String,
+        targetPlayers: j['targetPlayers'] as int,
+        baselineVersion: j['baselineVersion'] as String,
+        baselinePlayers: j['baselinePlayers'] as int,
+        metrics: [
+          for (final m in j['metrics'] as List) VersionMetricImpact.fromJson(m as Map<String, dynamic>),
+        ],
+        availableVersions: [for (final v in j['availableVersions'] as List) v as String],
+        reason: j['reason'] as String?,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'targetVersion': targetVersion,
+        'targetPlayers': targetPlayers,
+        'baselineVersion': baselineVersion,
+        'baselinePlayers': baselinePlayers,
+        'metrics': [for (final m in metrics) m.toJson()],
+        'availableVersions': availableVersions,
+        'reason': reason,
+      };
+}
+

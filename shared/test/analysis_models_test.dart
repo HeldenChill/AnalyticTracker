@@ -157,5 +157,70 @@ void main() {
     expect(parsed.transitions.single.toEvent, 'quit');
     expect(parsed.transitions.single.probability, 0.8);
   });
+
+  test('Survival and VersionImpact models JSON roundtrip', () {
+    const pt = SurvivalPoint(
+      day: 1,
+      survival: 0.85,
+      ciLower: 0.75,
+      ciUpper: 0.95,
+      atRisk: 100,
+      events: 15,
+      censored: 0,
+    );
+    const curve = SurvivalCurve(
+      group: 'v1.0.0',
+      players: 100,
+      events: 15,
+      censored: 85,
+      medianDays: 5.0,
+      points: [pt],
+    );
+    const logRank = LogRankTest(
+      chiSquare: 4.5,
+      degreesOfFreedom: 1,
+      pValue: 0.0339,
+      significant: true,
+    );
+    const survResult = SurvivalResult(
+      players: 100,
+      by: 'version',
+      curves: [curve],
+      logRank: logRank,
+      reason: null,
+    );
+    final survJson = survResult.toJson();
+    final survParsed = SurvivalResult.fromJson(survJson);
+    expect(survParsed.players, 100);
+    expect(survParsed.by, 'version');
+    expect(survParsed.curves.single.group, 'v1.0.0');
+    expect(survParsed.curves.single.points.single.survival, 0.85);
+    expect(survParsed.logRank?.significant, isTrue);
+
+    const metricImpact = VersionMetricImpact(
+      metric: 'D1 survival',
+      baselineValue: 0.40,
+      targetValue: 0.55,
+      difference: 0.15,
+      ciLower: 0.02,
+      ciUpper: 0.28,
+      significant: true,
+    );
+    const viResult = VersionImpactResult(
+      targetVersion: '1.0.4',
+      targetPlayers: 50,
+      baselineVersion: '1.0.3',
+      baselinePlayers: 45,
+      metrics: [metricImpact],
+      availableVersions: ['1.0.3', '1.0.4'],
+      reason: null,
+    );
+    final viJson = viResult.toJson();
+    final viParsed = VersionImpactResult.fromJson(viJson);
+    expect(viParsed.targetVersion, '1.0.4');
+    expect(viParsed.metrics.single.metric, 'D1 survival');
+    expect(viParsed.metrics.single.significant, isTrue);
+    expect(viParsed.availableVersions, ['1.0.3', '1.0.4']);
+  });
 }
 
