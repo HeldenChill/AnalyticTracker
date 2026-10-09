@@ -9,3 +9,4 @@ server/logs/
 *.db-wal
 *.db-shm
 server/imports/
+.superpowers/
