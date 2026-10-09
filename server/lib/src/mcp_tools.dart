@@ -323,6 +323,17 @@ class AnalyticTools {
           ),
           (a) => _send('GET', 'analysis/churn', query: _filterQuery(a)),
         ),
+        (
+          Tool(
+            name: 'analysis_levels',
+            description: 'Analyzes level progression difficulty (Beta-smoothed win rates), quit hazard '
+                'per level with quit wall detection (> 2x median hazard), exit-event ranking before quitting, '
+                'and Markov event transitions to quit. "reason" too_few_players (< 20) or no_level_events.',
+            inputSchema: _filtered({}),
+            annotations: _read,
+          ),
+          (a) => _send('GET', 'analysis/levels', query: _filterQuery(a)),
+        ),
       ];
 
   // ---- handlers ----

@@ -28,8 +28,9 @@ void main() {
     server.notifyInitialized();
 
     final list = await server.listTools(ListToolsRequest());
-    expect(list.tools.length, 19);
-    expect(list.tools.map((t) => t.name), containsAll(['import_export', 'analysis_clusters', 'analysis_churn']));
+    expect(list.tools.length, 20);
+    expect(list.tools.map((t) => t.name),
+        containsAll(['import_export', 'analysis_clusters', 'analysis_churn', 'analysis_levels']));
 
     final prompts = await server.listPrompts(ListPromptsRequest());
     expect(prompts.prompts.map((p) => p.name), ['weekly_insights']);
@@ -39,6 +40,7 @@ void main() {
     expect(text, contains('from 2026-09-08 to 2026-10-07'));
     expect(text, contains('analysis_clusters'));
     expect(text, contains('analysis_churn'));
+    expect(text, contains('analysis_levels'));
 
     final ok = await server.callTool(CallToolRequest(
       name: 'overview',
@@ -46,6 +48,13 @@ void main() {
     ));
     expect(ok.isError, isNot(true));
     expect((ok.content.single as TextContent).text, '{"path":"/overview"}');
+
+    final levelsOk = await server.callTool(CallToolRequest(
+      name: 'analysis_levels',
+      arguments: {'from': '2026-10-01', 'to': '2026-10-07'},
+    ));
+    expect(levelsOk.isError, isNot(true));
+    expect((levelsOk.content.single as TextContent).text, '{"path":"/analysis/levels"}');
 
     // Missing required "to": rejected by schema validation, API never called.
     final bad = await server.callTool(CallToolRequest(name: 'overview', arguments: {'from': '2026-10-01'}));
