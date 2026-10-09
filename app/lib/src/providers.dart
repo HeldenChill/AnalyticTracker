@@ -74,6 +74,10 @@ final funnelResultProvider = FutureProvider.autoDispose
 final clustersProvider = FutureProvider.family<ClusterResult, Filters>(
     (ref, f) => ref.watch(apiClientProvider).clusters(f));
 
+/// Churn drivers and rules for the Analytic page.
+final churnProvider = FutureProvider.family<ChurnResult, Filters>(
+    (ref, f) => ref.watch(apiClientProvider).churn(f));
+
 final paramKeysProvider = FutureProvider.family<List<String>, ({String event, Filters filters})>(
     (ref, q) => ref.watch(apiClientProvider).paramKeys(q.event, q.filters));
 
