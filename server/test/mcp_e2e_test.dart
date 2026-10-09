@@ -28,9 +28,9 @@ void main() {
     server.notifyInitialized();
 
     final list = await server.listTools(ListToolsRequest());
-    expect(list.tools.length, 22);
+    expect(list.tools.length, 24);
     expect(list.tools.map((t) => t.name),
-        containsAll(['import_export', 'analysis_clusters', 'analysis_churn', 'analysis_levels', 'analysis_survival', 'analysis_version_impact']));
+        containsAll(['import_export', 'analysis_clusters', 'analysis_churn', 'analysis_levels', 'analysis_survival', 'analysis_version_impact', 'analysis_associations', 'analysis_anomalies']));
 
     final prompts = await server.listPrompts(ListPromptsRequest());
     expect(prompts.prompts.map((p) => p.name), ['weekly_insights']);
@@ -43,6 +43,8 @@ void main() {
     expect(text, contains('analysis_levels'));
     expect(text, contains('analysis_survival'));
     expect(text, contains('analysis_version_impact'));
+    expect(text, contains('analysis_associations'));
+    expect(text, contains('analysis_anomalies'));
 
     final ok = await server.callTool(CallToolRequest(
       name: 'overview',
@@ -71,6 +73,20 @@ void main() {
     ));
     expect(versionImpactOk.isError, isNot(true));
     expect((versionImpactOk.content.single as TextContent).text, '{"path":"/analysis/version-impact"}');
+
+    final associationsOk = await server.callTool(CallToolRequest(
+      name: 'analysis_associations',
+      arguments: {'from': '2026-10-01', 'to': '2026-10-07'},
+    ));
+    expect(associationsOk.isError, isNot(true));
+    expect((associationsOk.content.single as TextContent).text, '{"path":"/analysis/associations"}');
+
+    final anomaliesOk = await server.callTool(CallToolRequest(
+      name: 'analysis_anomalies',
+      arguments: {'from': '2026-10-01', 'to': '2026-10-07'},
+    ));
+    expect(anomaliesOk.isError, isNot(true));
+    expect((anomaliesOk.content.single as TextContent).text, '{"path":"/analysis/anomalies"}');
 
     // Missing required "to": rejected by schema validation, API never called.
     final bad = await server.callTool(CallToolRequest(name: 'overview', arguments: {'from': '2026-10-01'}));

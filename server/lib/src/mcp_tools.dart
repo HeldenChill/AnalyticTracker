@@ -369,6 +369,28 @@ class AnalyticTools {
             if (a['version'] != null) 'version': '${a['version']}',
           }),
         ),
+        (
+          Tool(
+            name: 'analysis_associations',
+            description: 'Mines co-occurring player actions and events (support, confidence, lift). '
+                'Returns top 20 association pairs with support >= 5 and lift >= 1.5 or <= 0.67. '
+                '"reason" too_few_players (< 20).',
+            inputSchema: _filtered({}),
+            annotations: _read,
+          ),
+          (a) => _send('GET', 'analysis/associations', query: _filterQuery(a)),
+        ),
+        (
+          Tool(
+            name: 'analysis_anomalies',
+            description: 'Detects daily anomalies (|z| >= 3) across DAU, new players, sessions, top events, '
+                'and level completion rates using rolling 14-day robust z baseline (median and MAD). '
+                '"reason" too_short (< 8 days range).',
+            inputSchema: _filtered({}),
+            annotations: _read,
+          ),
+          (a) => _send('GET', 'analysis/anomalies', query: _filterQuery(a)),
+        ),
       ];
 
   // ---- handlers ----
