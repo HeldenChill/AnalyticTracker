@@ -53,72 +53,77 @@ class _StudioAsyncPanelState<T> extends State<StudioAsyncPanel<T>> {
     }
   }
 
+  Widget _buildCachedContent(BuildContext context, AsyncValue<T> incoming) {
+    final Widget notice;
+    if (incoming.isLoading) {
+      notice = Align(
+        alignment: Alignment.centerRight,
+        child: Card(
+          elevation: 2,
+          margin: const EdgeInsets.only(bottom: 8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Updating',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } else if (incoming.hasError) {
+      notice = ErrorRetry(
+        error: incoming.error!,
+        onRetry: widget.onRetry,
+        inline: true,
+      );
+    } else {
+      notice = const SizedBox.shrink();
+    }
+
+    final content = KeyedSubtree(
+      key: ValueKey(widget.queryKey),
+      child: widget.builder(_lastSuccess as T),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bounded = constraints.maxHeight.isFinite;
+        return Column(
+          mainAxisSize: bounded ? MainAxisSize.max : MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            notice,
+            if (bounded) Expanded(child: content) else content,
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final incoming = widget.value;
 
-    if (incoming.isLoading) {
-      if (_hasSuccess) {
-        return Stack(
-          children: [
-            widget.builder(_lastSuccess as T),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Card(
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Updating',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      }
-      return widget.loading ??
-          const Center(
-            child: CircularProgressIndicator(),
-          );
+    if (_hasSuccess) {
+      return _buildCachedContent(context, incoming);
     }
 
     if (incoming.hasError) {
-      if (_hasSuccess) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ErrorRetry(
-              error: incoming.error!,
-              onRetry: widget.onRetry,
-              inline: true,
-            ),
-            widget.builder(_lastSuccess as T),
-          ],
-        );
-      }
       return ErrorRetry(
         error: incoming.error!,
         onRetry: widget.onRetry,
       );
-    }
-
-    if (_hasSuccess) {
-      return widget.builder(_lastSuccess as T);
     }
 
     return widget.loading ??

@@ -161,4 +161,84 @@ void main() {
     );
     expect(find.text('Retry'), findsOneWidget);
   });
+
+  testWidgets('same query preserves State scroll and selection across phases', (t) async {
+    final key = ValueNotifier<Object>('A');
+    final value = ValueNotifier<AsyncValue<int>>(const AsyncData(7));
+    addTearDown(key.dispose);
+    addTearDown(value.dispose);
+    await t.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: ValueListenableBuilder<Object>(
+          valueListenable: key,
+          builder: (_, k, __) => ValueListenableBuilder<AsyncValue<int>>(
+            valueListenable: value,
+            builder: (_, v, __) => StudioAsyncPanel<int>(
+              queryKey: k,
+              value: v,
+              onRetry: () {},
+              builder: (_) => const _ScrollProbe(),
+            ),
+          ),
+        ),
+      ),
+    ));
+    final original = t.state<_ScrollProbeState>(find.byType(_ScrollProbe));
+    await t.tap(find.byType(Switch));
+    await t.pump();
+    original.controller.jumpTo(200);
+    await t.pump();
+    for (final next in <AsyncValue<int>>[
+      const AsyncLoading<int>().copyWithPrevious(const AsyncData(7)),
+      AsyncError<int>(StateError('refresh failed'), StackTrace.empty)
+          .copyWithPrevious(const AsyncData(7)),
+      const AsyncData(8),
+    ]) {
+      value.value = next;
+      await t.pump();
+      final now = t.state<_ScrollProbeState>(find.byType(_ScrollProbe));
+      expect(identical(now, original), isTrue);
+      expect(now.controller.offset, 200);
+      expect(now.selected, isTrue);
+    }
+    key.value = 'B';
+    value.value = const AsyncData(9);
+    await t.pump();
+    final replacement = t.state<_ScrollProbeState>(find.byType(_ScrollProbe));
+    expect(identical(replacement, original), isFalse);
+    expect(replacement.controller.offset, 0);
+    expect(replacement.selected, isFalse);
+  });
+}
+
+class _ScrollProbe extends StatefulWidget {
+  const _ScrollProbe();
+  @override
+  State<_ScrollProbe> createState() => _ScrollProbeState();
+}
+
+class _ScrollProbeState extends State<_ScrollProbe> {
+  final controller = ScrollController();
+  bool selected = false;
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: 160,
+        child: ListView(
+          controller: controller,
+          children: [
+            Switch(
+              value: selected,
+              onChanged: (v) => setState(() => selected = v),
+            ),
+            for (var i = 0; i < 40; i++)
+              SizedBox(height: 40, child: Text('row $i')),
+          ],
+        ),
+      );
 }
