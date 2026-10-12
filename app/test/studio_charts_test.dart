@@ -644,4 +644,72 @@ void main() {
     expect(t.hasRunningAnimations, isFalse);
     expect(find.text('20 events'), findsOneWidget);
   });
+
+  testWidgets('ranked names and exact values fit natural rows', (t) async {
+    final name = List.filled(30, 'VeryLongEventName').join();
+    const number = 123456789012.0;
+    for (final diverging in [false, true]) {
+      final rows = [RankedValue('long', name, number)];
+      final chart = diverging
+          ? DivergingBarChart(
+              values: rows,
+              unit: 'events',
+              valueFormatter: (n) => n.toStringAsFixed(0),
+            )
+          : RankedBarChart(
+              values: rows,
+              unit: 'events',
+              valueFormatter: (n) => n.toStringAsFixed(0),
+            );
+      await pumpRepairChart(t, chart, width: 280, scale: 1.5, bold: true, reduced: true);
+      expect(t.takeException(), isNull);
+      expectCompleteWrappedText(t, find.text(name));
+      expectCompleteWrappedText(t, find.text('123456789012 events'));
+    }
+  });
+
+  testWidgets('actual dense chart axes fit across themes widths and larger text', (t) async {
+    final points = [
+      for (var i = 0; i < 31; i++)
+        ChartPoint(i.toDouble(), (i + 1).toDouble(), label: '2026-10-${i + 1}')
+    ];
+    for (final style in AppStyle.values) {
+      for (final width in [280.0, 320.0, 720.0]) {
+        for (final kind in TimeChartKind.values) {
+          await pumpRepairChart(
+            t,
+            TimeSeriesChart(
+              kind: kind,
+              unit: 'events',
+              valueFormatter: (v) => '${v.toStringAsFixed(2)} measured events',
+              series: [ChartSeries(id: 'primary', label: 'Current', points: points)],
+            ),
+            style: style,
+            width: width,
+            scale: 1.5,
+            bold: true,
+            reduced: true,
+          );
+          expect(t.takeException(), isNull);
+          final labels = find.byWidgetPredicate((w) {
+            if (w is! Text || w.key is! ValueKey<String>) return false;
+            final key = (w.key! as ValueKey<String>).value;
+            return key.startsWith('chart-x-tick:') || key.startsWith('chart-y-tick:');
+          });
+          expect(labels, findsWidgets);
+          for (var i = 0; i < labels.evaluate().length; i++) {
+            final label = labels.at(i);
+            expectCompleteWrappedText(t, label);
+            final rect = t.getRect(label);
+            expect(rect.left, greaterThanOrEqualTo(-.5));
+            expect(rect.right, lessThanOrEqualTo(width + .5));
+          }
+          expect(
+            t.getSize(find.byKey(const ValueKey('chart-mark-area'))).height,
+            greaterThanOrEqualTo(80),
+          );
+        }
+      }
+    }
+  });
 }

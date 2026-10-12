@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/analytics_tokens.dart';
 import '../format.dart';
+import 'chart_axis_layout.dart';
 import 'chart_models.dart';
 import 'chart_motion.dart';
 import 'series_visual_style.dart';
@@ -198,11 +199,29 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
           if (!usableWidth.isFinite || usableWidth <= 0) {
             return const SizedBox.shrink();
           }
+
+          final buckets = [
+            for (var i = 0; i < allBucketX.length; i++)
+              ChartPoint(i.toDouble(), null, label: ordinalToLabel[i] ?? ''),
+          ];
+          final axisLayout = measureChartAxes(
+            context: context,
+            width: usableWidth,
+            bounds: bounds,
+            buckets: buckets,
+            ordinalBars: true,
+            formatY: (y) =>
+                widget.percentage ? '${(y * 100).toStringAsFixed(0)}%' : _formatValue(y),
+            style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+            plotHeight: math.max(200, widget.plotHeight),
+          );
+
+          final plotUsableWidth = math.max(1.0, usableWidth - axisLayout.yReservedSize - 8);
           final bucketCount = allBucketX.length;
           final seriesCount = sortedSeries.length;
           final rodWidth = math.min(
             14.0,
-            usableWidth / (2 * bucketCount * math.max(1, seriesCount)),
+            plotUsableWidth / (2 * math.max(1, bucketCount) * math.max(1, seriesCount)),
           );
 
           final rodSources = <(int, int), (ChartSeries, ChartPoint)>{};
@@ -281,38 +300,18 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             titlesData: FlTitlesData(
               topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 28,
-                  getTitlesWidget: (val, meta) {
-                    final label = ordinalToLabel[val.toInt()];
-                    if (label == null) return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 6.0),
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+              bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               leftTitles: AxisTitles(
                 sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 44,
+                  showTitles: axisLayout.yReservedSize > 0,
+                  reservedSize: axisLayout.yReservedSize > 0 ? axisLayout.yReservedSize : 44,
+                  interval: bounds.maxY > bounds.minY ? (bounds.maxY - bounds.minY) / 4 : null,
                   getTitlesWidget: (val, meta) {
-                    if (val == meta.min || val == meta.max) {
-                      return const SizedBox.shrink();
-                    }
                     return Text(
                       widget.percentage
                           ? '${(val * 100).toStringAsFixed(0)}%'
                           : _formatValue(val),
+                      key: ValueKey('chart-y-tick:$val'),
                       style: TextStyle(
                         fontSize: 10,
                         color: theme.colorScheme.onSurfaceVariant,
@@ -333,27 +332,139 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             borderData: FlBorderData(show: false),
           );
 
-          return BarChart(
-            key: ValueKey(topology),
-            barData,
-            duration: motion.geometryDuration,
+          Widget? scaleKey;
+          if (axisLayout.yReservedSize == 0 && axisLayout.yTicks.isNotEmpty) {
+            scaleKey = Container(
+              key: const ValueKey('chart-scale-key'),
+              padding: const EdgeInsets.only(bottom: 4.0),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  for (var i = 0; i < axisLayout.yTicks.length; i++)
+                    Text(
+                      widget.percentage
+                          ? '${(axisLayout.yTicks[i] * 100).toStringAsFixed(0)}%'
+                          : _formatValue(axisLayout.yTicks[i]),
+                      key: ValueKey('chart-y-tick:$i'),
+                      style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                ],
+              ),
+            );
+          }
+
+          Widget? dateKey;
+          if (axisLayout.xReservedSize == 0 && axisLayout.xTicks.isNotEmpty) {
+            dateKey = Container(
+              key: const ValueKey('chart-date-key'),
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  for (final entry in axisLayout.xTicks.entries)
+                    Text(
+                      entry.value,
+                      key: ValueKey('chart-x-tick:${entry.key}'),
+                      style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                ],
+              ),
+            );
+          }
+
+          Widget? xLabelStrip;
+          if (axisLayout.xReservedSize > 0 && axisLayout.xTicks.isNotEmpty) {
+            final plotLeft = axisLayout.yReservedSize > 0 ? axisLayout.yReservedSize : 0.0;
+            final plotUsable = math.max(1.0, usableWidth - plotLeft - 8);
+            xLabelStrip = SizedBox(
+              height: axisLayout.xReservedSize,
+              child: Stack(
+                children: [
+                  for (final entry in axisLayout.xTicks.entries) () {
+                    final idx = entry.key.toInt();
+                    final normalized = buckets.isEmpty ? 0.0 : (idx + 0.5) / buckets.length;
+                    final center = normalized.clamp(0.0, 1.0) * plotUsable;
+                    final left = (center - axisLayout.xLabelWidth / 2)
+                        .clamp(0.0, math.max(0.0, plotUsable - axisLayout.xLabelWidth));
+                    return Positioned(
+                      left: plotLeft + left,
+                      top: 4,
+                      width: axisLayout.xLabelWidth,
+                      child: Text(
+                        entry.value,
+                        key: ValueKey('chart-x-tick:${entry.key}'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    );
+                  }(),
+                ],
+              ),
+            );
+          }
+
+          final chartHeight =
+              math.max(80.0, math.max(200.0, widget.plotHeight) - axisLayout.xReservedSize);
+          final chartWidget = SizedBox(
+            key: const ValueKey('chart-mark-area'),
+            height: chartHeight,
+            child: BarChart(
+              key: ValueKey(topology),
+              barData,
+              duration: motion.geometryDuration,
+            ),
+          );
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (scaleKey != null) scaleKey,
+              chartWidget,
+              if (xLabelStrip != null) xLabelStrip,
+              if (dateKey != null) dateKey,
+            ],
           );
         },
       );
     } else {
       // Line or Area chart
-      final xToLabel = <double, String>{
-        for (final s in sortedSeries)
-          for (final p in s.points) p.x: p.label
-      };
-
       plotWidget = LayoutBuilder(
         builder: (context, constraints) {
           final motion = ChartMotion.of(context);
           final usableWidth = constraints.maxWidth;
+          if (!usableWidth.isFinite || usableWidth <= 0) {
+            return const SizedBox.shrink();
+          }
           final maxTipWidth = usableWidth.isFinite
               ? math.max(1.0, math.min(280.0, usableWidth - 32))
               : 280.0;
+
+          final buckets = <ChartPoint>[];
+          final seenX = <double>{};
+          for (final s in sortedSeries) {
+            for (final p in s.points) {
+              if (seenX.add(p.x)) {
+                buckets.add(ChartPoint(p.x, null, label: p.label));
+              }
+            }
+          }
+          buckets.sort((a, b) => a.x.compareTo(b.x));
+
+          final axisLayout = measureChartAxes(
+            context: context,
+            width: usableWidth,
+            bounds: bounds,
+            buckets: buckets,
+            ordinalBars: false,
+            formatY: (y) =>
+                widget.percentage ? '${(y * 100).toStringAsFixed(0)}%' : _formatValue(y),
+            style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+            plotHeight: math.max(200, widget.plotHeight),
+          );
 
           final lineBarsData = <LineChartBarData>[];
           final renderedSeriesIdByBarIndex = <int, String>{};
@@ -449,38 +560,18 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             titlesData: FlTitlesData(
               topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 28,
-                  getTitlesWidget: (val, meta) {
-                    final label = xToLabel[val];
-                    if (label == null) return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 6.0),
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+              bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               leftTitles: AxisTitles(
                 sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 44,
+                  showTitles: axisLayout.yReservedSize > 0,
+                  reservedSize: axisLayout.yReservedSize > 0 ? axisLayout.yReservedSize : 44,
+                  interval: bounds.maxY > bounds.minY ? (bounds.maxY - bounds.minY) / 4 : null,
                   getTitlesWidget: (val, meta) {
-                    if (val == meta.min || val == meta.max) {
-                      return const SizedBox.shrink();
-                    }
                     return Text(
                       widget.percentage
                           ? '${(val * 100).toStringAsFixed(0)}%'
                           : _formatValue(val),
+                      key: ValueKey('chart-y-tick:$val'),
                       style: TextStyle(
                         fontSize: 10,
                         color: theme.colorScheme.onSurfaceVariant,
@@ -501,10 +592,101 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             borderData: FlBorderData(show: false),
           );
 
-          return LineChart(
-            key: ValueKey(topology),
-            lineData,
-            duration: motion.geometryDuration,
+          Widget? scaleKey;
+          if (axisLayout.yReservedSize == 0 && axisLayout.yTicks.isNotEmpty) {
+            scaleKey = Container(
+              key: const ValueKey('chart-scale-key'),
+              padding: const EdgeInsets.only(bottom: 4.0),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  for (var i = 0; i < axisLayout.yTicks.length; i++)
+                    Text(
+                      widget.percentage
+                          ? '${(axisLayout.yTicks[i] * 100).toStringAsFixed(0)}%'
+                          : _formatValue(axisLayout.yTicks[i]),
+                      key: ValueKey('chart-y-tick:$i'),
+                      style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                ],
+              ),
+            );
+          }
+
+          Widget? dateKey;
+          if (axisLayout.xReservedSize == 0 && axisLayout.xTicks.isNotEmpty) {
+            dateKey = Container(
+              key: const ValueKey('chart-date-key'),
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  for (final entry in axisLayout.xTicks.entries)
+                    Text(
+                      entry.value,
+                      key: ValueKey('chart-x-tick:${entry.key}'),
+                      style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                ],
+              ),
+            );
+          }
+
+          Widget? xLabelStrip;
+          if (axisLayout.xReservedSize > 0 && axisLayout.xTicks.isNotEmpty) {
+            final plotLeft = axisLayout.yReservedSize > 0 ? axisLayout.yReservedSize : 0.0;
+            final plotUsable = math.max(1.0, usableWidth - plotLeft - 8);
+            final span = bounds.maxX - bounds.minX;
+            xLabelStrip = SizedBox(
+              height: axisLayout.xReservedSize,
+              child: Stack(
+                children: [
+                  for (final entry in axisLayout.xTicks.entries) () {
+                    final normalized = span <= 0 ? 0.0 : (entry.key - bounds.minX) / span;
+                    final center = normalized.clamp(0.0, 1.0) * plotUsable;
+                    final left = (center - axisLayout.xLabelWidth / 2)
+                        .clamp(0.0, math.max(0.0, plotUsable - axisLayout.xLabelWidth));
+                    return Positioned(
+                      left: plotLeft + left,
+                      top: 4,
+                      width: axisLayout.xLabelWidth,
+                      child: Text(
+                        entry.value,
+                        key: ValueKey('chart-x-tick:${entry.key}'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    );
+                  }(),
+                ],
+              ),
+            );
+          }
+
+          final chartHeight =
+              math.max(80.0, math.max(200.0, widget.plotHeight) - axisLayout.xReservedSize);
+          final chartWidget = SizedBox(
+            key: const ValueKey('chart-mark-area'),
+            height: chartHeight,
+            child: LineChart(
+              key: ValueKey(topology),
+              lineData,
+              duration: motion.geometryDuration,
+            ),
+          );
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (scaleKey != null) scaleKey,
+              chartWidget,
+              if (xLabelStrip != null) xLabelStrip,
+              if (dateKey != null) dateKey,
+            ],
           );
         },
       );
@@ -576,8 +758,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
               },
             ),
           ),
-        SizedBox(
-          height: math.max(200, widget.plotHeight),
+        ConstrainedBox(
+          constraints: BoxConstraints(minHeight: math.max(200, widget.plotHeight)),
           child: ChartMotion(
             dataRevision: revision,
             topologyRevision: topology,

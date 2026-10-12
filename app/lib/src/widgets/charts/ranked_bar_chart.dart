@@ -74,6 +74,13 @@ class RankedBarChart extends StatelessWidget {
     final topology = values.map((v) => v.id).join(';');
     final revision = values.map((v) => '${v.id}:${v.value}:${v.label}').join(';');
 
+    final labelStyle = theme.textTheme.bodyMedium?.copyWith(
+      fontWeight: FontWeight.w500,
+    );
+    final valueStyle = theme.textTheme.bodyMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+    );
+
     return ChartMotion(
       dataRevision: revision,
       topologyRevision: topology,
@@ -85,74 +92,130 @@ class RankedBarChart extends StatelessWidget {
             alpha: primaryColor.a * motion.markOpacity,
           );
 
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (final v in values) ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 140,
-                        child: Text(
-                          v.label,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+          final scaler = MediaQuery.textScalerOf(context);
+          final isBold = MediaQuery.boldTextOf(context);
+          final effectiveValStyle = DefaultTextStyle.of(context).style.merge(valueStyle).copyWith(
+                fontWeight: isBold ? FontWeight.bold : valueStyle?.fontWeight,
+              );
+
+          final formattedValues = {
+            for (final v in values)
+              v.id: unit.isEmpty ? formatVal(v.value) : '${formatVal(v.value)} $unit',
+          };
+
+          double measureTextWidth(String text) {
+            final p = TextPainter(
+              text: TextSpan(text: text, style: effectiveValStyle),
+              textScaler: scaler,
+              textDirection: Directionality.of(context),
+            )..layout();
+            final w = p.width;
+            p.dispose();
+            return w;
+          }
+
+          final maxValueWidth = formattedValues.values.fold<double>(
+                0,
+                (maxW, str) => math.max(maxW, measureTextWidth(str)),
+              ) +
+              8.0;
+
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final availableWidth = constraints.maxWidth;
+              final isWide = availableWidth >= maxValueWidth + 160;
+
+              final valueWidth = maxValueWidth;
+              var labelWidth = math.min(240.0, math.max(96.0, availableWidth * 0.35));
+              if (availableWidth - valueWidth - labelWidth - 16.0 < 64.0) {
+                labelWidth = math.max(64.0, availableWidth - valueWidth - 16.0 - 64.0);
+              }
+
+              Widget buildBar(RankedValue v) {
+                return Container(
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: TweenAnimationBuilder<double>(
+                      key: ValueKey('ranked-bar:${v.id}'),
+                      tween: Tween<double>(
+                        end: maxVal > 0 ? (v.value / maxVal).clamp(0.0, 1.0) : 0.0,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Container(
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: TweenAnimationBuilder<double>(
-                              key: ValueKey('ranked-bar:${v.id}'),
-                              tween: Tween<double>(
-                                end: maxVal > 0 ? (v.value / maxVal).clamp(0.0, 1.0) : 0.0,
-                              ),
-                              duration: motion.geometryDuration,
-                              builder: (context, widthFactor, _) {
-                                return FractionallySizedBox(
-                                  widthFactor: widthFactor,
-                                  child: Container(
-                                    height: 20,
-                                    decoration: BoxDecoration(
-                                      color: markColor,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                );
-                              },
+                      duration: motion.geometryDuration,
+                      builder: (context, widthFactor, _) {
+                        return FractionallySizedBox(
+                          widthFactor: widthFactor,
+                          child: Container(
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: markColor,
+                              borderRadius: BorderRadius.circular(4),
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 90,
-                        child: Text(
-                          unit.isEmpty ? formatVal(v.value) : '${formatVal(v.value)} $unit',
-                          textAlign: TextAlign.end,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ],
+                );
+              }
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final v in values)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: isWide
+                          ? Row(
+                              children: [
+                                SizedBox(
+                                  width: labelWidth,
+                                  child: Text(
+                                    v.label,
+                                    style: labelStyle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(child: buildBar(v)),
+                                const SizedBox(width: 8),
+                                SizedBox(
+                                  width: valueWidth,
+                                  child: Text(
+                                    formattedValues[v.id]!,
+                                    textAlign: TextAlign.end,
+                                    style: valueStyle,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  v.label,
+                                  style: labelStyle,
+                                ),
+                                const SizedBox(height: 2),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Text(
+                                    formattedValues[v.id]!,
+                                    style: valueStyle,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                buildBar(v),
+                              ],
+                            ),
+                    ),
+                ],
+              );
+            },
           );
         },
       ),
