@@ -7,6 +7,7 @@ import '../widgets/error_retry.dart';
 import '../widgets/format.dart';
 import '../widgets/kpi_card.dart';
 import '../widgets/metric_line_chart.dart';
+import '../widgets/studio_layout.dart';
 
 class OverviewPage extends ConsumerWidget {
   const OverviewPage({super.key});
@@ -35,16 +36,30 @@ class _OverviewBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        const StudioHeading(
+          title: 'Overview',
+          subtitle: 'Daily active players, acquisition, engagement, and uninstalls',
+        ),
+        const SizedBox(height: 16),
         if (empty)
           const Padding(
             padding: EdgeInsets.only(bottom: 12),
             child: Card(child: ListTile(leading: Icon(Icons.info_outline), title: Text('No data in this range'))),
           ),
-        // Six cards fill one row, else 3 + 3, else 2 per row — never a lone orphan.
+        // Six cards fill one row, else 3 + 3, else 2 per row, else 1 — never a lone orphan.
         LayoutBuilder(builder: (context, box) {
           const gap = 12.0;
           const minCard = 150.0;
-          final perRow = box.maxWidth >= 6 * minCard + 5 * gap ? 6 : (box.maxWidth >= 3 * minCard + 2 * gap ? 3 : 2);
+          final int perRow;
+          if (box.maxWidth >= 6 * minCard + 5 * gap) {
+            perRow = 6;
+          } else if (box.maxWidth >= 3 * minCard + 2 * gap) {
+            perRow = 3;
+          } else if (box.maxWidth >= 2 * minCard + gap) {
+            perRow = 2;
+          } else {
+            perRow = 1;
+          }
           final w = ((box.maxWidth - (perRow - 1) * gap) / perRow).floorToDouble();
           return Wrap(spacing: gap, runSpacing: gap, children: [
             KpiCard(width: w, title: 'DAU (avg)', value: fmtDecimal(k.dau), delta: pctChange(k.dau, p?.dau)),
