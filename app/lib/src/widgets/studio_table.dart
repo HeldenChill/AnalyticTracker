@@ -145,6 +145,26 @@ class _StudioTableState extends State<StudioTable> {
       );
     }
 
+    final theme = Theme.of(context);
+    final tableTheme = DataTableTheme.of(context);
+    final baseStyle = tableTheme.headingTextStyle ??
+        theme.dataTableTheme.headingTextStyle ?? theme.textTheme.titleSmall!;
+    final headingStyle = DefaultTextStyle.of(context).style.merge(baseStyle);
+    var headingHeight = tableTheme.headingRowHeight ??
+        theme.dataTableTheme.headingRowHeight ?? 56.0;
+    for (final column in widget.columns) {
+      final painter = TextPainter(
+        text: TextSpan(text: column.label, style: headingStyle),
+        textDirection: Directionality.of(context),
+        textAlign: column.numeric ? TextAlign.right : TextAlign.left,
+        textScaler: MediaQuery.textScalerOf(context),
+        locale: Localizations.maybeLocaleOf(context),
+      )..layout(maxWidth: column.width);
+      final needed = painter.height.ceilToDouble() + 16;
+      if (needed > headingHeight) headingHeight = needed;
+      painter.dispose();
+    }
+
     return Scrollbar(
       controller: _scrollController,
       thumbVisibility: true,
@@ -154,6 +174,8 @@ class _StudioTableState extends State<StudioTable> {
         child: DataTable(
           sortColumnIndex: widget.sortColumnIndex,
           sortAscending: widget.sortAscending,
+          headingTextStyle: headingStyle,
+          headingRowHeight: headingHeight,
           dataRowMinHeight: 48,
           dataRowMaxHeight: double.infinity,
           columns: [
@@ -163,6 +185,7 @@ class _StudioTableState extends State<StudioTable> {
                   width: widget.columns[i].width,
                   child: Text(
                     widget.columns[i].label,
+                    style: headingStyle,
                     softWrap: true,
                     textAlign: widget.columns[i].numeric
                         ? TextAlign.right

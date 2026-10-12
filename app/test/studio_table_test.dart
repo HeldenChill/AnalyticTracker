@@ -60,6 +60,20 @@ void main() {
       expectCompleteSingleLine(t, find.text('123456789012'));
       expect(t.takeException(), isNull);
     });
+
+    testWidgets('wrapped sortable heading is fully readable in ${style.name}', (t) async {
+      const label = 'Median time from step 1';
+      for (final scale in [1.0, 1.5]) {
+        await pumpStudio(t, StudioTable(
+          columns: [StudioColumn(label, width: 140, numeric: true,
+              onSort: (index, ascending) {})],
+          sortColumnIndex: 0,
+          rows: const [StudioRow([StudioTextCell('40s', numeric: true)])],
+        ), style: style, textScale: scale);
+        expectCompleteWrappedText(t, find.text(label));
+        expect(t.takeException(), isNull);
+      }
+    });
   }
 
   testWidgets('numeric width reacts to inherited theme and scale changes', (t) async {
@@ -84,5 +98,33 @@ void main() {
       expectCompleteSingleLine(t, find.text('123456789012'));
       expect(t.takeException(), isNull);
     }
+  });
+
+  testWidgets('header height updates while sort callback stays intact', (t) async {
+    t.view.physicalSize = const Size(720, 1200);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    final sorted = <(int, bool)>[];
+    const label = 'Median time from step 1';
+    for (final scale in [1.0, 1.5]) {
+      await t.pumpWidget(MaterialApp(
+        theme: buildTheme(scale == 1 ? AppStyle.tremor : AppStyle.midnight),
+        home: MediaQuery(data: MediaQueryData(
+          size: const Size(720, 1200), textScaler: TextScaler.linear(scale)),
+          child: Scaffold(body: StudioTable(
+            key: const ValueKey('retained-header-table'),
+            columns: [StudioColumn(label, width: 140, numeric: true,
+              onSort: (i, ascending) => sorted.add((i, ascending)))],
+            sortColumnIndex: 0, sortAscending: true,
+            rows: const [StudioRow([StudioTextCell('40s', numeric: true)])],
+          )),
+        ),
+      ));
+      await t.pumpAndSettle();
+      expectCompleteWrappedText(t, find.text(label));
+      expect(t.takeException(), isNull);
+    }
+    await t.tap(find.text(label));
+    expect(sorted, [(0, false)]);
   });
 }

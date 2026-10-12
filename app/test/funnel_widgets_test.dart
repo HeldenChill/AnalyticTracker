@@ -226,4 +226,11 @@ void main() {
       (2, FunnelPlayerOutcome.dropped)]);
     expect(t.takeException(), isNull);
   });
+
+  testWidgets('any-order Funnel header fits every wrapped line', (t) async {
+    await pumpStudio(t, const FunnelStepTable(
+      result: result, order: FunnelOrder.any), textScale: 1.5);
+    expectCompleteWrappedText(t, find.text('Median time from step 1'));
+    expect(t.takeException(), isNull);
+  });
 }
