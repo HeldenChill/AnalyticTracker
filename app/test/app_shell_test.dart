@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:analytic_app/src/api_client.dart';
 import 'package:analytic_app/src/providers.dart';
+import 'package:analytic_app/src/screens/counts_screen.dart';
+import 'package:analytic_app/src/screens/param_screen.dart';
 import 'package:analytic_app/src/shell/app_shell.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
@@ -102,6 +104,12 @@ void main() {
     await t.pumpAndSettle();
     expect(find.textContaining('Not enough players to find groups: 3'),
         findsOneWidget);
+    await t.tap(find.text('Events'));
+    await t.pumpAndSettle();
+    expect(find.byType(CountsScreen), findsOneWidget);
+    await t.tap(find.text('Parameters'));
+    await t.pumpAndSettle();
+    expect(find.byType(ParamScreen), findsOneWidget);
   });
 
   testWidgets('preset change refetches overview', (t) async {

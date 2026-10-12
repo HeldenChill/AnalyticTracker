@@ -243,7 +243,7 @@ class _CountsScreenState extends ConsumerState<CountsScreen> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Compare previous period'),
+                const Text('Compare'),
                 const SizedBox(width: 8),
                 Switch(
                   value: _compare,
