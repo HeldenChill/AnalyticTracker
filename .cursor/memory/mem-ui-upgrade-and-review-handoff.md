@@ -7,34 +7,48 @@
 
 ## Continue here
 
-**Current owner request:** Wave 3 implemented and verified. Ready to continue with Wave 4 in next session.
+**Current owner request:** Wave 4 implemented and verified. Ready to continue with Wave 5 in next session.
 
-- **Latest implemented product:** Wave 1, Wave 2 (repairs W2R1-W2R7), and Wave 3 (Tasks 7 & 8) are fully implemented and merged to `main` at commit `be12f93`.
-- **Fresh automated evidence:** All analyzers clean (0 issues); shared 65 / server 271 / app 210 = **546 tests passed**.
-- **Wave 3 deliverables on main:**
-  - `app/lib/src/view_models/storage_observations.dart`: `DayAvailability`, `StoredObservation`, `storedObservations`, strict `parseStoredTimestamp`.
-  - `app/lib/src/view_models/data_health_view_model.dart`: `DataHealthViewModel`, `buildDataHealth` (pure storage observations, no invented zeros, independent global freshness).
-  - `app/lib/src/widgets/coverage_calendar.dart`: 7-weekday column layout, partial month alignment, measured scaled labels, distinct visual styles for stored/zero/missing/incomplete/future, keyboard focus and tooltip preservation.
-  - `app/lib/src/screens/days_screen.dart`: `ConsumerStatefulWidget` with cancellable `_midnightTimer`, app lifecycle resume observation, `StudioAsyncPanel` keyed on `baseUrl`, `StudioHeading`, four `StudioMetric` cards, `ChartFrame` daily volume bars, `CoverageCalendar`, gap summary, newest-first `StudioTable` storage timeline.
-  - `app/lib/src/widgets/filter_bar.dart`: `storageScope` disabling gameplay controls while preserving selections; `refreshing` indicator.
-  - `app/lib/src/shell/app_shell.dart`: real pending refresh completion, origin URL and index guards, scoped snackbar messages.
-- **Wave 3 test coverage:**
-  - `data_health_view_model_test.dart` (8 tests)
-  - `coverage_calendar_test.dart` (3 tests)
-  - `data_health_dashboard_test.dart` (4 tests)
-  - `days_screen_test.dart` (3 tests)
-  - `filter_bar_test.dart` (2 tests)
+- **Latest implemented product:** Waves 1, 2, 3, and 4 (Tasks 9-11: Events explorer aggregation, ranking & search table, animated detail panel, navigation handoff to Parameters) are fully implemented and merged to `main` at commit `cfa68c5`.
+- **Fresh automated evidence:** All analyzers clean (0 issues); shared 65 / server 271 / app 227 = **563 tests passed**.
+- **Wave 4 deliverables on main:**
+  - `app/lib/src/view_models/events_view_model.dart`: `ChangeKind`, `EventChange`, `EventRowSummary`, `EventSummary`, pure `buildEventSummary`, coverage-aware `eventChange`, stable tie-breaking, NaN/infinite guard.
+  - `app/lib/src/state/events_explorer.dart`: `EventsQuery`, `EventsPayload`, `eventsExplorerProvider`, `selectedEventProvider`.
+  - `app/lib/src/widgets/event_detail_panel.dart`: wrapped name, occurrence metric, volume share, previous period count, change badge, daily activity chart, "Explore parameters" action button.
+  - `app/lib/src/screens/counts_screen.dart`: Studio layout, `StudioHeading` with toggle/chart controls, four KPI metric cards, daily occurrences trend, top 10 ranked events horizontal bar chart, searchable and sortable `StudioTable` (4 columns with custom change order and tie-breaking), animated selection detail panel with stale selection cleanup.
+  - `app/lib/src/widgets/studio_table.dart`: `LocalKey? key` support on `StudioRow` forwarded to `DataRow`.
+  - `app/lib/src/state/navigation.dart`: `AppPage` enum, `selectedPageProvider`, `parameterEventProvider`, `parameterKeyProvider`, `analyticTabIndexProvider`.
+  - `app/lib/src/shell/app_shell.dart`: shell-local index migrated to `selectedPageProvider`, `onExploreParameters` handoff wiring.
+  - `app/lib/src/screens/param_screen.dart`: syncs with navigation state, parameter key chips from `paramKeysProvider`, hidden test-device hint when empty.
+  - `app/lib/src/widgets/event_picker.dart`: `isExpanded: true`, bounded menu height, retains passed value.
+- **Wave 4 test coverage:**
+  - `events_view_model_test.dart` (6 tests)
+  - `events_explorer_provider_test.dart` (5 tests)
+  - `events_explorer_screen_test.dart` (5 tests)
+  - `events_parameter_handoff_test.dart` (1 test)
   - `app_shell_test.dart` (6 tests)
-- **Next:** Start Wave 4 implementation. Plan: `.cursor/plans/analytics-studio-ui-wave4-implementation.md`.
+- **Next:** Start Wave 5 implementation. Plan: `.cursor/plans/analytics-studio-ui-wave5-implementation.md`.
 
 | Artifact | Purpose |
 |---|---|
-| [Wave3 amended plan](../plans/analytics-studio-ui-wave3-implementation.md) | Tasks 7-8 implementation spec and amendments (now complete) |
-| [Wave4 plan](../plans/analytics-studio-ui-wave4-implementation.md) | Next up: Events screen and parameter explorer |
+| [Wave4 plan](../plans/analytics-studio-ui-wave4-implementation.md) | Tasks 9-11 implementation spec (now complete) |
+| [Wave5 plan](../plans/analytics-studio-ui-wave5-implementation.md) | Next up: Funnel editor and visualization upgrade |
 | [Master](../plans/analytics-studio-ui-implementation.md) | Master implementation roadmap |
 | [Ledger](mem-known-bugs-index.md) | Bug ledger |
 
-## Session 2026-10-12 - Wave 3 implementation and merge to main
+## Session 2026-10-12 - Wave 4 implementation on main
+
+Owner requested executing Wave 4 plan (`analytics-studio-ui-wave4-implementation.md`) inline using `executing-plans`.
+
+| Stage | Outcome and evidence |
+|---|---|
+| Baseline verification | Clean baseline on main (`be12f93`): shared 65 / server 271 / app 210 = 546 pass; SDK located at `G:\flutter\bin` |
+| Task 9 (TDD) | Implemented `events_view_model.dart` and `events_explorer.dart` with coverage-aware comparisons, tie-breaking, and NaN guards; `events_view_model_test.dart` (6/6) and `events_explorer_provider_test.dart` (5/5) pass; committed `ca0776e` |
+| Task 10 (TDD) | Implemented `event_detail_panel.dart`, full Studio `counts_screen.dart` (KPIs, trend chart, top ranked chart, sortable searchable table, animated detail panel), `StudioRow.key` on `StudioTable`; `events_explorer_screen_test.dart` (5/5) pass; committed `f287f8b` |
+| Task 11 (TDD) | Implemented `navigation.dart` (`AppPage`, `selectedPageProvider`, `parameterEventProvider`, `parameterKeyProvider`), `app_shell.dart` navigation wiring, `param_screen.dart` query sync & key chips, `event_picker.dart` layout; `events_parameter_handoff_test.dart`, `app_shell_test.dart` (6/6) pass; committed `cfa68c5` |
+| Self-review & ledger | 15 files changed (+2000, -115); 0 critical/important issues; 2 deferred minors noted; ledger updated; cleaned up plan workspace |
+| Gates verification | All analyzers clean; shared 65 / server 271 / app 227 = 563 tests passed |
+| Memory save | Updated `mem-project-index.md`, `mem-project-intent-and-origin.md`, `mem-ui-upgrade-and-review-handoff.md` |
 
 Owner requested executing Wave 3 plan (`analytics-studio-ui-wave3-implementation.md`) inline using `executing-plans`.
 

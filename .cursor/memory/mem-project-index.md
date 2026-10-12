@@ -4,7 +4,7 @@
 
 ## Project
 
-Cross-platform team dashboard for PetVsMonster: Windows-first Flutter app, Dart shelf server, SQLite raw events, BigQuery daily pull/manual import, Overview/Retention/Progression/Funnels and six-tab Analytic page. Analytics Studio A retains all four themes and 24 MCP tools. Wave 1, Wave 2, and Wave 3 (Tasks 7-8: Data health dashboard, CoverageCalendar, storage observations, filter storage scope, real refresh completion) are implemented and merged to main at be12f93. Full gates clean: shared 65 / server 271 / app 210 = 546 tests passed, 0 analyzer issues. Read mem-ui-upgrade-and-review-handoff.md for next session continuation (Wave 4).
+Cross-platform team dashboard for PetVsMonster: Windows-first Flutter app, Dart shelf server, SQLite raw events, BigQuery daily pull/manual import, Overview/Retention/Progression/Funnels and six-tab Analytic page. Analytics Studio A retains all four themes and 24 MCP tools. Waves 1, 2, 3, and 4 (Tasks 9-11: Events explorer aggregation, ranking & search table, animated detail panel, navigation handoff to Parameters) are implemented and merged to main at cfa68c5. Full gates clean: shared 65 / server 271 / app 227 = 563 tests passed, 0 analyzer issues. Read mem-ui-upgrade-and-review-handoff.md for next session continuation (Wave 5).
 
 ## Memory index
 

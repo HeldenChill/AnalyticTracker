@@ -51,13 +51,14 @@
 | Wave3 plan audit (10-12) | Owner asked review while Gemini repaired Wave2 | Seven plan defects0040-0046 patched; two corrected prototypes pass;15 blocks syntax-checked; Task11/15 handoffs aligned |
 | Wave2 repair review and memory save (10-12) | Owner reported repairs done, requested review, then complete memory/playbook save | 529 tests clean; nine probes seven failures; 0033-0037 closed, 0038/0039 residuals and 0047-0050 remain |
 | Analytics Studio Wave 3 (10-12) | Implemented Wave 3 tasks 7 & 8 inline using executing-plans (TDD, red-green, self-review). Merged to main at be12f93. | Task 7 Data health view model, Task 8 DaysScreen dashboard, CoverageCalendar, FilterBar storageScope, AppShell pending refresh; gates clean: shared 65 / server 271 / app 210 = 546 total tests |
+| Analytics Studio Wave 4 (10-12) | Implemented Wave 4 tasks 9-11 inline using executing-plans (TDD, red-green, self-review). Merged to main at cfa68c5. | Task 9 Events aggregation/query provider, Task 10 CountsScreen Studio UI with KPIs, trends, top 10 ranked bar chart, sortable/searchable table, animated detail panel, Task 11 Events-to-Parameters navigation handoff and ParamScreen key chips; gates clean: shared 65 / server 271 / app 227 = 563 total tests |
 
-## Status - START HERE (2026-10-12 Wave 3 implementation complete, Wave 4 next)
+## Status - START HERE (2026-10-12 Wave 4 implementation complete, Wave 5 next)
 
 - Read [current handoff](mem-ui-upgrade-and-review-handoff.md).
-- Analytics Studio Waves 1, 2, and 3 are implemented and merged into `main`.
-- Current HEAD is `be12f93` (clean working tree).
-- Automated gates: shared 65 / server 271 / app 210 = **546 pass**, all analyzers clean (0 issues).
+- Analytics Studio Waves 1, 2, 3, and 4 are implemented and merged into `main`.
+- Current HEAD is `cfa68c5` (clean working tree).
+- Automated gates: shared 65 / server 271 / app 227 = **563 pass**, all analyzers clean (0 issues).
 - Wave 3 delivered:
   - Task 7: `storage_observations.dart`, `data_health_view_model.dart`, `data_health_view_model_test.dart` (commit `6bf0027`).
   - Task 8: `coverage_calendar.dart`, `days_screen.dart`, `filter_bar.dart`, `app_shell.dart`, tests in `coverage_calendar_test.dart`, `data_health_dashboard_test.dart`, `days_screen_test.dart`, `filter_bar_test.dart`, `app_shell_test.dart` (commit `be12f93`).
