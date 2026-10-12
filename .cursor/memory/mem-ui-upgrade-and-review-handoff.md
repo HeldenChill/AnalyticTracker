@@ -7,32 +7,46 @@
 
 ## Continue here
 
-**Current owner request:** Save this complete session and update the reusable playbooks. This memory reflects completed reviews/planning through2026-10-12; it does not authorize automatic implementation on continuation.
+**Current owner request:** Wave 3 implemented and verified. Ready to continue with Wave 4 in next session.
 
-- **Latest reviewed product:** Wave2 tasks4-6 and Gemini W2R1-W2R7 repairs are implemented at reviewed head `8ea1e77`. **Repair review verdict: fixes required. Wave3 remains gated.** Check current HEAD/status before new work.
-- **Fresh automated evidence:** all three analyzers clean; shared65/server271/app193 = **529 existing tests passed**. Nine additional repair-review probes: **seven fail, two pass**, covering five important remaining issues.
-- **Current ledger:** BUG-0033-0037 RESOLVED for automated cases; BUG-0038/0039 remain CONFIRMED with residual renderer evidence. New BUG-0047-0049 are CONFIRMED important defects/gaps; BUG-0050 is a CONFIRMED low documentation gap. BUG-0026 remains separate/nonblocking. BUG-0040-0046 are RESOLVED **as Wave3 plan defects only**.
-- **Remaining Wave2 blockers:** interrupted horizontal bars fail to snap on reduced/inactive policy change; date labels use different geometry from marks; loading displays prior-scope error; active tooltips retain old anchors; partial bars lack a visual marker/legend. Required repair evidence report is also missing.
-- **No new product fix was made by this reviewer.** Review artifacts, plans and memory changed; Gemini owns product commits. No commit/push, new Windows build, server restart or live Windows walkthrough in this session.
-- **Next:** Read latest repair review and probes, preserve owner dirty files, and address remaining Wave2 findings through owner-directed Gemini work, then re-review. If asked for a follow-up plan, incorporate exact failing assertions below. Do not repeat completed Wave1/tasks4-6, start Wave3, or incidentally repair BUG-0026.
-- **Execution/delegation:** implementation stays inline with one task commit, no push. Reviews dispatched an independent read-only reviewer only because owner explicitly invoked requesting-code-review; this does not enable general agent dispatch. Wave3 plan audit was inline.
+- **Latest implemented product:** Wave 1, Wave 2 (repairs W2R1-W2R7), and Wave 3 (Tasks 7 & 8) are fully implemented and merged to `main` at commit `be12f93`.
+- **Fresh automated evidence:** All analyzers clean (0 issues); shared 65 / server 271 / app 210 = **546 tests passed**.
+- **Wave 3 deliverables on main:**
+  - `app/lib/src/view_models/storage_observations.dart`: `DayAvailability`, `StoredObservation`, `storedObservations`, strict `parseStoredTimestamp`.
+  - `app/lib/src/view_models/data_health_view_model.dart`: `DataHealthViewModel`, `buildDataHealth` (pure storage observations, no invented zeros, independent global freshness).
+  - `app/lib/src/widgets/coverage_calendar.dart`: 7-weekday column layout, partial month alignment, measured scaled labels, distinct visual styles for stored/zero/missing/incomplete/future, keyboard focus and tooltip preservation.
+  - `app/lib/src/screens/days_screen.dart`: `ConsumerStatefulWidget` with cancellable `_midnightTimer`, app lifecycle resume observation, `StudioAsyncPanel` keyed on `baseUrl`, `StudioHeading`, four `StudioMetric` cards, `ChartFrame` daily volume bars, `CoverageCalendar`, gap summary, newest-first `StudioTable` storage timeline.
+  - `app/lib/src/widgets/filter_bar.dart`: `storageScope` disabling gameplay controls while preserving selections; `refreshing` indicator.
+  - `app/lib/src/shell/app_shell.dart`: real pending refresh completion, origin URL and index guards, scoped snackbar messages.
+- **Wave 3 test coverage:**
+  - `data_health_view_model_test.dart` (8 tests)
+  - `coverage_calendar_test.dart` (3 tests)
+  - `data_health_dashboard_test.dart` (4 tests)
+  - `days_screen_test.dart` (3 tests)
+  - `filter_bar_test.dart` (2 tests)
+  - `app_shell_test.dart` (6 tests)
+- **Next:** Start Wave 4 implementation. Plan: `.cursor/plans/analytics-studio-ui-wave4-implementation.md`.
 
 | Artifact | Purpose |
 |---|---|
-| [Latest Wave2 repair review](../../docs/reviews/2026-10-12-gemini-wave2-repair-review.md) | Five important remaining issues, minor evidence gap, fresh gates and verdict |
-| [Repair-review probes](../../docs/reviews/2026-10-12-wave2-repair-review-probe_test.dart) | Nine executable tests; seven currently fail, two supported-composition cases pass |
-| [Wave2 repair implementation plan](../plans/analytics-studio-ui-wave2-repair-implementation.md) | W2R1-W2R7, precedence over original kernels; remaining acceptance contracts still apply |
-| [Wave3 amended plan](../plans/analytics-studio-ui-wave3-implementation.md) | Future tasks7-8 after Wave2 approval; global storage, refresh, calendar and clock contracts |
-| [Wave3 plan audit](../../docs/reviews/2026-10-12-wave3-plan-review.md) | Plan-only BUG-0040-0046 and prototype boundaries |
-| [Original Wave2 review](../../docs/reviews/2026-10-12-gemini-ui-wave2-review.md) | Original BUG-0033-0039 findings and repair rationale |
-| [Master](../plans/analytics-studio-ui-implementation.md), [verification report](../plans/analytics-studio-ui-verification.md), [ledger](mem-known-bugs-index.md) | Entry order, required evidence and canonical statuses |
+| [Wave3 amended plan](../plans/analytics-studio-ui-wave3-implementation.md) | Tasks 7-8 implementation spec and amendments (now complete) |
+| [Wave4 plan](../plans/analytics-studio-ui-wave4-implementation.md) | Next up: Events screen and parameter explorer |
+| [Master](../plans/analytics-studio-ui-implementation.md) | Master implementation roadmap |
+| [Ledger](mem-known-bugs-index.md) | Bug ledger |
 
-## Session 2026-10-12 - Wave2 implementation, repairs and Wave3 planning
+## Session 2026-10-12 - Wave 3 implementation and merge to main
 
-Owner resumed the earlier Wave2 handoff, reported Gemini implementation done, requested code review, requested detailed repair-plan patches, requested Wave3 plan audit during Gemini implementation, requested repair review, then requested saving all session knowledge/playbook experience. Analytics Studio A/four themes and prior statistical policies remain unchanged.
+Owner requested executing Wave 3 plan (`analytics-studio-ui-wave3-implementation.md`) inline using `executing-plans`.
 
 | Stage | Outcome and evidence |
 |---|---|
+| Baseline verification | Clean baseline on main (`d01955e`): shared 65 / server 271 / app 193 = 529 pass; SDK located at `G:\flutter\bin` |
+| Feature branch setup | Created `feature/wave3-data-health`; initialized SDD ledger at `.superpowers/sdd/analytics-studio-ui-wave3-implementation/progress.md` |
+| Task 7 (TDD) | Wrote failing `data_health_view_model_test.dart` (RED); implemented `storage_observations.dart` and `data_health_view_model.dart` (GREEN, 8/8 pass); resolved style info; app 201/201 clean; committed `6bf0027` |
+| Task 8 (TDD) | Wrote failing tests in `coverage_calendar_test.dart`, `data_health_dashboard_test.dart`, updated `days_screen_test.dart`, `filter_bar_test.dart`, `app_shell_test.dart` (RED); implemented `coverage_calendar.dart`, `filter_bar.dart`, `app_shell.dart`, `days_screen.dart` (GREEN, 18/18 targeted pass); resolved analyzer warnings; app 210/210 clean; committed `be12f93` |
+| Self-review & ledger | 12 files changed (+1407, -76); clean exit criteria; ledger updated; cleaned up plan workspace |
+| Finishing branch | Merged `feature/wave3-data-health` into `main` (fast-forward); verified app 210/210 on `main`; deleted feature branch |
+| Memory save | Updated `mem-project-index.md`, `mem-project-intent-and-origin.md`, `mem-ui-upgrade-and-review-handoff.md` |
 | Initial Wave2 implementation review | Actual tasks4-6 reviewed against amended contracts, not merely old unimplemented handoff. Existing gates shared65/server271/app176 =512 clean; six original review probes failed. BUG-0033-0039 filed; no critical finding, fixes required |
 | Detailed Wave2 repair planning | Added W2R1-W2R7 repair plan; master/Wave2 route to it and gate Wave3. Corrected contradictory missing-bar oracle: groups0/1/2, rod counts1/0/1. Added explicit backward-compatible motion handoff, algorithms, rendered/state regressions, per-task commits and acceptance gates |
 | Repair-plan validation |25 Dart blocks syntax-parsed; seven existing-API proposed tests compiled/executed: six reproduced bugs, real root accessibility test passed. Three isolated style/axis prototype tests passed. These are not proof of future production integration |

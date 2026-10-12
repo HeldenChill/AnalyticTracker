@@ -4,7 +4,7 @@
 
 ## Project
 
-Cross-platform team dashboard for PetVsMonster: Windows-first Flutter app, Dart shelf server, SQLite raw events, BigQuery daily pull/manual import, Overview/Retention/Progression/Funnels and six-tab Analytic page. Analytics Studio A retains all four themes and24 MCP tools. Wave1/R1-R4 and Wave2/tasks4-6/W2R1-W2R7 are implemented. **Latest repair review8ea1e77: fixes required, Wave3 gated**, despite all analyzers clean and shared65/server271/app193 =529 tests. BUG-0033-0037 resolved; BUG-0038/0039 residual motion/axis issues, BUG-0047-0049 new loading/tooltip/partial-mark issues and BUG-0050 missing repair evidence remain confirmed. Nine repair probes: seven fail/two pass. Wave3 plan audited/patched, BUG-0040-0046 resolved as plan-only defects; implementation unstarted by this reviewer. BUG-0026 remains separate/nonblocking; Windows visual acceptance pending. Owner requested complete session memory and playbook save. Read mem-ui-upgrade-and-review-handoff.md for current scope, artifacts and continuation; do not automatically start Wave3.
+Cross-platform team dashboard for PetVsMonster: Windows-first Flutter app, Dart shelf server, SQLite raw events, BigQuery daily pull/manual import, Overview/Retention/Progression/Funnels and six-tab Analytic page. Analytics Studio A retains all four themes and 24 MCP tools. Wave 1, Wave 2, and Wave 3 (Tasks 7-8: Data health dashboard, CoverageCalendar, storage observations, filter storage scope, real refresh completion) are implemented and merged to main at be12f93. Full gates clean: shared 65 / server 271 / app 210 = 546 tests passed, 0 analyzer issues. Read mem-ui-upgrade-and-review-handoff.md for next session continuation (Wave 4).
 
 ## Memory index
 

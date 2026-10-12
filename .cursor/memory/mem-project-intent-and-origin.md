@@ -49,19 +49,21 @@
 | Analytics Studio Wave 1 & Repairs (10-12) | Wave 1 tasks 1–3 and review repairs R1–R4 implemented & reviewed; gates lowered to 10; responsive layout, safe tables, numeric cell measurement, dynamic header height, bounded actions; BUG-0022..0025 RESOLVED; BUG-0026 nonblocking open | 7 commits up to 81649a3; master gates clean (shared 65 / server 271 / app 144 = 480 tests); live Windows checks pending |
 | Analytics Studio Wave2 review/repair planning (10-12) | Owner reported Gemini done, requested review and detailed fix plan | Initial512 tests clean but six probes fail; BUG0033-0039; W2R1-W2R7 authored and master/Wave2 linked |
 | Wave3 plan audit (10-12) | Owner asked review while Gemini repaired Wave2 | Seven plan defects0040-0046 patched; two corrected prototypes pass;15 blocks syntax-checked; Task11/15 handoffs aligned |
-| Wave2 repair review and memory save (10-12) | Owner reported repairs done, requested review, then complete memory/playbook save |529 tests clean; nine probes seven failures;0033-0037 closed,0038/0039 residuals and0047-0050 remain; no Wave3 signoff |
+| Wave2 repair review and memory save (10-12) | Owner reported repairs done, requested review, then complete memory/playbook save | 529 tests clean; nine probes seven failures; 0033-0037 closed, 0038/0039 residuals and 0047-0050 remain |
+| Analytics Studio Wave 3 (10-12) | Implemented Wave 3 tasks 7 & 8 inline using executing-plans (TDD, red-green, self-review). Merged to main at be12f93. | Task 7 Data health view model, Task 8 DaysScreen dashboard, CoverageCalendar, FilterBar storageScope, AppShell pending refresh; gates clean: shared 65 / server 271 / app 210 = 546 total tests |
 
-## Status - START HERE (2026-10-12 Wave2 repair review and Wave3 plan audit)
+## Status - START HERE (2026-10-12 Wave 3 implementation complete, Wave 4 next)
 
-- Read [current handoff](mem-ui-upgrade-and-review-handoff.md); original unimplemented-Wave2 continuation is superseded.
-- Analytics Studio A/four themes and population/evidence policies remain approved; Wave1/R1-R4 reviewed. Wave2 tasks4-6 and W2R1-W2R7 implemented, but **repair review requires fixes before Wave3**.
-- Latest reviewed head8ea1e77; dated automated gates: shared65/server271/app193 =529 pass, all analyzers clean. Nine additional repair probes: seven fail/two pass. Current source must be reinspected before work.
-- Ledger:0033-0037 resolved for automated cases;0038/0039 still confirmed with interrupted horizontal motion and actual date-axis geometry evidence;0047-0049 confirmed previous-error loading, retained tooltip anchors and partial-bar marking;0050 low missing repair report evidence.0026 remains nonblocking/out of scope; Windows live acceptance pending.
-- [Wave3 plan](../plans/analytics-studio-ui-wave3-implementation.md) audited/patched with plan-only0040-0046: global storage cache/refresh, strict freshness, calendar geometry/focus, test migration and midnight/resume. Task11/15 handoffs patched in Waves4/5. No Wave3 product code by reviewer.
-- Owner requested this entire session saved and playbook updated. Next engineering work depends on owner direction: remaining Wave2 fixes/follow-up plan and re-review; no automatic Wave3 execution.
-- Codex performed planning/review/verification only; Gemini owns product implementation. Independent reviewer dispatched only for explicitly invoked requesting-code-review; implementation/plan audits remain inline by default.
-- Preserve dirty owner plans/memory/verification artifact; stage only implementation task-owned files if later authorized; commit per task, never push. No build/restart/Windows walkthrough was performed during this session.
-- Key artifacts: [repair plan](../plans/analytics-studio-ui-wave2-repair-implementation.md), [latest review](../../docs/reviews/2026-10-12-gemini-wave2-repair-review.md), [Wave3 audit](../../docs/reviews/2026-10-12-wave3-plan-review.md), [ledger](mem-known-bugs-index.md).
+- Read [current handoff](mem-ui-upgrade-and-review-handoff.md).
+- Analytics Studio Waves 1, 2, and 3 are implemented and merged into `main`.
+- Current HEAD is `be12f93` (clean working tree).
+- Automated gates: shared 65 / server 271 / app 210 = **546 pass**, all analyzers clean (0 issues).
+- Wave 3 delivered:
+  - Task 7: `storage_observations.dart`, `data_health_view_model.dart`, `data_health_view_model_test.dart` (commit `6bf0027`).
+  - Task 8: `coverage_calendar.dart`, `days_screen.dart`, `filter_bar.dart`, `app_shell.dart`, tests in `coverage_calendar_test.dart`, `data_health_dashboard_test.dart`, `days_screen_test.dart`, `filter_bar_test.dart`, `app_shell_test.dart` (commit `be12f93`).
+- Next engineering work: **Wave 4** (Events screen and parameter explorer).
+- Preserve dirty owner plans/memory/verification artifact; commit per task, never push.
+- Key artifacts: [Wave 3 plan](../plans/analytics-studio-ui-wave3-implementation.md), [Wave 4 plan](../plans/analytics-studio-ui-wave4-implementation.md), [master](../plans/analytics-studio-ui-implementation.md), [ledger](mem-known-bugs-index.md).
 
 ## Next-step candidates (owner picks)
 
