@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:analytic_app/src/api_client.dart';
+import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -87,6 +88,23 @@ void main() {
     expect(
       ApiClient('http://host:8080', client: mock).days(),
       throwsA(isA<ApiException>().having((e) => e.message, 'message', contains('Cannot reach server'))),
+    );
+  });
+
+  test('survival 404 preserves message and adds request context', () async {
+    final client = ApiClient('http://host:8080', client: MockClient((request) async {
+      expect(request.url.path, '/analysis/survival');
+      return jsonRes({'error': 'route missing'}, 404);
+    }));
+    addTearDown(client.close);
+    await expectLater(
+      client.survival(const Filters(from: '2026-10-01', to: '2026-10-02')),
+      throwsA(
+        isA<ApiException>()
+            .having((e) => e.statusCode, 'status', 404)
+            .having((e) => e.path, 'path', 'analysis/survival')
+            .having((e) => e.toString(), 'original message', 'route missing'),
+      ),
     );
   });
 }

@@ -5,8 +5,10 @@ import 'package:analytic_shared/analytic_shared.dart';
 import 'package:http/http.dart' as http;
 
 class ApiException implements Exception {
-  ApiException(this.message);
+  ApiException(this.message, {this.statusCode, this.path});
   final String message;
+  final int? statusCode;
+  final String? path;
   @override
   String toString() => message;
 }
@@ -44,7 +46,8 @@ class ApiClient {
       };
       res = await call.timeout(const Duration(seconds: 15));
     } catch (e) {
-      throw ApiException('Cannot reach server at $_base ($e)');
+      if (e is ApiException) rethrow;
+      throw ApiException('Cannot reach server at $_base ($e)', path: path);
     }
     Object? decoded;
     try {
@@ -53,8 +56,18 @@ class ApiClient {
       decoded = null;
     }
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      if (decoded is Map && decoded['error'] is String) throw ApiException(decoded['error'] as String);
-      throw ApiException('HTTP ${res.statusCode}');
+      if (decoded is Map && decoded['error'] is String) {
+        throw ApiException(
+          decoded['error'] as String,
+          statusCode: res.statusCode,
+          path: path,
+        );
+      }
+      throw ApiException(
+        'HTTP ${res.statusCode}',
+        statusCode: res.statusCode,
+        path: path,
+      );
     }
     return decoded;
   }
