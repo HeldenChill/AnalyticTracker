@@ -31,10 +31,7 @@ class ProgressionPage extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Card(child: StageTable(stages: d.stages)),
-                ),
+                Card(child: StageTable(stages: d.stages)),
                 const SizedBox(height: 16),
                 Text('Players reaching each stage', style: Theme.of(context).textTheme.titleMedium),
                 for (final s in d.stages)

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../theme/analytics_tokens.dart';
 import 'format.dart';
+import 'studio_table.dart';
 
 class FunnelStepTable extends StatelessWidget {
   const FunnelStepTable({
@@ -50,19 +51,22 @@ class FunnelStepTable extends StatelessWidget {
     final tokens = AnalyticsTokens.of(context);
 
     Widget dropped(FunnelStepResult s) {
-      if (s.dropped == null) return const Text('—');
+      if (s.dropped == null) return const StudioTextCell('—', numeric: true);
       final text = '−${s.dropped}';
       final Widget badge;
       if (s.index != result.biggestDropIndex) {
-        badge = Text(text);
+        badge = StudioTextCell(text, numeric: true);
       } else {
-        badge = Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: tokens.bad.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(999),
+        badge = Align(
+          alignment: Alignment.centerRight,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: tokens.bad.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(text, style: TextStyle(color: tokens.bad, fontWeight: FontWeight.w600)),
           ),
-          child: Text(text, style: TextStyle(color: tokens.bad, fontWeight: FontWeight.w600)),
         );
       }
       if (s.index >= 1 && onSelectStep != null) {
@@ -88,41 +92,35 @@ class FunnelStepTable extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        DataTable(
-          columnSpacing: 20,
-          dataRowMaxHeight: double.infinity,
+        StudioTable(
           columns: [
-            const DataColumn(label: Text('Step'), numeric: true),
-            const DataColumn(label: Text('Event')),
-            const DataColumn(label: Text('Players'), numeric: true),
-            const DataColumn(label: Text('From previous'), numeric: true),
-            const DataColumn(label: Text('From first'), numeric: true),
-            const DataColumn(label: Text('Dropped'), numeric: true),
-            DataColumn(
-              label: Text(order == FunnelOrder.any ? 'Median time from step 1' : 'Median time'),
+            const StudioColumn('Step', width: 60, numeric: true),
+            const StudioColumn('Event', width: 320),
+            const StudioColumn('Players', width: 90, numeric: true),
+            const StudioColumn('From previous', width: 120, numeric: true),
+            const StudioColumn('From first', width: 100, numeric: true),
+            const StudioColumn('Dropped', width: 90, numeric: true),
+            StudioColumn(
+              order == FunnelOrder.any ? 'Median time from step 1' : 'Median time',
+              width: 140,
               numeric: true,
             ),
           ],
           rows: [
             for (final s in result.steps)
-              DataRow(cells: [
-                DataCell(Text('${s.index + 1}')),
-                DataCell(ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(s.text)),
-                )),
-                DataCell(
-                  s.index >= 1 && onSelectStep != null
-                      ? InkWell(
-                          onTap: () => onSelectStep!(s.index + 1, FunnelPlayerOutcome.converted),
-                          child: Text('${s.players}'),
-                        )
-                      : Text('${s.players}'),
-                ),
-                DataCell(Text(fmtPct(s.fromPrevious))),
-                DataCell(Text(fmtPct(s.fromFirst))),
-                DataCell(dropped(s)),
-                DataCell(Text(fmtDuration(s.medianSeconds))),
+              StudioRow([
+                StudioTextCell('${s.index + 1}', numeric: true),
+                StudioTextCell(s.text),
+                s.index >= 1 && onSelectStep != null
+                    ? InkWell(
+                        onTap: () => onSelectStep!(s.index + 1, FunnelPlayerOutcome.converted),
+                        child: StudioTextCell('${s.players}', numeric: true),
+                      )
+                    : StudioTextCell('${s.players}', numeric: true),
+                StudioTextCell(fmtPct(s.fromPrevious), numeric: true),
+                StudioTextCell(fmtPct(s.fromFirst), numeric: true),
+                dropped(s),
+                StudioTextCell(fmtDuration(s.medianSeconds), numeric: true),
               ]),
           ],
         ),

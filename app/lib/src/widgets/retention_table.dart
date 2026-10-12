@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/analytics_tokens.dart';
 import 'format.dart';
+import 'studio_table.dart';
 
 /// Cohort table. A null cell (day not observable yet) is blank, never 0%.
 class RetentionTable extends StatelessWidget {
@@ -26,25 +27,25 @@ class RetentionTable extends StatelessWidget {
     }
 
     final totalSize = data.cohorts.fold<int>(0, (a, c) => a + c.size);
-    return DataTable(
-      columnSpacing: 18,
+    return StudioTable(
       columns: [
-        const DataColumn(label: Text('Cohort (first_open)')),
-        const DataColumn(label: Text('Players'), numeric: true),
-        for (final o in data.offsets) DataColumn(label: Text('D$o')),
+        const StudioColumn('Cohort (first_open)', width: 140),
+        const StudioColumn('Players', width: 90, numeric: true),
+        for (final o in data.offsets)
+          StudioColumn('D$o', width: 70, numeric: true),
       ],
       rows: [
         for (final c in data.cohorts)
-          DataRow(cells: [
-            DataCell(Text(c.day)),
-            DataCell(Text('${c.size}')),
+          StudioRow([
+            StudioTextCell(c.day),
+            StudioTextCell('${c.size}', numeric: true),
             for (final r in c.retained)
-              DataCell(pctCell(r == null ? null : (c.size == 0 ? 0.0 : r / c.size))),
+              pctCell(r == null ? null : (c.size == 0 ? 0.0 : r / c.size)),
           ]),
-        DataRow(cells: [
-          const DataCell(Text('Weighted avg', style: TextStyle(fontWeight: FontWeight.bold))),
-          DataCell(Text('$totalSize')),
-          for (final a in data.average) DataCell(pctCell(a)),
+        StudioRow([
+          const StudioTextCell('Weighted avg', style: TextStyle(fontWeight: FontWeight.bold)),
+          StudioTextCell('$totalSize', numeric: true),
+          for (final a in data.average) pctCell(a),
         ]),
       ],
     );

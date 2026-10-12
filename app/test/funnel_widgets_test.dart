@@ -154,4 +154,46 @@ void main() {
       expect(find.byTooltip('Remove step'), findsNWidgets(2));
     });
   });
+
+  testWidgets('FunnelStepTable handles long step expression and fires callbacks', (t) async {
+    setSize(t);
+    int? clickedStep;
+    FunnelPlayerOutcome? clickedOutcome;
+    const longStepName = 'very_long_custom_event_name_with_detailed_step_description_and_parameters_to_test_wrapping_safety';
+    final res = FunnelResult(
+      steps: [
+        const FunnelStepResult(index: 0, event: 'first_open', players: 100, fromPrevious: null, fromFirst: 1.0, dropped: null, medianSeconds: null),
+        const FunnelStepResult(index: 1, event: longStepName, players: 60, fromPrevious: 0.6, fromFirst: 0.6, dropped: 40, medianSeconds: 15),
+      ],
+      totalConversion: 0.6,
+      biggestDropIndex: 1,
+    );
+
+    await t.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: FunnelStepTable(
+          result: res,
+          onSelectStep: (step, outcome) {
+            clickedStep = step;
+            clickedOutcome = outcome;
+          },
+        ),
+      ),
+    ));
+
+    expect(find.text(longStepName), findsOneWidget);
+    expect(t.takeException(), isNull);
+
+    // Test converted tap (step 2)
+    await t.tap(find.text('60'));
+    await t.pump();
+    expect(clickedStep, 2);
+    expect(clickedOutcome, FunnelPlayerOutcome.converted);
+
+    // Test dropped tap (step 2)
+    await t.tap(find.text('−40'));
+    await t.pump();
+    expect(clickedStep, 2);
+    expect(clickedOutcome, FunnelPlayerOutcome.dropped);
+  });
 }

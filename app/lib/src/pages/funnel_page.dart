@@ -308,22 +308,16 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
                       if (r.segments.isNotEmpty) ...[
                         Text('Segments', style: theme.textTheme.titleMedium),
                         const SizedBox(height: 8),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: FunnelSegmentTable(result: r),
-                        ),
+                        FunnelSegmentTable(result: r),
                         const SizedBox(height: 16),
                       ],
                       Text('Steps', style: theme.textTheme.titleMedium),
                       const SizedBox(height: 8),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: FunnelStepTable(
-                          result: r,
-                          order: widget.def.order,
-                          onSelectStep: (step, outcome) =>
-                              setState(() => _drillDown = (step: step, outcome: outcome, segment: null)),
-                        ),
+                      FunnelStepTable(
+                        result: r,
+                        order: widget.def.order,
+                        onSelectStep: (step, outcome) =>
+                            setState(() => _drillDown = (step: step, outcome: outcome, segment: null)),
                       ),
                     ],
                   ],

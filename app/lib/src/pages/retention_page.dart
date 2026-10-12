@@ -25,10 +25,7 @@ class RetentionPage extends ConsumerWidget {
               children: [
                 Text(_summary(d), style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 12),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Card(child: RetentionTable(data: d)),
-                ),
+                Card(child: RetentionTable(data: d)),
               ],
             );
           },

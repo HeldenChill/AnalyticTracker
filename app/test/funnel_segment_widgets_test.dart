@@ -66,4 +66,35 @@ void main() {
 
     expect(find.text('v1.0'), findsOneWidget);
   });
+
+  testWidgets('FunnelSegmentTable handles long segment name without layout exception', (tester) async {
+    const longSegName = 'unusually_long_segment_identifier_name_for_testing_wrapping_behavior_across_devices';
+    final result = FunnelResult(
+      steps: const [
+        FunnelStepResult(index: 0, event: 'e1', players: 10, fromPrevious: null, fromFirst: 1.0, dropped: null, medianSeconds: null),
+      ],
+      totalConversion: 1.0,
+      biggestDropIndex: null,
+      segments: [
+        const FunnelSegmentResult(
+          value: longSegName,
+          steps: [
+            FunnelSegmentStepResult(players: 10, fromPrevious: null, fromFirst: 1.0, dropped: null, medianSeconds: null),
+          ],
+          totalConversion: 1.0,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FunnelSegmentTable(result: result),
+        ),
+      ),
+    );
+
+    expect(find.text(longSegName), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
