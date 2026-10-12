@@ -8,11 +8,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/studio_test_host.dart';
+import 'support/studio_text_assertions.dart';
+
 const result = FunnelResult(steps: [
   FunnelStepResult(index: 0, event: 'first_open', players: 214, fromPrevious: null, fromFirst: 1.0, dropped: null, medianSeconds: null),
   FunnelStepResult(index: 1, event: 'tut', params: [ParamFilter('step', '1')], players: 198, fromPrevious: 198 / 214, fromFirst: 198 / 214, dropped: 16, medianSeconds: 40),
   FunnelStepResult(index: 2, event: 'tut', params: [ParamFilter('step', '3')], players: 160, fromPrevious: 160 / 198, fromFirst: 160 / 214, dropped: 38, medianSeconds: 130),
 ], totalConversion: 160 / 214, biggestDropIndex: 2);
+
+const largeCountResult = FunnelResult(steps: [
+  FunnelStepResult(index: 0, event: 'start', players: 223456789012,
+    fromPrevious: null, fromFirst: 1, dropped: null, medianSeconds: null),
+  FunnelStepResult(index: 1, event: 'finish', players: 123456789012,
+    fromPrevious: 0.55, fromFirst: 0.55, dropped: 100000000000,
+    medianSeconds: 40),
+], totalConversion: 0.55, biggestDropIndex: 1);
 
 void setSize(WidgetTester t) {
   t.view.physicalSize = const Size(1400, 1000);
@@ -195,5 +206,24 @@ void main() {
     await t.pump();
     expect(clickedStep, 2);
     expect(clickedOutcome, FunnelPlayerOutcome.dropped);
+  });
+
+  testWidgets('interactive Funnel counts preserve digits and callbacks', (t) async {
+    final selected = <(int, FunnelPlayerOutcome)>[];
+    await pumpStudio(t, FunnelStepTable(result: largeCountResult,
+      onSelectStep: (step, outcome) => selected.add((step, outcome))),
+      width: 1600, textScale: 1.5);
+    for (final value in ['223456789012', '123456789012', '−100000000000']) {
+      expectCompleteSingleLine(t, find.text(value));
+    }
+    await Scrollable.ensureVisible(t.element(find.text('123456789012')));
+    await t.pumpAndSettle();
+    await t.tap(find.text('123456789012'));
+    await Scrollable.ensureVisible(t.element(find.text('−100000000000')));
+    await t.pumpAndSettle();
+    await t.tap(find.text('−100000000000'));
+    expect(selected, [(2, FunnelPlayerOutcome.converted),
+      (2, FunnelPlayerOutcome.dropped)]);
+    expect(t.takeException(), isNull);
   });
 }

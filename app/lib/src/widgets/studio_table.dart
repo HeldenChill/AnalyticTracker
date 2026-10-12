@@ -42,13 +42,40 @@ class StudioTextCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final inherited = DefaultTextStyle.of(context).style;
+    final effectiveStyle = style == null ? inherited : inherited.merge(style);
+    if (numeric) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: effectiveStyle),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        locale: Localizations.maybeLocaleOf(context),
+        maxLines: 1,
+      )..layout();
+      final measured = painter.width.ceilToDouble() + 1;
+      painter.dispose();
+      final minimum = width ?? 0;
+      return SizedBox(
+        width: measured > minimum ? measured : minimum,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            text,
+            style: effectiveStyle,
+            softWrap: false,
+            maxLines: 1,
+            textAlign: TextAlign.right,
+          ),
+        ),
+      );
+    }
     final cell = Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(
         text,
-        softWrap: !numeric,
-        maxLines: numeric ? 1 : null,
-        textAlign: numeric ? TextAlign.right : TextAlign.left,
+        softWrap: true,
+        maxLines: null,
+        textAlign: TextAlign.left,
         style: style,
       ),
     );
@@ -154,13 +181,8 @@ class _StudioTableState extends State<StudioTable> {
                 cells: [
                   for (var c = 0; c < row.cells.length; c++)
                     DataCell(
-                      c < widget.columns.length &&
-                              row.cells[c] is StudioTextCell &&
-                              (row.cells[c] as StudioTextCell).width == null
-                          ? SizedBox(
-                              width: widget.columns[c].width,
-                              child: row.cells[c],
-                            )
+                      c < widget.columns.length
+                          ? _buildCell(widget.columns[c], row.cells[c])
                           : row.cells[c],
                     ),
                 ],
@@ -169,5 +191,18 @@ class _StudioTableState extends State<StudioTable> {
         ),
       ),
     );
+  }
+
+  Widget _buildCell(StudioColumn column, Widget cell) {
+    if (column.numeric) {
+      return ConstrainedBox(
+        constraints: BoxConstraints(minWidth: column.width),
+        child: cell,
+      );
+    }
+    if (cell is StudioTextCell && cell.width == null) {
+      return SizedBox(width: column.width, child: cell);
+    }
+    return cell;
   }
 }
