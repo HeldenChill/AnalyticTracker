@@ -7,6 +7,8 @@ import 'src/shell/app_shell.dart';
 import 'src/state/style.dart';
 import 'src/theme/app_style.dart';
 
+import 'src/theme/motion_policy.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
@@ -26,11 +28,18 @@ class AnalyticApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return MaterialApp(
-      title: 'PVM Analytics',
-      debugShowCheckedModeBanner: false,
-      theme: buildTheme(ref.watch(styleProvider)),
-      home: const AppShell(),
+    final selectedTheme = buildTheme(ref.watch(styleProvider));
+    final app = Builder(
+      builder: (context) => MaterialApp(
+        title: 'PVM Analytics',
+        debugShowCheckedModeBanner: false,
+        theme: selectedTheme,
+        themeAnimationDuration: motionDuration(context, MotionKind.theme),
+        home: const AppShell(),
+      ),
     );
+    return MediaQuery.maybeOf(context) != null
+        ? app
+        : MediaQuery.fromView(view: View.of(context), child: app);
   }
 }

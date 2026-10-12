@@ -73,13 +73,13 @@ class _FunnelTrendViewState extends State<FunnelTrendView> {
     };
 
     // Calculate conversion values based on selected step
-    final List<num> conversionValues = [];
+    final List<num?> conversionValues = [];
     final String chartTitle;
 
     if (_selectedStepIndex == 0) {
       chartTitle = 'Total conversion rate';
       for (final t in trend) {
-        conversionValues.add((t.totalConversion ?? 0.0) * 100);
+        conversionValues.add(t.totalConversion);
       }
     } else {
       final stepIdx = _selectedStepIndex;
@@ -87,9 +87,9 @@ class _FunnelTrendViewState extends State<FunnelTrendView> {
       chartTitle = 'Step 1 → ${stepIdx + 1}: $stepLabel';
       for (final t in trend) {
         if (t.players.isEmpty || t.players.first == 0 || stepIdx >= t.players.length) {
-          conversionValues.add(0.0);
+          conversionValues.add(null);
         } else {
-          conversionValues.add((t.players[stepIdx] / t.players.first) * 100);
+          conversionValues.add(t.players[stepIdx] / t.players.first);
         }
       }
     }
@@ -141,9 +141,11 @@ class _FunnelTrendViewState extends State<FunnelTrendView> {
         // Line chart
         MetricLineChart(
           title: chartTitle,
+          unit: '%',
+          percentage: true,
           days: bucketStarts,
           values: conversionValues,
-          valueFormatter: (v) => '${v.toStringAsFixed(1)}%',
+          valueFormatter: (v) => '${(v * 100).toStringAsFixed(1)}%',
           incompleteIndices: incompleteIndices,
           width: double.infinity,
           height: 260,

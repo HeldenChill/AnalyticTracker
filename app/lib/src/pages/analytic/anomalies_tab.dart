@@ -107,13 +107,10 @@ class _AnomaliesTabState extends ConsumerState<AnomaliesTab> {
                   style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
                 ),
                 const SizedBox(height: 8),
-                SizedBox(
-                  height: 220,
-                  child: MetricLineChart(
-                    title: alert.series,
-                    days: [for (final p in alert.history) p.day],
-                    values: [for (final p in alert.history) p.value],
-                  ),
+                MetricLineChart(
+                  title: alert.series,
+                  days: [for (final p in alert.history) p.day],
+                  values: [for (final p in alert.history) p.value],
                 ),
               ],
             ],

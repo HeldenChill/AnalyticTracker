@@ -75,8 +75,38 @@ class AnalyticsTokens extends ThemeExtension<AnalyticsTokens> {
         displayFont: displayFont ?? this.displayFont,
       );
 
-  /// Styles switch instantly; no colour interpolation needed.
   @override
-  AnalyticsTokens lerp(ThemeExtension<AnalyticsTokens>? other, double t) =>
-      (other is AnalyticsTokens && t >= 0.5) ? other : this;
+  AnalyticsTokens lerp(ThemeExtension<AnalyticsTokens>? other, double t) {
+    if (other is! AnalyticsTokens) return this;
+    if (t == 0) return this;
+    if (t == 1) return other;
+
+    final thisChart = chart.isEmpty ? [good] : chart;
+    final otherChart = other.chart.isEmpty ? [other.good] : other.chart;
+    final targetLen = t <= 0.5 ? thisChart.length : otherChart.length;
+    final lerpedChart = <Color>[
+      for (var i = 0; i < targetLen; i++)
+        Color.lerp(
+          thisChart[i < thisChart.length ? i : thisChart.length - 1],
+          otherChart[i < otherChart.length ? i : otherChart.length - 1],
+          t,
+        ) ??
+            (t < 0.5
+                ? thisChart[i < thisChart.length ? i : thisChart.length - 1]
+                : otherChart[i < otherChart.length ? i : otherChart.length - 1]),
+    ];
+
+    return AnalyticsTokens(
+      sidebar: Color.lerp(sidebar, other.sidebar, t) ?? (t < 0.5 ? sidebar : other.sidebar),
+      sidebarFg: Color.lerp(sidebarFg, other.sidebarFg, t) ?? (t < 0.5 ? sidebarFg : other.sidebarFg),
+      activeNav: Color.lerp(activeNav, other.activeNav, t) ?? (t < 0.5 ? activeNav : other.activeNav),
+      activeNavFg: Color.lerp(activeNavFg, other.activeNavFg, t) ?? (t < 0.5 ? activeNavFg : other.activeNavFg),
+      good: Color.lerp(good, other.good, t) ?? (t < 0.5 ? good : other.good),
+      bad: Color.lerp(bad, other.bad, t) ?? (t < 0.5 ? bad : other.bad),
+      grid: Color.lerp(grid, other.grid, t) ?? (t < 0.5 ? grid : other.grid),
+      chart: lerpedChart,
+      radius: radius + (other.radius - radius) * t,
+      displayFont: t < 0.5 ? displayFont : other.displayFont,
+    );
+  }
 }

@@ -55,4 +55,29 @@ void main() {
     expect(tokens.good, Colors.green);
     expect(tokens.bad, Colors.red);
   });
+
+  test('custom palette colors interpolate instead of jumping', () {
+    final a = buildTheme(AppStyle.tremor).extension<AnalyticsTokens>()!;
+    final b = buildTheme(AppStyle.midnight).extension<AnalyticsTokens>()!;
+    final halfway = a.lerp(b, 0.5);
+    expect(halfway.sidebar, Color.lerp(a.sidebar, b.sidebar, 0.5));
+    expect(halfway.chart.first, Color.lerp(a.chart.first, b.chart.first, 0.5));
+    expect(halfway.radius, (a.radius + b.radius) / 2);
+  });
+
+  test('token interpolation handles palette lengths and exact endpoints', () {
+    final a = buildTheme(AppStyle.tremor).extension<AnalyticsTokens>()!;
+    final b = buildTheme(AppStyle.midnight).extension<AnalyticsTokens>()!
+      .copyWith(chart: [Colors.red]);
+    final middle = a.lerp(b, 0.5);
+    expect(middle.chart, hasLength(a.chart.length));
+    for (var i = 0; i < a.chart.length; i++) {
+      expect(middle.chart[i], Color.lerp(a.chart[i], Colors.red, 0.5));
+    }
+    expect(a.lerp(b, 0).chart, a.chart);
+    expect(a.lerp(b, 1).chart, b.chart);
+    final empty = b.copyWith(chart: []);
+    expect(a.lerp(empty, 0.5).chart, isNotEmpty);
+    expect(a.lerp(empty, 1).chart, isEmpty);
+  });
 }

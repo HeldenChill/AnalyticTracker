@@ -87,12 +87,36 @@ class _OverviewBody extends StatelessWidget {
           ]);
         }),
         const SizedBox(height: 16),
-        Wrap(spacing: 12, runSpacing: 12, children: [
-          MetricLineChart(title: 'DAU', days: days, values: [for (final d in data.daily) d.dau]),
-          MetricLineChart(title: 'New users', days: days, values: [for (final d in data.daily) d.newUsers]),
-          MetricLineChart(title: 'Sessions', days: days, values: [for (final d in data.daily) d.sessions]),
-          MetricLineChart(title: 'Uninstalls', days: days, values: [for (final d in data.daily) d.uninstalls]),
-        ]),
+        StudioGrid(
+          minChildWidth: 360,
+          maxColumns: 2,
+          children: [
+            MetricLineChart(
+              title: 'DAU',
+              unit: 'players',
+              days: days,
+              values: [for (final d in data.daily) d.dau],
+            ),
+            MetricLineChart(
+              title: 'New users',
+              unit: 'players',
+              days: days,
+              values: [for (final d in data.daily) d.newUsers],
+            ),
+            MetricLineChart(
+              title: 'Sessions',
+              unit: 'sessions',
+              days: days,
+              values: [for (final d in data.daily) d.sessions],
+            ),
+            MetricLineChart(
+              title: 'Uninstalls',
+              unit: 'removals',
+              days: days,
+              values: [for (final d in data.daily) d.uninstalls],
+            ),
+          ],
+        ),
       ],
     );
   }
