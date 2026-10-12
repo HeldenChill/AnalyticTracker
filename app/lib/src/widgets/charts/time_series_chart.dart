@@ -9,6 +9,7 @@ import '../../theme/motion_policy.dart';
 import '../format.dart';
 import 'chart_models.dart';
 import 'chart_motion.dart';
+import 'series_visual_style.dart';
 
 enum TimeChartKind { line, area, bars }
 
@@ -180,11 +181,17 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
           final p = s.points.where((p) => p.x == curX).firstOrNull;
           if (p != null && p.value != null) {
             final slot = _registry.slotFor(s.id);
-            final color = palette[slot % palette.length];
+            final style = resolveSeriesVisualStyle(
+              palette: palette,
+              slot: slot,
+              seriesId: s.id,
+              outline: theme.colorScheme.onSurface,
+            );
             rods.add(
               BarChartRodData(
                 toY: p.value!,
-                color: color,
+                color: style.color,
+                borderSide: style.rodBorder,
                 width: 14,
                 borderRadius: BorderRadius.circular(2),
               ),
@@ -268,23 +275,23 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
       );
     } else {
       // Line or Area chart
-      final dashPatterns = <List<int>?>[null, [6, 4], [2, 4], [8, 3, 2, 3]];
       final lineBarsData = <LineChartBarData>[];
       final renderedSeriesIdByBarIndex = <int, String>{};
 
       for (final s in sortedSeries) {
         final slot = _registry.slotFor(s.id);
-        final color = palette[slot % palette.length];
-        final cycle = slot ~/ palette.length;
-        final reference = s.id == 'previous' || s.id == 'alert-baseline';
+        final style = resolveSeriesVisualStyle(
+          palette: palette,
+          slot: slot,
+          seriesId: s.id,
+          outline: theme.colorScheme.onSurface,
+        );
         final segments = splitSeries(s.points);
 
         for (final segment in segments) {
           final pattern = segment.incomplete
               ? const <int>[1, 4]
-              : reference
-                  ? const <int>[6, 4]
-                  : dashPatterns[cycle % dashPatterns.length];
+              : style.lineDash;
 
           final spots = [
             for (final p in segment.points)
@@ -299,13 +306,13 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
           lineBarsData.add(
             LineChartBarData(
               spots: spots,
-              color: color,
+              color: style.color,
               dashArray: pattern,
               dotData: FlDotData(show: spots.length == 1),
               barWidth: 2.5,
               belowBarData: BarAreaData(
                 show: widget.kind == TimeChartKind.area,
-                color: color.withValues(alpha: 0.15),
+                color: style.color.withValues(alpha: 0.15),
               ),
             ),
           );
@@ -434,33 +441,59 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
         if (showLegend)
           Padding(
             padding: const EdgeInsets.only(bottom: 12.0),
-            child: Wrap(
-              spacing: 16,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                for (final s in sortedSeries)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 14,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: palette[_registry.slotFor(s.id) % palette.length],
-                          borderRadius: BorderRadius.circular(2),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    for (final s in sortedSeries) () {
+                      final slot = _registry.slotFor(s.id);
+                      final style = resolveSeriesVisualStyle(
+                        palette: palette,
+                        slot: slot,
+                        seriesId: s.id,
+                        outline: theme.colorScheme.onSurface,
+                      );
+                      final semanticsLabel = describeSeriesVisualStyle(
+                        style,
+                        isBars: widget.kind == TimeChartKind.bars,
+                        seriesId: s.id,
+                      );
+                      return ConstrainedBox(
+                        key: ValueKey('series-legend:${s.id}'),
+                        constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Semantics(
+                              label: semanticsLabel,
+                              child: CustomPaint(
+                                key: ValueKey('series-sample:${s.id}'),
+                                size: const Size(20, 10),
+                                painter: SeriesSamplePainter(
+                                  style: style,
+                                  isBars: widget.kind == TimeChartKind.bars,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                s.label,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        s.label,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
+                      );
+                    }(),
+                  ],
+                );
+              },
             ),
           ),
         SizedBox(

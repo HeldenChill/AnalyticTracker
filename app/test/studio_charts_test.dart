@@ -11,8 +11,65 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/studio_test_host.dart';
+import 'support/studio_text_assertions.dart';
+
+Future<void> pumpRepairChart(WidgetTester t, Widget child, {
+  double width = 320,
+  double scale = 1,
+  bool bold = false,
+  bool reduced = false,
+  bool active = true,
+  AppStyle style = AppStyle.tremor,
+}) async {
+  await t.pumpWidget(MaterialApp(
+    theme: buildTheme(style),
+    themeAnimationDuration: Duration.zero,
+    home: MediaQuery(
+      data: MediaQueryData(
+        textScaler: TextScaler.linear(scale),
+        boldText: bold,
+        disableAnimations: reduced,
+      ),
+      child: Scaffold(
+        body: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: width,
+            child: TickerMode(
+              enabled: active,
+              child: SingleChildScrollView(child: child),
+            ),
+          ),
+        ),
+      ),
+    ),
+  ));
+}
 
 void main() {
+  testWidgets('actual series legend wraps full long label', (t) async {
+    final label = List.filled(20, 'long series name').join(' ');
+    await pumpRepairChart(
+      t,
+      TimeSeriesChart(
+        unit: 'events',
+        series: [
+          ChartSeries(
+            id: 'reference',
+            label: label,
+            points: const [ChartPoint(0, 1, label: 'day')],
+          ),
+        ],
+      ),
+      scale: 1.5,
+      bold: true,
+      reduced: true,
+    );
+    expect(t.takeException(), isNull);
+    expectCompleteWrappedText(t, find.text(label));
+    final paragraph = t.getRect(find.text(label));
+    expect(paragraph.right, lessThanOrEqualTo(320.5));
+  });
   testWidgets('responsive chart preserves real zero and missing gaps', (t) async {
     await pumpStudio(
       t,
