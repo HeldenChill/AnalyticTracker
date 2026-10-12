@@ -55,7 +55,7 @@ LevelResult analyzeLevels({
   required Set<String> observable,
   required Set<String> churned,
 }) {
-  if (totalPlayers < 20) {
+  if (totalPlayers < minAnalysisPlayers) {
     return LevelResult(
       players: totalPlayers,
       observable: observable.length,

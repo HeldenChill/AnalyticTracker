@@ -4,7 +4,7 @@ import 'features.dart';
 import 'kmeans.dart';
 
 /// Fewer players than this → no clustering (spec §4).
-const minClusterPlayers = 20;
+const minClusterPlayers = minAnalysisPlayers;
 
 String _pretty(String key) => key.startsWith('ev:') ? key.substring(3) : key;
 

@@ -20,7 +20,7 @@ class LevelsTab extends ConsumerWidget {
           data: (r) {
             if (r.reason == 'too_few_players') {
               return Center(
-                child: Text('Not enough players in this range to analyze levels: ${r.players} in range, need at least 20.'),
+                child: Text('Not enough players in this range to analyze levels: ${r.players} in range, need at least $minAnalysisPlayers.'),
               );
             }
             if (r.reason == 'no_level_events' || r.levels.isEmpty) {

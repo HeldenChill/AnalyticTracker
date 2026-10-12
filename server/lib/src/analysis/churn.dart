@@ -73,38 +73,47 @@ ChurnResult analyzeChurn(
   final ns = stayedIndices.length;
   final churnRate = nc / observable;
 
+  final canCompare = nc > 0 && ns > 0;
   final drivers = <ChurnDriver>[];
-  for (var col = 0; col < pf.keys.length; col++) {
-    final feature = pf.keys[col];
-    final cVals = [for (final i in churnedIndices) pf.rows[i][col]];
-    final sVals = [for (final i in stayedIndices) pf.rows[i][col]];
+  var rules = const <ChurnRule>[];
 
-    final mc = nc > 0 ? cVals.fold(0.0, (a, b) => a + b) / nc : 0.0;
-    final ms = ns > 0 ? sVals.fold(0.0, (a, b) => a + b) / ns : 0.0;
+  if (canCompare && observable >= minAnalysisPlayers) {
+    for (var col = 0; col < pf.keys.length; col++) {
+      final feature = pf.keys[col];
+      final cVals = [for (final i in churnedIndices) pf.rows[i][col]];
+      final sVals = [for (final i in stayedIndices) pf.rows[i][col]];
 
-    final rawRatio = ms > 0 ? (mc / ms) : null;
-    final ratio = (rawRatio == null || rawRatio.isNaN || rawRatio.isInfinite) ? null : rawRatio;
-    final d = cohensD(cVals, sVals);
-    final cRate = nc > 0 ? cVals.where((v) => v > 0).length / nc : 0.0;
-    final sRate = ns > 0 ? sVals.where((v) => v > 0).length / ns : 0.0;
+      final mc = cVals.fold(0.0, (a, b) => a + b) / nc;
+      final ms = sVals.fold(0.0, (a, b) => a + b) / ns;
 
-    drivers.add(ChurnDriver(
-      feature: feature,
-      meanChurned: mc,
-      meanStayed: ms,
-      ratio: ratio,
-      cohensD: d,
-      churnedRate: cRate,
-      stayedRate: sRate,
-      smallSample: nc < 10 || ns < 10,
-    ));
+      final rawRatio = ms > 0 ? (mc / ms) : null;
+      final ratio = (rawRatio == null || rawRatio.isNaN || rawRatio.isInfinite) ? null : rawRatio;
+      final d = cohensD(cVals, sVals);
+      final cRate = cVals.where((v) => v > 0).length / nc;
+      final sRate = sVals.where((v) => v > 0).length / ns;
+
+      drivers.add(ChurnDriver(
+        feature: feature,
+        meanChurned: mc,
+        meanStayed: ms,
+        ratio: ratio,
+        cohensD: d,
+        churnedRate: cRate,
+        stayedRate: sRate,
+        smallSample: nc < 10 || ns < 10,
+      ));
+    }
+
+    // Ranked by |cohensD| descending
+    drivers.sort((a, b) => b.cohensD.abs().compareTo(a.cohensD.abs()));
+
+    final rulesFit = fitChurnTree(pf.rows, churnLabels, pf.keys);
+    rules = rulesFit.rules;
   }
 
-  // Ranked by |cohensD| descending
-  drivers.sort((a, b) => b.cohensD.abs().compareTo(a.cohensD.abs()));
-
-  final rulesFit = fitChurnTree(pf.rows, churnLabels, pf.keys);
-  final reason = observable < 20 ? 'too_few_players' : null;
+  final reason = observable < minAnalysisPlayers
+      ? 'too_few_players'
+      : (!canCompare ? 'one_outcome_class' : null);
 
   return ChurnResult(
     players: totalPlayers,
@@ -114,7 +123,7 @@ ChurnResult analyzeChurn(
     excluded: excludedCount,
     churnRate: churnRate,
     drivers: drivers,
-    rules: observable < 20 ? const [] : rulesFit.rules,
+    rules: rules,
     reason: reason,
   );
 }

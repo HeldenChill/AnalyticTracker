@@ -164,9 +164,9 @@ void main() {
       expect(trans.probability, 1.0);
     });
 
-    test('returns too_few_players when total players < 20', () {
+    test('returns too_few_players when total players < 10', () {
       final res = analyzeLevels(
-        totalPlayers: 15,
+        totalPlayers: 9,
         players: ['p1', 'p2'],
         playerEvents: {},
         activeAtEnd: {},

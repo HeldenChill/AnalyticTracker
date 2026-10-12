@@ -234,7 +234,7 @@ class EventStore {
     }
 
     final totalPlayers = playerDays.length;
-    if (totalPlayers < 20) {
+    if (totalPlayers < minAnalysisPlayers) {
       return SurvivalResult(
         players: totalPlayers,
         by: by,
@@ -478,7 +478,7 @@ class EventStore {
     }
 
     final totalPlayers = playerEvents.length;
-    if (totalPlayers < 20) {
+    if (totalPlayers < minAnalysisPlayers) {
       return AssociationResult(
         players: totalPlayers,
         rules: const [],

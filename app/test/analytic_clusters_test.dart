@@ -104,7 +104,7 @@ void main() {
         players: 7, k: 0, silhouette: null, features: [], droppedFeatures: [], overall: {}, clusters: [],
         reason: 'too_few_players');
     await pump(t, empty);
-    expect(find.text('Not enough players to find groups: 7 in this range, need at least 20. Try a longer date range.'),
+    expect(find.text('Not enough players to find groups: 7 in this range, need at least 10. Try a longer date range.'),
         findsOneWidget);
     await pump(t, ClusterResult.fromJson({...empty.toJson(), 'players': 30, 'reason': 'no_variance'}));
     expect(find.text('Every player looks the same on every feature, so there are no groups.'), findsOneWidget);

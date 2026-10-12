@@ -49,7 +49,7 @@ DecisionTreeFit fitChurnTree(
   List<bool> y,
   List<String> featureNames, {
   int maxDepth = 3,
-  int minLeaf = 10,
+  int minLeaf = minChurnRuleLeafPlayers,
   double minGiniDecrease = 0.01,
 }) {
   final n = x.length;

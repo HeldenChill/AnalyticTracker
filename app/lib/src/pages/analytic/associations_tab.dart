@@ -1,3 +1,4 @@
+import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,7 +19,7 @@ class AssociationsTab extends ConsumerWidget {
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (res) {
         if (res.reason == 'too_few_players') {
-          return const Center(child: Text('Fewer than 20 players in range (too few to mine associations).'));
+          return Center(child: Text('Fewer than $minAnalysisPlayers players in range (too few to mine associations).'));
         }
         if (res.rules.isEmpty) {
           return const Center(child: Text('No significant event associations found in this range.'));

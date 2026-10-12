@@ -33,7 +33,7 @@ class SurvivalTab extends ConsumerWidget {
         if (r.reason == 'too_few_players') {
           return Center(
             child: Text(
-              'Not enough players in this range to analyze survival: ${r.players} in range, need at least 20.',
+              'Not enough players in this range to analyze survival: ${r.players} in range, need at least $minAnalysisPlayers.',
             ),
           );
         }

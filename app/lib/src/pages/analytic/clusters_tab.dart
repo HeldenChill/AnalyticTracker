@@ -29,7 +29,7 @@ class ClustersTab extends ConsumerWidget {
             if (r.reason == 'too_few_players') {
               return Center(
                   child: Text('Not enough players to find groups: ${r.players} in this range, '
-                      'need at least 20. Try a longer date range.'));
+                      'need at least $minAnalysisPlayers. Try a longer date range.'));
             }
             if (r.reason != null || r.clusters.isEmpty) {
               return const Center(child: Text('Every player looks the same on every feature, so there are no groups.'));

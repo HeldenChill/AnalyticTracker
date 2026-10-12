@@ -1,3 +1,4 @@
+import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -27,9 +28,14 @@ class ChurnTab extends ConsumerWidget {
                 child: Text('Date range too short to observe churn: need at least 8 days in the date range.'),
               );
             }
+            if (r.reason == 'one_outcome_class') {
+              return const Center(
+                child: Text('Need both churned and stayed players to compare behavior.'),
+              );
+            }
             if (r.reason == 'too_few_players' && r.drivers.isEmpty) {
               return Center(
-                child: Text('Not enough observable players to infer rules: ${r.observable} in this range, need at least 20.'),
+                child: Text('Not enough observable players to infer rules: ${r.observable} in this range, need at least $minAnalysisPlayers.'),
               );
             }
             final theme = Theme.of(context);
@@ -118,8 +124,10 @@ class ChurnTab extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(
                       r.reason == 'too_few_players'
-                          ? 'Not enough observable players to infer rules (need at least 20).'
-                          : 'No strong decision rules found.',
+                          ? 'Not enough observable players to infer rules (need at least $minAnalysisPlayers).'
+                          : (r.observable < 20
+                              ? 'Rules need at least 20 observable players to form two groups of 10.'
+                              : 'No strong decision rules found.'),
                       style: theme.textTheme.bodyMedium,
                     ),
                   )

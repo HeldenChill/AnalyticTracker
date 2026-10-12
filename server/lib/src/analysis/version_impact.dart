@@ -31,7 +31,7 @@ SurvivalResult analyzeSurvivalData({
   required Map<String, SubjectDuration> playerDurations,
   required String by,
 }) {
-  if (totalPlayers < 20) {
+  if (totalPlayers < minAnalysisPlayers) {
     return SurvivalResult(
       players: totalPlayers,
       by: by,
@@ -54,7 +54,7 @@ SurvivalResult analyzeSurvivalData({
     final p = entry.key;
     final dur = entry.value;
     final rawG = playerGroups[p] ?? 'Unknown';
-    final groupName = (rawCounts[rawG] ?? 0) >= 10 ? rawG : 'Other';
+    final groupName = (rawCounts[rawG] ?? 0) >= minSurvivalGroupPlayers ? rawG : 'Other';
     groupedSubjects.putIfAbsent(groupName, () => []).add(dur);
   }
 
@@ -104,7 +104,7 @@ VersionImpactResult analyzeVersionImpactData({
 }) {
   final eligibleVersions = [
     for (final v in chronologicalVersions)
-      if ((playersByVersion[v]?.length ?? 0) >= 20) v,
+      if ((playersByVersion[v]?.length ?? 0) >= minAnalysisPlayers) v,
   ];
 
   if (eligibleVersions.length < 2) {

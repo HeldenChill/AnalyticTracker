@@ -23,13 +23,13 @@ PlayerFeatures twoGroups({int grinders = 8, int casuals = 16}) {
 void main() {
   test('too few players → reason, no clusters', () {
     final pf = PlayerFeatures(
-      [for (var i = 0; i < 19; i++) 'p$i'],
+      [for (var i = 0; i < 9; i++) 'p$i'],
       ['sessions'],
-      [for (var i = 0; i < 19; i++) [i.toDouble()]],
+      [for (var i = 0; i < 9; i++) [i.toDouble()]],
     );
     final r = clusterPlayers(pf);
     expect(r.reason, 'too_few_players');
-    expect(r.players, 19);
+    expect(r.players, 9);
     expect(r.k, 0);
     expect(r.silhouette, isNull);
     expect(r.clusters, isEmpty);

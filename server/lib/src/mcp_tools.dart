@@ -301,7 +301,7 @@ class AnalyticTools {
                 'active_days, playtime_min, max_level, level_fails, tenure_days, plus counts of the top 10 events '
                 'done by 10+ players). Each cluster: label, size, share, top 3 distinguishing features, raw means '
                 '(compare with "overall"). k = number of non-empty groups; silhouette < 0.25 = weak separation. '
-                '"reason" too_few_players (< 20) or no_variance means no clusters.',
+                '"reason" too_few_players (< 10) or no_variance means no clusters.',
             inputSchema: _filtered({
               'k': Schema.int(description: 'Number of groups, 2..8. Omit for auto (2..6, best silhouette).'),
             }),
@@ -317,7 +317,7 @@ class AnalyticTools {
             name: 'analysis_churn',
             description: 'Compares first-24h behavior of churned vs stayed players (Cohen\'s d effect size) '
                 'and extracts CART decision tree churn rules. Churned = app_remove or no event in last 7 days of range. '
-                '"reason" not_observable (< 8 days range) or too_few_players (< 20 observable).',
+                '"reason" not_observable (< 8 days range) or too_few_players (< 10 observable).',
             inputSchema: _filtered({}),
             annotations: _read,
           ),
@@ -328,7 +328,7 @@ class AnalyticTools {
             name: 'analysis_levels',
             description: 'Analyzes level progression difficulty (Beta-smoothed win rates), quit hazard '
                 'per level with quit wall detection (> 2x median hazard), exit-event ranking before quitting, '
-                'and Markov event transitions to quit. "reason" too_few_players (< 20) or no_level_events.',
+                'and Markov event transitions to quit. "reason" too_few_players (< 10) or no_level_events.',
             inputSchema: _filtered({}),
             annotations: _read,
           ),
@@ -339,7 +339,7 @@ class AnalyticTools {
             name: 'analysis_survival',
             description: 'Kaplan-Meier survival curves S(t) and log-rank test grouped by version, platform, or cluster. '
                 'Curves show retention over days with Greenwood 95% confidence intervals. '
-                '"reason" too_few_players (< 20).',
+                '"reason" too_few_players (< 10).',
             inputSchema: _filtered({
               'by': EnumSchema.untitledSingleSelect(
                 description: 'Grouping dimension ("version", "platform", or "cluster"). Default "version".',
@@ -358,9 +358,9 @@ class AnalyticTools {
             name: 'analysis_version_impact',
             description: 'Evaluates impact of an app version compared to its predecessor using 1,000 bootstrap resamples (95% CI). '
                 'Compares D1 survival, sessions, playtime, and level win rates. '
-                '"reason" too_few_players (< 2 versions with >= 20 players).',
+                '"reason" too_few_players (< 2 versions with >= 10 players).',
             inputSchema: _filtered({
-              'version': Schema.string(description: 'Target version to evaluate. Omit for newest version with >= 20 players.'),
+              'version': Schema.string(description: 'Target version to evaluate. Omit for newest version with >= 10 players.'),
             }),
             annotations: _read,
           ),
@@ -374,7 +374,7 @@ class AnalyticTools {
             name: 'analysis_associations',
             description: 'Mines co-occurring player actions and events (support, confidence, lift). '
                 'Returns top 20 association pairs with support >= 5 and lift >= 1.5 or <= 0.67. '
-                '"reason" too_few_players (< 20).',
+                '"reason" too_few_players (< 10).',
             inputSchema: _filtered({}),
             annotations: _read,
           ),

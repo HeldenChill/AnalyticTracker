@@ -83,7 +83,7 @@ void main() {
       expect(groupNames, isNot(contains('iOS')));
     });
 
-    test('Version impact compares target with previous version >= 20 players',
+    test('Version impact compares target with previous version >= 10 players',
         () {
       final v10 = <PlayerVersionData>[
         for (var i = 0; i < 25; i++)
@@ -131,7 +131,7 @@ void main() {
       expect(sess.significant, isTrue);
     });
 
-    test('Fewer than 2 versions with >= 20 players returns too_few_players',
+    test('Fewer than 2 versions with >= 10 players returns too_few_players',
         () {
       final res = analyzeVersionImpactData(
         chronologicalVersions: ['1.0.0'],
