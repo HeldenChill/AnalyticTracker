@@ -70,6 +70,62 @@ void main() {
     final paragraph = t.getRect(find.text(label));
     expect(paragraph.right, lessThanOrEqualTo(320.5));
   });
+
+  testWidgets('fraction domains are fixed for every time chart kind', (t) async {
+    for (final kind in TimeChartKind.values) {
+      for (final value in [0.0, .3, 1.0]) {
+        await pumpRepairChart(
+          t,
+          TimeSeriesChart(
+            kind: kind,
+            unit: '%',
+            percentage: true,
+            series: [
+              ChartSeries(
+                id: 'primary',
+                label: 'Conversion',
+                points: [ChartPoint(0, value, label: 'day')],
+              ),
+            ],
+          ),
+          reduced: true,
+        );
+        final data = kind == TimeChartKind.bars
+            ? t.widget<BarChart>(find.byType(BarChart)).data
+            : t.widget<LineChart>(find.byType(LineChart)).data;
+        if (data is BarChartData) {
+          expect(data.minY, 0);
+          expect(data.maxY, 1);
+        }
+        if (data is LineChartData) {
+          expect(data.minY, 0);
+          expect(data.maxY, 1);
+        }
+      }
+    }
+  });
+
+  testWidgets('invalid percentage values trigger finite chart axis fallback', (t) async {
+    for (final bad in [-0.01, 1.01, double.nan, double.infinity]) {
+      await pumpRepairChart(
+        t,
+        TimeSeriesChart(
+          unit: '%',
+          percentage: true,
+          series: [
+            ChartSeries(
+              id: 'primary',
+              label: 'Conversion',
+              points: [ChartPoint(0, bad, label: 'day')],
+            ),
+          ],
+        ),
+        reduced: true,
+      );
+      expect(find.text('These values cannot be displayed on a finite chart axis.'), findsOneWidget);
+    }
+  });
+
   testWidgets('responsive chart preserves real zero and missing gaps', (t) async {
     await pumpStudio(
       t,

@@ -1,6 +1,7 @@
 import 'package:analytic_app/src/theme/app_style.dart';
 import 'package:analytic_app/src/widgets/funnel_trend_view.dart';
 import 'package:analytic_shared/analytic_shared.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -75,5 +76,23 @@ void main() {
     await tester.tap(find.text('Week'));
     await tester.pumpAndSettle();
     expect(chosenInterval, FunnelInterval.week);
+  });
+
+  testWidgets('FunnelTrendView conversion trend uses 0..1 domain while source points remain exact', (tester) async {
+    await tester.pumpWidget(wrap(
+      FunnelTrendView(
+        result: testResult,
+        interval: FunnelInterval.day,
+        onIntervalChanged: (_) {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final lineChart = tester.widget<LineChart>(find.byType(LineChart));
+    expect(lineChart.data.minY, 0.0);
+    expect(lineChart.data.maxY, 1.0);
+    // Source data unchanged
+    expect(testResult.trend[0].totalConversion, 0.5);
+    expect(testResult.trend[1].totalConversion, 0.4);
   });
 }

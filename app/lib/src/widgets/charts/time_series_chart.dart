@@ -88,19 +88,6 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
     final palette =
         tokens.chart.isEmpty ? [theme.colorScheme.primary] : tokens.chart;
 
-    // Check percentage bounds
-    if (widget.percentage) {
-      for (final s in widget.series) {
-        for (final p in s.points) {
-          if (p.value != null && (p.value! < 0.0 || p.value! > 1.0)) {
-            throw ArgumentError(
-              'Percentage values must be between 0 and 1, got ${p.value}',
-            );
-          }
-        }
-      }
-    }
-
     final sortedSeries = List<ChartSeries>.of(widget.series)
       ..sort((a, b) => a.id.compareTo(b.id));
 
@@ -124,10 +111,24 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
 
     final ChartBounds bounds;
     try {
-      bounds = chartBounds(
+      if (widget.percentage) {
+        for (final s in sortedSeries) {
+          for (final p in s.points) {
+            if (p.value != null) {
+              if (p.value!.isNaN || p.value!.isInfinite || p.value! < 0 || p.value! > 1) {
+                throw ArgumentError('Percentage values must be between 0 and 1: ${p.value}');
+              }
+            }
+          }
+        }
+      }
+      final computed = chartBounds(
         sortedSeries,
         includeZero: widget.kind == TimeChartKind.bars || !widget.percentage,
       );
+      bounds = widget.percentage
+          ? ChartBounds(computed.minX, computed.maxX, 0, 1)
+          : computed;
     } on ArgumentError {
       return ConstrainedBox(
         constraints: BoxConstraints(minHeight: math.max(200, widget.plotHeight)),
