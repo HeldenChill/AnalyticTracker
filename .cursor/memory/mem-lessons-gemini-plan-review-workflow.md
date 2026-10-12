@@ -125,6 +125,13 @@
 - During concurrent Gemini work, remain read-only on product files and scope plan patches to requested contracts. Record the reviewed completed revision separately from an earlier audit start; never overwrite/stash/reset another actor's dirty source or assign its edits to the reviewer.
 - Explicit requesting-code-review authorizes one independent read-only reviewer with a tailored brief. Do not give it whole session history or allow recursive reviewers; let coordinator run full gates while reviewer inspects logic/pinned APIs to avoid duplicating suite work. It does not authorize delegation for every later task.
 
+### Studio UI and test harness lessons (Wave 4 - 2026-10-12)
+
+- **DataRow key typing:** Flutter's `DataRow` explicitly requires `LocalKey? key`. High-level table models (e.g. `StudioRow`) must type their keys as `LocalKey?` rather than general `Key?` to avoid static type mismatch when forwarding to `DataRow(key: row.key)`.
+- **WidgetTester viewport height:** Complex Studio dashboard pages with KPI cards, multi-type charts, tables, and detail panels easily exceed default test viewports (1200px). Set `height: 3200` to `4000` in `studio_test_host.dart` for end-to-end screen tests so lower elements (e.g. table rows, detail panel action buttons) are hit-testable without fragile manual `scrollUntilVisible` calls.
+- **Post-frame selection cleanup:** When query filters change and a currently selected entity (e.g. `selectedEventProvider`) is absent from new results, deselect via `WidgetsBinding.instance.addPostFrameCallback((_) => ...)` to avoid modifying Riverpod providers during active build / layout phases.
+- **Bounded header actions:** In `StudioHeading`, actions share row space with the page title and subtitle. On standard 1200px viewports with a 240px sidebar, the actions container has ~366px. Keep action labels concise (e.g. `Text('Compare')`) to prevent `RenderFlex` overflow.
+
 ## Gemini habits observed
 
 

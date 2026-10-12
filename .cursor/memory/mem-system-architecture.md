@@ -73,14 +73,17 @@ Pull re-fetches last **3** days (late events) and fills missing days **oldest fi
 - Level data truth: real PVM levels are `level_N_start/complete/fail` event names (`stg_*` nearly empty → Progression page shows little); v6 Levels tab parses names.
 
 
-## Reviewed state and approved UI successor
+## Reviewed state and Analytics Studio UI (Waves 1-4 built, Wave 5 next)
 
-- Review/fix evidence: `docs/reviews/2026-10-09-gemini-analytics-review.md`; BUG-0012 through BUG-0020 resolved. Last full gates65/263/103 =431; no complete live Windows visual verification claimed.
-- Current population/version eligibility remains20; group support10 remains. The approved Studio plan will reduce population/per-version eligibility to10 while preserving method support guards.
-- D1 observability is not the seven-day churn cutoff: first-seen day must precede range end. A cohort with no follow-up has no D1 comparison.
+- Review/fix evidence: `docs/reviews/2026-10-09-gemini-analytics-review.md`; BUG-0012 through BUG-0020 resolved.
 - Storage availability comes from `pulled_days`; a recorded zero day is an observation, an unpulled day is unavailable.
-- Existing server/API/MCP and JSON contracts remain the basis of the UI upgrade. No new service/package or data migration is approved.
-- Approved successor: `.cursor/plans/analytics-studio-ui-design.md`, master `.cursor/plans/analytics-studio-ui-implementation.md`, six wave plans. New Studio widgets/navigation/motion are planned, not built.
+- Existing server/API/MCP and JSON contracts remain the basis of the UI upgrade. No new service/package or data migration needed.
+- Analytics Studio UI built state:
+  - **Wave 1 (Tasks 1-3):** Responsive Studio layout, sidebar breakpoint, `StudioTable`, `StudioHeading`, `MetricCard`.
+  - **Wave 2 (Tasks 4-6 + repairs):** Studio charts (lines, bars, donut), motion orchestration, axes and tooltip layout.
+  - **Wave 3 (Tasks 7-8):** `storage_observations.dart`, `data_health_view_model.dart`, `CoverageCalendar` (7-weekday columns, partial month alignment, keyboard focus/tooltips), `DaysScreen` Data health dashboard, `FilterBar` `storageScope`, `AppShell` real pending refresh.
+  - **Wave 4 (Tasks 9-11):** `events_view_model.dart` (coverage-aware `eventChange`, pure `buildEventSummary`, NaN/infinite guards), `events_explorer.dart` (`eventsExplorerProvider`, `selectedEventProvider`), `CountsScreen` Studio UI (KPIs, daily trend, top 10 ranked events bar chart, searchable and sortable table, animated `EventDetailPanel`), `navigation.dart` (`AppPage`, `selectedPageProvider`, `parameterEventProvider`, `parameterKeyProvider`, `analyticTabIndexProvider`), `AppShell` navigation routing and `CountsScreen.onExploreParameters` handoff, `ParamScreen` parameter key chips and hidden test-device hint.
+- Next: Wave 5 (`analytics-studio-ui-wave5-implementation.md`): Funnel editor and visualization upgrade.
 - Retain all four palettes/fonts and saved preference keys; see `mem-ui-upgrade-and-review-handoff.md` for owner decisions and next step.
 
 ## App styling
