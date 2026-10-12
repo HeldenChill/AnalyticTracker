@@ -312,6 +312,53 @@ void main() {
     expect(t.takeException(), isNull);
   });
 
+  testWidgets('bar tooltip maps sparse rods to original measured series', (t) async {
+    await pumpRepairChart(
+      t,
+      const TimeSeriesChart(
+        kind: TimeChartKind.bars,
+        percentage: true,
+        unit: '%',
+        series: [
+          ChartSeries(
+            id: 'a',
+            label: 'A missing',
+            points: [
+              ChartPoint(.1, null, label: 'bucket A'),
+              ChartPoint(.2, .5, label: 'bucket B'),
+            ],
+          ),
+          ChartSeries(
+            id: 'b',
+            label: 'B actual',
+            points: [
+              ChartPoint(.1, .3, label: 'bucket A', incomplete: true),
+              ChartPoint(.2, .7, label: 'bucket B'),
+            ],
+          ),
+        ],
+      ),
+      reduced: true,
+    );
+    final d = t.widget<BarChart>(find.byType(BarChart)).data;
+    final group = d.barGroups.first;
+    final tip = d.barTouchData.touchTooltipData;
+    final item = tip.getTooltipItem(
+      group,
+      0,
+      group.barRods.first.copyWith(toY: .99),
+      0,
+    )!;
+    expect(item.text, contains('bucket A'));
+    expect(item.text, contains('B actual'));
+    expect(item.text, contains('30.0%'));
+    expect(item.text, contains('partial'));
+    expect(item.text, isNot(contains('99.0%')));
+    expect(item.text, isNot(contains('%%')));
+    expect(tip.fitInsideHorizontally && tip.fitInsideVertically, isTrue);
+    expect(tip.maxContentWidth, lessThanOrEqualTo(280));
+  });
+
   testWidgets('fractional bar buckets retain separate ordinal identities', (t) async {
     await pumpStudio(
       t,

@@ -193,6 +193,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             usableWidth / (2 * bucketCount * math.max(1, seriesCount)),
           );
 
+          final rodSources = <(int, int), (ChartSeries, ChartPoint)>{};
           final barGroups = <BarChartGroupData>[];
           for (var ord = 0; ord < allBucketX.length; ord++) {
             final curX = ordinalToX[ord]!;
@@ -207,6 +208,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                   seriesId: s.id,
                   outline: theme.colorScheme.onSurface,
                 );
+                rodSources[(ord, rods.length)] = (s, p);
                 rods.add(
                   BarChartRodData(
                     toY: p.value!,
@@ -226,6 +228,33 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             minY: bounds.minY,
             maxY: bounds.maxY,
             barGroups: barGroups,
+            barTouchData: BarTouchData(
+              touchTooltipData: BarTouchTooltipData(
+                fitInsideHorizontally: true,
+                fitInsideVertically: true,
+                maxContentWidth: math.max(1.0, math.min(280.0, usableWidth - 32)),
+                tooltipPadding: const EdgeInsets.all(8),
+                getTooltipColor: (_) => theme.colorScheme.surfaceContainerHighest,
+                getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                  final source = rodSources[(group.x, rodIndex)];
+                  if (source == null) return null;
+                  final (series, point) = source;
+                  final formatted = _formatValue(point.value!);
+                  final valueText = widget.unit.isEmpty || widget.percentage
+                      ? formatted
+                      : '$formatted ${widget.unit}';
+                  return BarTooltipItem(
+                    '${point.label}\n${series.label}: $valueText'
+                    '${point.incomplete ? ' (partial)' : ''}',
+                    TextStyle(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  );
+                },
+              ),
+            ),
             titlesData: FlTitlesData(
               topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -345,103 +374,114 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
               '${s.id}:${[for (final p in s.points) '${p.x}:${p.value == null}:${p.incomplete}'].join(',')}'
           ].join(';')}';
 
-      final lineData = LineChartData(
-        minX: bounds.minX,
-        maxX: bounds.maxX,
-        minY: bounds.minY,
-        maxY: bounds.maxY,
-        lineBarsData: lineBarsData,
-        lineTouchData: LineTouchData(
-          touchTooltipData: LineTouchTooltipData(
-            fitInsideHorizontally: true,
-            fitInsideVertically: true,
-            getTooltipColor: (spot) => theme.colorScheme.surfaceContainerHighest,
-            getTooltipItems: (touchedSpots) {
-              final seen = <(String, double)>{};
-              return [
-                for (final spot in touchedSpots)
-                  if (seen.add((
-                    renderedSeriesIdByBarIndex[spot.barIndex] ?? '',
-                    spot.x,
-                  )))
-                    LineTooltipItem(
-                      _tooltipTextForMeasuredPoint(
+      plotWidget = LayoutBuilder(
+        builder: (context, constraints) {
+          final usableWidth = constraints.maxWidth;
+          final maxTipWidth = usableWidth.isFinite
+              ? math.max(1.0, math.min(280.0, usableWidth - 32))
+              : 280.0;
+
+          final lineData = LineChartData(
+            minX: bounds.minX,
+            maxX: bounds.maxX,
+            minY: bounds.minY,
+            maxY: bounds.maxY,
+            lineBarsData: lineBarsData,
+            lineTouchData: LineTouchData(
+              touchTooltipData: LineTouchTooltipData(
+                fitInsideHorizontally: true,
+                fitInsideVertically: true,
+                maxContentWidth: maxTipWidth,
+                tooltipPadding: const EdgeInsets.all(8),
+                getTooltipColor: (spot) => theme.colorScheme.surfaceContainerHighest,
+                getTooltipItems: (touchedSpots) {
+                  final seen = <(String, double)>{};
+                  return [
+                    for (final spot in touchedSpots)
+                      if (seen.add((
                         renderedSeriesIdByBarIndex[spot.barIndex] ?? '',
                         spot.x,
-                        spot.y,
-                        sortedSeries,
-                      ),
-                      TextStyle(
-                        color: theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                    )
-                  else
-                    null,
-              ];
-            },
-          ),
-        ),
-        titlesData: FlTitlesData(
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 28,
-              getTitlesWidget: (val, meta) {
-                final label = xToLabel[val];
-                if (label == null) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(top: 6.0),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                );
-              },
+                      )))
+                        LineTooltipItem(
+                          _tooltipTextForMeasuredPoint(
+                            renderedSeriesIdByBarIndex[spot.barIndex] ?? '',
+                            spot.x,
+                            spot.y,
+                            sortedSeries,
+                          ),
+                          TextStyle(
+                            color: theme.colorScheme.onSurface,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        )
+                      else
+                        null,
+                  ];
+                },
+              ),
             ),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 44,
-              getTitlesWidget: (val, meta) {
-                if (val == meta.min || val == meta.max) {
-                  return const SizedBox.shrink();
-                }
-                return Text(
-                  widget.percentage
-                      ? '${(val * 100).toStringAsFixed(0)}%'
-                      : _formatValue(val),
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                );
-              },
+            titlesData: FlTitlesData(
+              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 28,
+                  getTitlesWidget: (val, meta) {
+                    final label = xToLabel[val];
+                    if (label == null) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 6.0),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 44,
+                  getTitlesWidget: (val, meta) {
+                    if (val == meta.min || val == meta.max) {
+                      return const SizedBox.shrink();
+                    }
+                    return Text(
+                      widget.percentage
+                          ? '${(val * 100).toStringAsFixed(0)}%'
+                          : _formatValue(val),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
-        ),
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (val) => FlLine(
-            color: theme.dividerColor.withValues(alpha: 0.4),
-            strokeWidth: 1,
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-      );
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (val) => FlLine(
+                color: theme.dividerColor.withValues(alpha: 0.4),
+                strokeWidth: 1,
+              ),
+            ),
+            borderData: FlBorderData(show: false),
+          );
 
-      plotWidget = LineChart(
-        key: ValueKey(topology),
-        lineData,
-        duration: duration,
+          return LineChart(
+            key: ValueKey(topology),
+            lineData,
+            duration: duration,
+          );
+        },
       );
     }
 
