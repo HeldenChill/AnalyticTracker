@@ -10,12 +10,13 @@ Future<void> pumpStudio(
   WidgetTester t,
   Widget child, {
   double width = 720,
+  double height = 1200,
   double textScale = 1.5,
   AppStyle style = AppStyle.tremor,
   bool reducedMotion = false,
   List<Override> overrides = const [],
 }) async {
-  t.view.physicalSize = Size(width, 1200);
+  t.view.physicalSize = Size(width, height);
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.reset);
   await t.pumpWidget(ProviderScope(
@@ -25,7 +26,7 @@ Future<void> pumpStudio(
         theme: buildTheme(style),
         home: MediaQuery(
           data: MediaQueryData(
-              size: Size(width, 1200),
+              size: Size(width, height),
               textScaler: TextScaler.linear(textScale),
               disableAnimations: reducedMotion),
           child: Scaffold(body: child),

@@ -17,10 +17,12 @@ class StudioColumn {
 class StudioRow {
   const StudioRow(
     this.cells, {
+    this.key,
     this.selected = false,
     this.onSelectChanged,
   });
 
+  final LocalKey? key;
   final List<Widget> cells;
   final bool selected;
   final ValueChanged<bool?>? onSelectChanged;
@@ -199,6 +201,7 @@ class _StudioTableState extends State<StudioTable> {
           rows: [
             for (final row in widget.rows)
               DataRow(
+                key: row.key,
                 selected: row.selected,
                 onSelectChanged: row.onSelectChanged,
                 cells: [
