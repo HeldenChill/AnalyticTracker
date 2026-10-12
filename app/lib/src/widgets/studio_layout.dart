@@ -41,37 +41,53 @@ class StudioHeading extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        if (actions.isEmpty) {
+          return titleWidget;
+        }
         if (constraints.maxWidth < 720) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               titleWidget,
-              if (actions.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: actions,
-                ),
-              ],
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: titleWidget),
-            if (actions.isNotEmpty) ...[
-              const SizedBox(width: 16),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
-                children: actions,
+                children: [
+                  for (final action in actions)
+                    ConstrainedBox(
+                      constraints:
+                          BoxConstraints(maxWidth: constraints.maxWidth),
+                      child: action,
+                    ),
+                ],
               ),
             ],
+          );
+        }
+        final actionWidth = (constraints.maxWidth - 16) * 0.4;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: titleWidget),
+            const SizedBox(width: 16),
+            SizedBox(
+              width: actionWidth,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  for (final action in actions)
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: actionWidth),
+                      child: action,
+                    ),
+                ],
+              ),
+            ),
           ],
         );
       },
