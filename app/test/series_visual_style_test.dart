@@ -56,6 +56,7 @@ void main() {
           ),
         ),
       ));
+      await t.pump(const Duration(milliseconds: 401));
 
       final lineChart = t.widget<LineChart>(find.byType(LineChart));
       for (var i = 0; i < 5; i++) {
