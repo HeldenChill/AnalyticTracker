@@ -406,6 +406,8 @@ final analyticTabIndexProvider = StateProvider<int>((ref) => 0);
 
 Replace shell-local _index with selectedPageProvider. Navigation labels/order stay unchanged; full sidebar, later rail and later drawer all share this state.
 
+**Wave3 handoff:** Task8 adds storage-scoped FilterBar disabling and guarded pending Data health refresh. Migrate all of those `_index` reads/captured originIndex values too: storageScope is `ref.watch(selectedPageProvider) == AppPage.dataHealth`, capture `originPage = ref.read(selectedPageProvider)`, and guard feedback with current selectedPageProvider equality. Do not leave index7 in refresh callbacks after deleting `_index`. Preserve nullable filter callbacks, unchanged saved gameplay selections, server-URL guard and `_refreshing` finally cleanup. The full active-request refresh registry remains Task15B.
+
 CountsScreen onExploreParameters callback:
 
 ```dart

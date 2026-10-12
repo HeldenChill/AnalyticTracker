@@ -17,13 +17,19 @@
 | Order | Wave plan | Tasks | Independently usable outcome |
 |---|---|---|---|
 | 1 | [Wave 1](analytics-studio-ui-wave1-implementation.md) | 0-3 | Baseline, 10-player policy, shared layout and safe tables |
+| 1R | [Wave 1 review repairs](analytics-studio-ui-wave1-repair-implementation.md) | R1-R4 | Complete numeric values, readable headers, bounded actions and accurate cohort copy |
 | 2 | [Wave 2](analytics-studio-ui-wave2-implementation.md) | 4-6 | Theme motion, chart system and shared async states |
+| 2R | [Wave 2 review repairs](analytics-studio-ui-wave2-repair-implementation.md) | W2R1-W2R7 | Stable async State, complete legends and labels, safe domains, gaps, tooltips and motion |
 | 3 | [Wave 3](analytics-studio-ui-wave3-implementation.md) | 7-8 | Data health dashboard with real coverage |
 | 4 | [Wave 4](analytics-studio-ui-wave4-implementation.md) | 9-11 | Event insights, comparison and parameter handoff |
 | 5 | [Wave 5](analytics-studio-ui-wave5-implementation.md) | 12-15 | All Analytic charts, remaining tables and shell flow |
 | 6 | [Wave 6](analytics-studio-ui-wave6-implementation.md) | 16-17 | Whole-app regression and actual Windows runtime evidence |
 
-Run only the requested wave. If given this master without a wave number, start Wave 1 and report its completion before continuing. Do not skip foundational tasks to copy the HTML demo.
+Run only the requested wave. Inspect current checkout progress rather than repeating completed tasks. At `16c96da`, Wave1 repairs R1-R4 and Wave2 tasks4-6 are committed; the current next execution is [Wave2 review repairs W2R1-W2R7](analytics-studio-ui-wave2-repair-implementation.md). Wave2 code review found BUG-0033-0039 despite512 passing existing tests; six review probes fail. Do not begin Wave3 until repairs pass review. On earlier checkouts, follow the preceding wave/repair order. Stop after the requested wave or repair report. Do not skip foundational tasks to copy the HTML demo.
+
+### Wave 1 review gate - 2026-10-12
+
+Review of94d8562..96f6459 found BUG-0022 through BUG-0025. All analyzers and446 tests passed, but dimension probes reproduced clipped numeric values and wrapped headers; ordinary no-exception assertions missed both. Wave1 is not signed off until [R1-R4](analytics-studio-ui-wave1-repair-implementation.md) pass. This repair plan takes precedence over the original tasks2-3 sizing kernels where they conflict, and corrects the missed version-impact copy from task1. Waves2-6 remain unimplemented at the review head. Keep task numbering0-17 and existing wave dependencies unchanged; repairs precede Wave2.
 
 The steps specify contracts, algorithms, test bodies, edit anchors and composition. They are not a claim that new production code has been precompiled or future test counts are already known. The executor must prove every red/green cycle.
 

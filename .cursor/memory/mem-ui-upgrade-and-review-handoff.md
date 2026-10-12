@@ -2,23 +2,107 @@
 
 **ID:** `mem-ui-upgrade-and-review-handoff`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-09
+**Last updated:** 2026-10-12
 **Related:** `mem-project-intent-and-origin`, `mem-system-architecture`, `mem-known-bugs-index`, `mem-lessons-gemini-plan-review-workflow`
 
 ## Continue here
 
-Owner ended the session to continue in a new session. The next deliverable is Gemini execution/review of the approved Analytics Studio UI upgrade, beginning with Wave 1 unless the owner supplies completed implementation work.
+**Current owner request:** Save this complete session and update the reusable playbooks. This memory reflects completed reviews/planning through2026-10-12; it does not authorize automatic implementation on continuation.
 
-- Design approved; detailed implementation plan delivered.
-- UI upgrade implementation has **not started**.
-- Ten-player gates are **planned**, not already implemented. Existing population/version gates still use20.
-- Preserve existing palettes/fonts and Settings choices.
-- Owner runs Gemini; the assistant plans, reviews and fixes on request. Default inline; no automatic agent dispatch.
-- Read Git status/log before claiming the checkout is clean or that Gemini has completed a wave.
-- Master plan: `.cursor/plans/analytics-studio-ui-implementation.md`.
-- Approved spec: `.cursor/plans/analytics-studio-ui-design.md`.
+- **Latest reviewed product:** Wave2 tasks4-6 and Gemini W2R1-W2R7 repairs are implemented at reviewed head `8ea1e77`. **Repair review verdict: fixes required. Wave3 remains gated.** Check current HEAD/status before new work.
+- **Fresh automated evidence:** all three analyzers clean; shared65/server271/app193 = **529 existing tests passed**. Nine additional repair-review probes: **seven fail, two pass**, covering five important remaining issues.
+- **Current ledger:** BUG-0033-0037 RESOLVED for automated cases; BUG-0038/0039 remain CONFIRMED with residual renderer evidence. New BUG-0047-0049 are CONFIRMED important defects/gaps; BUG-0050 is a CONFIRMED low documentation gap. BUG-0026 remains separate/nonblocking. BUG-0040-0046 are RESOLVED **as Wave3 plan defects only**.
+- **Remaining Wave2 blockers:** interrupted horizontal bars fail to snap on reduced/inactive policy change; date labels use different geometry from marks; loading displays prior-scope error; active tooltips retain old anchors; partial bars lack a visual marker/legend. Required repair evidence report is also missing.
+- **No new product fix was made by this reviewer.** Review artifacts, plans and memory changed; Gemini owns product commits. No commit/push, new Windows build, server restart or live Windows walkthrough in this session.
+- **Next:** Read latest repair review and probes, preserve owner dirty files, and address remaining Wave2 findings through owner-directed Gemini work, then re-review. If asked for a follow-up plan, incorporate exact failing assertions below. Do not repeat completed Wave1/tasks4-6, start Wave3, or incidentally repair BUG-0026.
+- **Execution/delegation:** implementation stays inline with one task commit, no push. Reviews dispatched an independent read-only reviewer only because owner explicitly invoked requesting-code-review; this does not enable general agent dispatch. Wave3 plan audit was inline.
 
-## This session's review and fixes
+| Artifact | Purpose |
+|---|---|
+| [Latest Wave2 repair review](../../docs/reviews/2026-10-12-gemini-wave2-repair-review.md) | Five important remaining issues, minor evidence gap, fresh gates and verdict |
+| [Repair-review probes](../../docs/reviews/2026-10-12-wave2-repair-review-probe_test.dart) | Nine executable tests; seven currently fail, two supported-composition cases pass |
+| [Wave2 repair implementation plan](../plans/analytics-studio-ui-wave2-repair-implementation.md) | W2R1-W2R7, precedence over original kernels; remaining acceptance contracts still apply |
+| [Wave3 amended plan](../plans/analytics-studio-ui-wave3-implementation.md) | Future tasks7-8 after Wave2 approval; global storage, refresh, calendar and clock contracts |
+| [Wave3 plan audit](../../docs/reviews/2026-10-12-wave3-plan-review.md) | Plan-only BUG-0040-0046 and prototype boundaries |
+| [Original Wave2 review](../../docs/reviews/2026-10-12-gemini-ui-wave2-review.md) | Original BUG-0033-0039 findings and repair rationale |
+| [Master](../plans/analytics-studio-ui-implementation.md), [verification report](../plans/analytics-studio-ui-verification.md), [ledger](mem-known-bugs-index.md) | Entry order, required evidence and canonical statuses |
+
+## Session 2026-10-12 - Wave2 implementation, repairs and Wave3 planning
+
+Owner resumed the earlier Wave2 handoff, reported Gemini implementation done, requested code review, requested detailed repair-plan patches, requested Wave3 plan audit during Gemini implementation, requested repair review, then requested saving all session knowledge/playbook experience. Analytics Studio A/four themes and prior statistical policies remain unchanged.
+
+| Stage | Outcome and evidence |
+|---|---|
+| Initial Wave2 implementation review | Actual tasks4-6 reviewed against amended contracts, not merely old unimplemented handoff. Existing gates shared65/server271/app176 =512 clean; six original review probes failed. BUG-0033-0039 filed; no critical finding, fixes required |
+| Detailed Wave2 repair planning | Added W2R1-W2R7 repair plan; master/Wave2 route to it and gate Wave3. Corrected contradictory missing-bar oracle: groups0/1/2, rod counts1/0/1. Added explicit backward-compatible motion handoff, algorithms, rendered/state regressions, per-task commits and acceptance gates |
+| Repair-plan validation |25 Dart blocks syntax-parsed; seven existing-API proposed tests compiled/executed: six reproduced bugs, real root accessibility test passed. Three isolated style/axis prototype tests passed. These are not proof of future production integration |
+| Wave3 audit while Gemini worked | Audited global storage metadata through model/dashboard/calendar/filter/refresh/clock teardown inline. Patched Wave3 and Task11/15 dependency notes in Waves4/5. BUG-0040-0046 corrected as plan-only findings. Two original-kernel probes failed; two correction prototypes passed;15 blocks syntax-checked with signature/async wrappers |
+| Completed repair review | Gemini W2R1-W2R7 plus test follow-up reviewed16c96da..8ea1e77. Fresh529 tests/all analyzers clean; nine extra probes have seven failures/two passes. BUG-0033-0037 closed; BUG-0038/0039 residuals retained; BUG-0047-0050 added. Wave3 still gated |
+| Memory/playbook save | Consolidated latest status in this handoff, project index and intent; updated reusable review/testing and Windows execution lessons. No ledger status changed merely because memory was saved |
+
+### Remaining evidence to reproduce
+
+| ID | Current evidence / acceptance boundary |
+|---|---|
+| BUG-0038 | Ranked10-to20 with max20: after100ms, changing only inactive/reduced policy leaves widthFactor0.642857 instead of1. Disabling duration alone does not complete unchanged-target implicit tween. Ranked/diverging renderer completion must be verified |
+| BUG-0039 |720px sparse grouped bars: middle date label365.125px versus actual rendered group center424.046875px. Text is readable, but geometry differs. Actual plot width/spaceAround group centers must drive ticks |
+| BUG-0047 | Initial/new-key AsyncLoading carrying previous AsyncError displays old-server failure; loading flag must win without a local cache |
+| BUG-0048 | Bar selected indicator persists after10-to20 revision; line current plotted y20 retains tooltip anchor y10. Selection must clear with measured revision/topology and pointer exit/cancel |
+| BUG-0049 | Equal complete/partial rods have identical color and BorderSide.none; no matching partial key. Needs visible distinction without relying on hover |
+| BUG-0050 | Verification artifact still contains Wave1/R1-R4/app144 evidence only; required actual Wave2 repair evidence absent. Do not invent historical red/green or Windows checks |
+
+### Wave3 future contracts and validation boundaries
+
+- Cache `/days` rows by server URL; selected dates/gameplay flags are local presentation inputs, not request identity. Recompute model from retained global rows during same-server refresh failure; new-server wrappers never seed stale data.
+- Data health refresh has one real pending owner and scope guard; Task11 migrates index comparisons to AppPage, Task15B replaces legacy completion with active registry without a second `/days` request.
+- Strict zoned timestamp grammar preserves counts but treats ambiguous/impossible legacy timestamps as unknown; global freshness orders instants, independent of displayed range.
+- Calendar measures scaled/bold labels, keeps true partial-month weekday alignment/inert placeholders, uses accessible keyboard focus and disposes nodes/controllers. One midnight/resume clock trigger recalculates classification without refetch/range mutation.
+- Existing DaysScreen test transitions from first/last-inferred old list copy to explicit selected range; preserve10/5 counts, assert total15/coverage2-of3/missingOct2 through actual StudioMetric/row keys.
+- No Wave3 product code was implemented in this session. Plan-only resolutions, syntax parsing, isolated prototypes, production gates and live Windows evidence are separate tiers.
+
+### Probe interpretation and workspace preservation
+
+Original six Wave2 probes now have five passes. Giant legend in a standalone nonscrolling600px host overflows vertically20px after correct full wrapping; the same data in the supported bounded ChartFrame passes. Do not reopen fixed horizontal legend clipping from an invalid host composition. Large scale-key fallback grows naturally in a scrollable host.
+
+Reports and executable review probes remain under docs/reviews, outside standard app test discovery; some intentionally reproduce obsolete plan kernels. Temporary validation files were removed. All existing dirty plans, verification report and memory files remain owner work; no reset/stash/staging/commit. Concurrent Wave2 changes observed during Wave3 audit were Gemini's work, and the final review used its completed clean product checkout. Inspect status/HEAD before continuation rather than trusting a historical test count.
+
+## Earlier handoff - historical owner continuation
+
+Before this session, owner asked to save Wave1/R1-R4 review and continue Wave2 plan review elsewhere. At that earlier baseline tasks4-6 were unimplemented, then untracked chart files appeared externally. That continuation has now been superseded by implementation and repair reviews above; it is not the current next task. Older Wave1/plan-audit evidence below remains historical.
+
+## Session 2026-10-12 - Wave 1 reviews and Wave 2 plan audit
+
+The owner used requesting-code-review to assess Gemini's Wave1 implementation. Only tasks1–3 had been implemented; the master instructs stopping after Wave1, so Waves2–6 being absent was not a scope violation. Independent gates passed shared65/server271/app110 =446, but rendered dimension probes found defects that ordinary widget-existence/no-exception assertions missed.
+
+| Work | Outcome / evidence |
+|---|---|
+| Initial Wave1 review | Numeric cells clipped digits, wrapped table headers clipped vertically, desktop heading actions overflowed, and version-impact empty-state copy still said20 players. Findings assigned to BUG-0022–0025 |
+| Owner-requested repair planning | Added `analytics-studio-ui-wave1-repair-implementation.md` with detailed R1–R4 instructions and meaningful regressions. Linked it from master/Wave1 and made repairs prerequisite to Wave2 |
+| Gemini repair review | Original four cases repaired; dimensions, sorting, Funnel callbacks and data/CSV semantics preserved. Fresh gates passed all analyzers and shared65/server271/app144 =480 tests |
+| Residual accessibility issue | BUG-0026 CONFIRMED, low/nonblocking: numeric width measurement differs from rendering under accessibility bold text. Reproduced using bundled fonts; Windows OS delivery of that preference was not established. No new product patch was made in review |
+| Wave2 plan audit requested by owner | Checked approved design, current app/adapters, later wave contracts, pinned fl_chart1.2.0 and Riverpod2.6.1 source; patched concrete plan conflicts and added regressions |
+| Wave2 audit verification |13 Dart regression code blocks syntax-parsed using pinned formatter; Markdown links/fences/whitespace checked. This is neither type-checking nor execution of future tests. No Wave2 product code was implemented |
+
+Wave2 plan findings BUG-0027–0032 are **RESOLVED as plan-document defects only**. Their future production behavior still needs Gemini implementation and red/green proof:
+
+| ID | Plan concern / review focus |
+|---|---|
+|0027 | Root theme reduced motion must work without a preexisting root MediaQuery |
+|0028 | Changes to missing/incomplete segments or bucket coordinates must not interpolate unrelated plot indices, even with the same series IDs |
+|0029 | Deduplicated boundary tooltips must preserve fl_chart callback list cardinality |
+|0030 | Riverpod previous-value wrappers must not reseed new-server/new-filter caches with stale data |
+|0031 | Chart domains need representable positive finite spans, not merely finite endpoints |
+|0032 | ChartFrame, time-series legends and ranked lists need consistent height ownership |
+
+The amendment also specifies percentage fractions/formatting, sparse/fractional bar buckets, registry lifetime, palette-length endpoints, interaction gating, exact-value access and HTTP404 request context. Source of truth is the plan; do not duplicate its algorithms here. TimeSeriesChart adds optional `plotHeight=240`, preserving later-wave call sites.
+
+**Historical next-session review focus, superseded by the current handoff:** Check consistency between the original task4–6 instructions and the appended amendments, private motion/plot state handoff, generic ChartFrame versus specialized later-wave consumers, and regression coverage. Read the actual diff and pinned APIs before adding further corrections. Syntax-checked snippets are not precompiled implementation snapshots. Do not repeat Wave1/R1–R4, fix BUG-0026 incidentally, run later waves, or mark Windows acceptance complete.
+
+**Workspace preservation:** Plans, verification report and memory files have owner/uncommitted changes. Inspect `git status` on continuation; never reset, stash, stage or commit them implicitly. This session changed plans and memory during review; product fixes were Gemini's work. No push, new app build or Windows live walkthrough was performed by this reviewer.
+
+**Concurrent-work observation at memory save:** Untracked `app/test/chart_models_test.dart` and `app/lib/src/widgets/charts/` appeared after the initial status read; chart_models.dart exists. This reviewer did not create or modify it. Therefore the statement that Wave2 is unimplemented describes the reviewed baseline, not a guarantee of current external work. On continuation inspect HEAD, current source/test files and dirty changes before deciding whether task4 has begun. Preserve those untracked source/test files and do not attribute or overwrite them blindly.
+
+## Earlier analytics review and fixes - 2026-10-09
 
 Owner requested review of all Gemini work on2026-10-09 using requesting-code-review. The review covered all five Analytic waves:31 commits,56 changed files and uncommitted wave plans. Git attribution identified the local owner account, not Gemini independently.
 
@@ -38,7 +122,7 @@ Owner then asked to fix all findings using systematic-debugging. Nine findings w
 | 0019 | Zero median hazard and strict wall boundary | Exact boundary regressions; resolved |
 | 0020 | Missing advertised survival confidence bands | Chart-data/widget regression; resolved |
 
-Last completed full verification: **shared65 / server263 / app103 =431 tests**, all three analyzers clean. This is historical evidence from the fixes; rerun current gates before reviewing later Gemini changes. No full Windows visual walkthrough or new release build was performed for those fixes.
+Earlier analytics-fix verification: **shared65 / server263 / app103 =431 tests**, all three analyzers clean. This is historical evidence from2026-10-09; latest dated Wave1 repair evidence is480 tests above. Rerun current gates before reviewing later Gemini changes. No full Windows visual walkthrough or new release build was performed for those earlier fixes.
 
 Owner's explicit D1 decision: **at least one complete follow-up day**. Exclude players first seen on the selected range's final day; if either version cohort has no observable players, omit its D1 comparison. This differs from the seven-day churn observability cutoff.
 
@@ -61,7 +145,7 @@ Owner reported:
 - Lower minimum players to10 to test Analytic visuals.
 - Tables overlap and fail to wrap long titles/names.
 
-The assistant clarified graph variety/separation; owner chose both. Table issue is BUG-0022, currently **SUSPECTED**, awaiting exact widget/viewport reproduction. Other graphical complaints are requirements to investigate, not individually proven defect records.
+The assistant clarified graph variety/separation; owner chose both. Table issue BUG-0022 was initially SUSPECTED; the2026-10-12 review reproduced wrapped-header clipping and R2 resolved its automated acceptance case. Windows visual acceptance remains pending. Other graphical complaints are requirements to investigate, not individually proven defect records.
 
 Owner approved visual direction **A / Analytics Studio**, then separately approved the written design. Owner confirmed A must **retain all four existing color themes**; the light preview palette is illustrative.
 
@@ -88,15 +172,15 @@ Important distinction: ten observable players may support visual drivers but can
 | Approved UI spec | `.cursor/plans/analytics-studio-ui-design.md` |
 | Gemini master | `.cursor/plans/analytics-studio-ui-implementation.md` |
 | Six wave plans | `.cursor/plans/analytics-studio-ui-wave1-implementation.md` through `analytics-studio-ui-wave6-implementation.md` |
-| Future implementation verification report | `.cursor/plans/analytics-studio-ui-verification.md`; not yet produced |
+| Implementation verification report | `.cursor/plans/analytics-studio-ui-verification.md`; records repairs R1–R4 automated evidence; Windows live checks pending |
 
 The design and plan are versioned. Use Git log for exact history; master-plan document commit is a review anchor, not proof of implemented UI.
 
 | Wave | Tasks | Outcome |
 |---|---|---|
-| 1 | 0-3 | Baseline, ten-player gates/MCP copy, responsive layout and safe tables |
-| 2 | 4-6 | Chart models/variants, theme/motion and query-aware async states |
-| 3 | 7-8 | Data health dashboard |
+| 1 | 0-3 + R1-R4 | Baseline, ten-player gates/MCP copy, responsive layout, safe tables, numeric cell measurement, dynamic header height, bounded actions; reviewed |
+| 2 | 4-6 + W2R1-W2R7 | Implemented; review requires remaining motion/axis/loading/tooltip/partial-mark fixes and evidence update before Wave3 |
+| 3 | 7-8 | Data health dashboard plan audited/amended; gated on Wave2 acceptance |
 | 4 | 9-11 | Events aggregation/comparison/detail and Parameters handoff |
 | 5 | 12-15 | Six Analytic views and shell integration;15A/B/C separate commits |
 | 6 | 16-17 | Theme/width/text regression matrix, Windows build/server reload/live evidence |
@@ -124,13 +208,25 @@ The preview includes Data health/Events/Analytic navigation, search, detail and 
 
 The session URL/key is in that companion's local `state/server-info`, not stored here. The server may expire after inactivity; check/restart the companion before reusing a URL. Generated preview files are ignored by the pending `.gitignore` change adding `.superpowers/`.
 
-## Owner-facing Gemini instruction
+## Current owner-facing continuation instruction
 
 ```text
-Read .cursor/plans/analytics-studio-ui-implementation.md and its approved design.
-Execute Wave 1 only, following every regression and verification step.
-Preserve unrelated changes. Do not push.
-Report commits, test results, and remaining issues before continuing.
+Read AGENTS.md, .cursor/memory/mem-project-index.md,
+.cursor/memory/mem-project-intent-and-origin.md and
+.cursor/memory/mem-ui-upgrade-and-review-handoff.md.
+
+Inspect current git status/HEAD; do not rely on older unimplemented-wave notes.
+Latest reviewed repair baseline is8ea1e77, not a guarantee of current checkout.
+Read docs/reviews/2026-10-12-gemini-wave2-repair-review.md and its probes.
+
+Wave2 still needs BUG-0038/0039/0047-0050 addressed and re-reviewed.
+Wave3 plan is amended, but implementation stays gated on Wave2 acceptance.
+Determine the requested work from the owner's new prompt: a follow-up plan,
+authorized fixes, or review of newly completed Gemini changes.
+Do not automatically repeat tasks4-6/W2R1-W2R7 or begin Wave3.
+
+Preserve owner dirty source/plans/memory. No reset/stash/implicit staging/push.
+Keep prototype, automated production and Windows runtime evidence separate.
 ```
 
-If the next session starts with "Gemini done", determine the completed wave/commit range and review its actual diff/gates/runtime report. Do not restart brainstorming or execute later waves without knowing the owner's current progress.
+If owner says "Gemini done", inspect the new completed range and current gates/probes before changing statuses. Explicit requesting-code-review may dispatch one read-only reviewer; ordinary plan audits/implementation remain inline. Saving memory alone changes no bug status and authorizes no implementation.

@@ -7,6 +7,8 @@
 **Tech stack:** existing Dart/Flutter workspace.
 **Spec:** analytics-studio-ui-design.md sections4,8,9,11.
 
+**Review amendment 2026-10-12:** Tasks1-3 exist at96f6459, but Wave1 has not passed review. Read [Wave1 review repairs](analytics-studio-ui-wave1-repair-implementation.md) before editing. R1-R4 fix BUG-0022-0025; their numeric sizing/header height/action layout instructions supersede conflicting original kernels below. Do not replay completed tasks. Repair before Wave2.
+
 ## Task 0 - Establish checkout and baseline
 
 **Files:** read-only project inspection. Do not commit leftover owner files.
@@ -359,6 +361,7 @@ Expected-value reasoning: the long identifier is longer than120 characters; a bo
 
 ## Wave 1 exit
 
+- [ ] R1-R4 in [Wave1 review repairs](analytics-studio-ui-wave1-repair-implementation.md) pass, including full numeric width and wrapped header height assertions.
 - [ ] 9/10/19 boundary regressions pass; method evidence guards remain.
 - [ ] Long names wrap in four existing table widgets; no nested horizontal scrollers.
 - [ ] Full gates and task commits reported.

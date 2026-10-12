@@ -252,6 +252,8 @@ This integration task has three independently verified sub-deliverables. Execute
 
 15A leaves the existing refresh method in place until15B replaces it; it may not call unimplemented registry APIs. 15B leaves matching semantics and editor controls untouched until15C. Run targeted red before each subtask's implementation, not after all three.
 
+**Wave3/4 handoff:** Existing Data health refresh has a pending-click guard, awaits exactly one global days request, and suppresses feedback after server/page changes; Task11 migrates its page guard to AppPage. Task15B replaces that legacy completion path with the registry, retaining those guards and filter-scope restoration. Do not leave the old method running beside registry.reload or issue a second `/days` refresh. Data health's StudioAsyncPanel caches global rows with server URL identity; its local display-date changes are not `/days` query changes.
+
 ```dart
 PageStage({Key? key, required int index, required List<Widget> pages});
 class ActiveRequestRegistry {

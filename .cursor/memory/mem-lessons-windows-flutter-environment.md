@@ -2,7 +2,7 @@
 
 **ID:** `mem-lessons-windows-flutter-environment`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-09
+**Last updated:** 2026-10-12
 
 ## Machine facts (owner PC)
 
@@ -51,3 +51,23 @@ Then `flutter build windows --release` (~25–40 s). Ship the **whole** `Release
 - Windows app was not rebuilt during the later UI planning; a future Gemini implementation must build/relaunch and inspect the actual current binary.
 - Browser companion used the project's brainstorming script under Git Bash with --open --foreground and persistent `.superpowers/brainstorm/` files. Its URL token lives in local server-info; do not commit it in project memory. The server may expire after inactivity.
 - Browser automation was unavailable in this session. Only preview HTTP delivery and JavaScript/template behavior were checked; no screenshot-based visual sign-off. Use currently supported UI tools in future sessions; older synthetic-click recipes are historical, not authority to bypass tool restrictions.
+
+## SDK bootstrap and UTF-8 lessons - 2026-10-12
+
+- In restricted Windows sessions, flutter.bat/dart.bat can spin silently before launching Dart. The SDK shared.bat bootstrap redirects lock errors and retries acquiring bin/cache/flutter.bat.lock; a denied cache write can look like a busy SDK. Inspect this review's process tree/command lines and pinned script rather than waiting indefinitely or assuming tests started.
+- Stop only the identified processes launched by this review. Do not delete SDK lock/cache files, kill unrelated Dart/MCP sessions or request broader access before checking a safe fallback.
+- On this installed SDK, the real Dart executable and prebuilt flutter_tools.snapshot successfully ran analyzers/tests without the batch bootstrap. Verify those installed paths exist and cached dependencies are ready; this is a review/test fallback, not an SDK upgrade or assurance about every build command.
+
+```powershell
+# cwd app; run separately and inspect each exit/output
+& 'D:\flutter\bin\cache\dart-sdk\bin\dart.exe' 'D:\flutter\bin\cache\flutter_tools.snapshot' analyze --no-pub
+& 'D:\flutter\bin\cache\dart-sdk\bin\dart.exe' 'D:\flutter\bin\cache\flutter_tools.snapshot' test --no-pub
+# cwd shared, then server
+& 'D:\flutter\bin\cache\dart-sdk\bin\dart.exe' analyze
+& 'D:\flutter\bin\cache\dart-sdk\bin\dart.exe' test
+```
+
+- A wrapped shell ending with success can hide an earlier analyzer/test failure. Record per-command results, not just the surrounding script exit. Full output that is truncated must still preserve final test summary/count/exit; capture and filter summaries if needed.
+- Python on this Windows host defaults to cp1252 for stdout and text subprocess decoding. Unicode arrows and Flutter box-drawing output caused UnicodeEncodeError/UnicodeDecodeError even after the child test had run. Use `sys.stdout.reconfigure(encoding='utf-8')` for emitted text and `subprocess.run(..., text=True, encoding='utf-8', errors='replace')` for captured logs. A decode failure is not a behavioral test result; rerun/read the actual child output.
+- Preserve existing Markdown encoding/newlines and use targeted updates after rereading shared files. Code-fence formatter checks may use declaration/statement wrappers; state that boundary explicitly. Remove only named temporary validation files, not an entire tool/test directory.
+- These sessions performed automated widget/render-object probes only. No fresh Windows release build, screenshot/live walkthrough or server restart occurred; keep those evidence fields pending until actually observed.

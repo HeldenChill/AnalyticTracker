@@ -2,7 +2,7 @@
 
 **ID:** `mem-project-intent-and-origin`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-09
+**Last updated:** 2026-10-12
 **Related:** `mem-system-architecture` (what exists now), `mem-lessons-firebase-bigquery-data`, `mem-lessons-windows-flutter-environment`, `mem-lessons-gemini-plan-review-workflow`, `mem-known-bugs-index`
 
 ## Intent (owner-stated)
@@ -46,30 +46,34 @@
 | v6 review/fixes (10-09) | Owner asked review all today's Gemini work, then fix all nine findings using systematic-debugging; D1 cutoff chosen as one complete follow-up day | BUG-0012..0020 RESOLVED; gates65/263/103; review artifact in docs/reviews |
 | Runtime report (10-09) | Survival/Associations/Anomalies404 | Stale server restarted; four affected endpoints200; BUG-0021 RESOLVED |
 | Analytics Studio (10-09) | More informative Data health/Events, chart variety plus series distinction, motion, wrapping and10-player gates; chose A while retaining all four themes; approved written spec | Six-wave Gemini implementation plan delivered; implementation NOT started; BUG-0022 SUSPECTED |
+| Analytics Studio Wave 1 & Repairs (10-12) | Wave 1 tasks 1–3 and review repairs R1–R4 implemented & reviewed; gates lowered to 10; responsive layout, safe tables, numeric cell measurement, dynamic header height, bounded actions; BUG-0022..0025 RESOLVED; BUG-0026 nonblocking open | 7 commits up to 81649a3; master gates clean (shared 65 / server 271 / app 144 = 480 tests); live Windows checks pending |
+| Analytics Studio Wave2 review/repair planning (10-12) | Owner reported Gemini done, requested review and detailed fix plan | Initial512 tests clean but six probes fail; BUG0033-0039; W2R1-W2R7 authored and master/Wave2 linked |
+| Wave3 plan audit (10-12) | Owner asked review while Gemini repaired Wave2 | Seven plan defects0040-0046 patched; two corrected prototypes pass;15 blocks syntax-checked; Task11/15 handoffs aligned |
+| Wave2 repair review and memory save (10-12) | Owner reported repairs done, requested review, then complete memory/playbook save |529 tests clean; nine probes seven failures;0033-0037 closed,0038/0039 residuals and0047-0050 remain; no Wave3 signoff |
 
-## Status - START HERE (2026-10-09 review and UI planning)
+## Status - START HERE (2026-10-12 Wave2 repair review and Wave3 plan audit)
 
-- **Read first:** `mem-ui-upgrade-and-review-handoff.md` for the complete current handoff.
-- **Existing v6 Analytic Waves 1-5 are implemented.** The review found nine important defects; owner requested fixes, and BUG-0012 through BUG-0020 are RESOLVED with regression evidence.
-- **Last verified gates:** shared65 / server263 / app103 = **431 tests**, analyzers clean. This evidence predates any future Gemini UI implementation; rerun current gates when reviewing later work.
-- **D1 owner decision:** one complete follow-up day; final-day first-seen players excluded from version D1, and no comparison when either cohort is unobservable.
-- **Runtime 404:** BUG-0021 RESOLVED after restarting the stale Dart server; survival/version-impact/associations/anomalies returned200. The current app was not freshly rebuilt during UI planning.
-- **UI redesign:** owner approved A / Analytics Studio and the written spec. **All four current color themes remain.** Requests include richer Data health/Events, varied and distinct charts, smooth motion, long-name wrapping and ten-player eligibility.
-- **Implementation not started:** the approved ten-player gates and new widgets are planned, not present in current product code. Existing population/version gates remain20.
-- **Gemini plan delivered:** `.cursor/plans/analytics-studio-ui-implementation.md` links six detailed waves. Start Wave1 only and report before continuing, unless the owner supplies later implementation work.
-- **BUG-0022 SUSPECTED:** owner-reported table overlap/wrapping; exact reproduction still required.
-- **Workspace:** main branch; inspect Git status. The preview-ignore `.gitignore` change remains a separate pending file; memory handoff does not include product-code edits. Never overwrite/stage unrelated changes automatically.
+- Read [current handoff](mem-ui-upgrade-and-review-handoff.md); original unimplemented-Wave2 continuation is superseded.
+- Analytics Studio A/four themes and population/evidence policies remain approved; Wave1/R1-R4 reviewed. Wave2 tasks4-6 and W2R1-W2R7 implemented, but **repair review requires fixes before Wave3**.
+- Latest reviewed head8ea1e77; dated automated gates: shared65/server271/app193 =529 pass, all analyzers clean. Nine additional repair probes: seven fail/two pass. Current source must be reinspected before work.
+- Ledger:0033-0037 resolved for automated cases;0038/0039 still confirmed with interrupted horizontal motion and actual date-axis geometry evidence;0047-0049 confirmed previous-error loading, retained tooltip anchors and partial-bar marking;0050 low missing repair report evidence.0026 remains nonblocking/out of scope; Windows live acceptance pending.
+- [Wave3 plan](../plans/analytics-studio-ui-wave3-implementation.md) audited/patched with plan-only0040-0046: global storage cache/refresh, strict freshness, calendar geometry/focus, test migration and midnight/resume. Task11/15 handoffs patched in Waves4/5. No Wave3 product code by reviewer.
+- Owner requested this entire session saved and playbook updated. Next engineering work depends on owner direction: remaining Wave2 fixes/follow-up plan and re-review; no automatic Wave3 execution.
+- Codex performed planning/review/verification only; Gemini owns product implementation. Independent reviewer dispatched only for explicitly invoked requesting-code-review; implementation/plan audits remain inline by default.
+- Preserve dirty owner plans/memory/verification artifact; stage only implementation task-owned files if later authorized; commit per task, never push. No build/restart/Windows walkthrough was performed during this session.
+- Key artifacts: [repair plan](../plans/analytics-studio-ui-wave2-repair-implementation.md), [latest review](../../docs/reviews/2026-10-12-gemini-wave2-repair-review.md), [Wave3 audit](../../docs/reviews/2026-10-12-wave3-plan-review.md), [ledger](mem-known-bugs-index.md).
 
 ## Next-step candidates (owner picks)
 
 | Item | Note |
 |---|---|
-| **Gemini Analytics Studio Wave1** | Approved design/master and six wave plans ready; run/review one wave at a time |
-| Review completed Gemini UI work | Determine actual wave, diff, gates and runtime report first |
+| **Remaining Wave2 repair findings** | Owner-directed follow-up plan/fixes, then review of0038/0039/0047-0050; Wave3 remains gated |
+| Gemini amended Wave3 implementation | Only after remaining Wave2 acceptance and owner direction; tasks7-8, preserve global storage/query semantics |
 | Existing Windows visual checks | Source fixes have automated coverage; current Windows app build/visual walkthrough still needs explicit evidence |
 | Verify BUG-0005..0009,0011 in app | Older VERIFY_PENDING records remain; do not silently mark resolved |
 | API token BUG-0010 | Still deferred; prerequisite for team/LAN deployment |
 | Automatic pull and other platforms | IAM remains unresolved; Windows first |
+
 
 
 ## v6 Analytic tab — handoff (2026-10-07)
