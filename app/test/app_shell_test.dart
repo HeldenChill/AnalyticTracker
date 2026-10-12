@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:analytic_app/src/api_client.dart';
@@ -22,7 +23,7 @@ void main() {
   late List<Filters> overviewCalls;
   late int daysCalls;
 
-  Future<void> pumpShell(WidgetTester t, {ApiClient? api}) async {
+  Future<void> pumpShell(WidgetTester t, {ApiClient? api, Future<List<DayStat>> Function()? daysLoader}) async {
     t.view.physicalSize = const Size(1400, 1000);
     t.view.devicePixelRatio = 1.0;
     addTearDown(t.view.reset);
@@ -33,6 +34,10 @@ void main() {
         if (api != null) apiClientProvider.overrideWithValue(api),
         daysProvider.overrideWith((ref) async {
           daysCalls++;
+          ref.watch(baseUrlProvider);
+          if (daysLoader != null) {
+            return daysLoader();
+          }
           return const <DayStat>[];
         }),
         eventNamesProvider.overrideWith((ref) async => const <String>[]),
@@ -187,5 +192,25 @@ void main() {
     await t.tap(find.byTooltip('Refresh'));
     await t.pumpAndSettle();
     expect(await results(), [2, 2, 2, 2, 2]);
+  });
+
+  testWidgets('Data health refresh awaits one real request and disables duplicates', (t) async {
+    final pending = Completer<List<DayStat>>();
+    var requests = 0;
+    await pumpShell(t, daysLoader: () {
+      requests++;
+      return requests == 1 ? Future.value(const <DayStat>[]) : pending.future;
+    });
+    await t.tap(find.widgetWithText(ListTile, 'Data health'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('refresh-button')));
+    await t.pump();
+    expect(t.widget<IconButton>(find.byKey(const ValueKey('refresh-button'))).onPressed, isNull);
+    expect(find.text('Refreshed Data health'), findsNothing);
+    expect(requests, 2);
+    pending.complete(const []);
+    await t.pumpAndSettle();
+    expect(find.text('Refreshed Data health'), findsOneWidget);
+    expect(t.widget<IconButton>(find.byKey(const ValueKey('refresh-button'))).onPressed, isNotNull);
   });
 }

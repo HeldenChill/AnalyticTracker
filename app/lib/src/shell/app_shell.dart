@@ -45,35 +45,49 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   int _index = 0;
+  bool _refreshing = false;
 
   Future<void> _refresh() async {
-    ref.invalidate(filterOptionsProvider);
-    ref.invalidate(overviewProvider);
-    ref.invalidate(retentionProvider);
-    ref.invalidate(progressionProvider);
-    ref.invalidate(daysProvider);
-    ref.invalidate(eventNamesProvider);
-    ref.invalidate(countsProvider);
-    ref.invalidate(paramProvider);
-    ref.invalidate(savedFunnelsProvider);
-    ref.invalidate(funnelResultProvider);
-    ref.invalidate(paramKeysProvider);
-    ref.invalidate(paramValuesProvider);
-    ref.invalidate(clustersProvider);
-    ref.invalidate(churnProvider);
-    ref.invalidate(levelsProvider);
-    ref.invalidate(survivalProvider);
-    ref.invalidate(versionImpactProvider);
-    ref.invalidate(associationsProvider);
-    ref.invalidate(anomaliesProvider);
-    // Data often comes back identical in <1 ms, so confirm visibly.
-    final messenger = ScaffoldMessenger.of(context);
+    if (_refreshing || (_index == 7 && ref.read(daysProvider).isLoading)) return;
+    final originUrl = ref.read(baseUrlProvider);
+    final originIndex = _index;
+    setState(() => _refreshing = true);
     try {
-      await ref.read(daysProvider.future);
-      messenger.showSnackBar(
-          const SnackBar(content: Text('Refreshed'), duration: Duration(seconds: 1)));
+      ref.invalidate(filterOptionsProvider);
+      ref.invalidate(overviewProvider);
+      ref.invalidate(retentionProvider);
+      ref.invalidate(progressionProvider);
+      ref.invalidate(eventNamesProvider);
+      ref.invalidate(countsProvider);
+      ref.invalidate(paramProvider);
+      ref.invalidate(savedFunnelsProvider);
+      ref.invalidate(funnelResultProvider);
+      ref.invalidate(paramKeysProvider);
+      ref.invalidate(paramValuesProvider);
+      ref.invalidate(clustersProvider);
+      ref.invalidate(churnProvider);
+      ref.invalidate(levelsProvider);
+      ref.invalidate(survivalProvider);
+      ref.invalidate(versionImpactProvider);
+      ref.invalidate(associationsProvider);
+      ref.invalidate(anomaliesProvider);
+
+      final refreshedDays = ref.refresh(daysProvider.future);
+      await refreshedDays;
+      if (!mounted || ref.read(baseUrlProvider) != originUrl || _index != originIndex) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(originIndex == 7 ? 'Refreshed Data health' : 'Refreshed'),
+        duration: const Duration(seconds: 1),
+      ));
     } catch (_) {
-      // Error is already shown by the page's ErrorRetry view.
+      if (mounted && originIndex == 7 && _index == originIndex &&
+          ref.read(baseUrlProvider) == originUrl) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not refresh Data health')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
     }
   }
 
@@ -136,7 +150,13 @@ class _AppShellState extends ConsumerState<AppShell> {
           Expanded(
             child: Column(
               children: [
-                FilterBar(onRefresh: _refresh),
+                FilterBar(
+                  onRefresh: _refresh,
+                  storageScope: _index == 7,
+                  refreshing: _index == 7
+                      ? _refreshing || ref.watch(daysProvider).isLoading
+                      : _refreshing,
+                ),
                 const Divider(height: 1),
                 Expanded(
                   child: IndexedStack(
