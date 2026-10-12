@@ -359,7 +359,8 @@ class _VersionImpactCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'Version impact requires at least 2 versions with ≥ 20 players to compare.',
+            'Version impact requires at least 2 versions with at least '
+            '$minAnalysisPlayers players each to compare.',
             style: theme.textTheme.bodyMedium,
           ),
         ),

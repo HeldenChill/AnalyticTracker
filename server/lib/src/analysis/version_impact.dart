@@ -96,7 +96,7 @@ SurvivalResult analyzeSurvivalData({
   );
 }
 
-/// Compares target version with previous chronological version having >= 20 players (spec §6d).
+/// Compares target version with previous chronological version having at least minAnalysisPlayers players.
 VersionImpactResult analyzeVersionImpactData({
   required List<String> chronologicalVersions,
   required Map<String, List<PlayerVersionData>> playersByVersion,

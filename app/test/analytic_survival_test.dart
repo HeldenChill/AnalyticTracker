@@ -165,4 +165,30 @@ void main() {
             'Not enough players in this range to analyze survival'),
         findsOneWidget);
   });
+
+  testWidgets('version impact empty state uses ten-player cohort policy', (t) async {
+    const survival = SurvivalResult(players: 10, by: 'version', reason: null,
+      curves: [SurvivalCurve(group: '1.0', players: 10, events: 0,
+        censored: 10, medianDays: null, points: [
+          SurvivalPoint(day: 0, survival: 1, ciLower: 1, ciUpper: 1,
+            atRisk: 10, events: 0, censored: 0),
+        ])], logRank: null);
+    const impact = VersionImpactResult(targetVersion: '', targetPlayers: 0,
+      baselineVersion: '', baselinePlayers: 0, metrics: [],
+      availableVersions: [], reason: 'too_few_players');
+    final client = _FakeApiClient(survival, impact);
+    addTearDown(client.close);
+    await t.pumpWidget(ProviderScope(
+      overrides: [apiClientProvider.overrideWithValue(client)],
+      child: const MaterialApp(home: Scaffold(body: SurvivalTab())),
+    ));
+    await t.pumpAndSettle();
+    final message = find.text(
+      'Version impact requires at least 2 versions with at least '
+      '$minAnalysisPlayers players each to compare.');
+    await t.scrollUntilVisible(message, 200,
+      scrollable: find.byType(Scrollable).first);
+    expect(message, findsOneWidget);
+    expect(find.textContaining('20 players'), findsNothing);
+  });
 }
