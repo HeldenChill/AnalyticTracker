@@ -174,105 +174,119 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
               .label,
       };
 
-      final barGroups = <BarChartGroupData>[];
-      for (var ord = 0; ord < allBucketX.length; ord++) {
-        final curX = ordinalToX[ord]!;
-        final rods = <BarChartRodData>[];
-        for (final s in sortedSeries) {
-          final p = s.points.where((p) => p.x == curX).firstOrNull;
-          if (p != null && p.value != null) {
-            final slot = _registry.slotFor(s.id);
-            final style = resolveSeriesVisualStyle(
-              palette: palette,
-              slot: slot,
-              seriesId: s.id,
-              outline: theme.colorScheme.onSurface,
-            );
-            rods.add(
-              BarChartRodData(
-                toY: p.value!,
-                color: style.color,
-                borderSide: style.rodBorder,
-                width: 14,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            );
-          }
-        }
-        if (rods.isNotEmpty) {
-          barGroups.add(BarChartGroupData(x: ord, barRods: rods));
-        }
-      }
-
       final topology =
           'bars;${allBucketX.join(',')};${[
             for (final s in sortedSeries)
               '${s.id}:${[for (final p in s.points) '${p.x}:${p.value == null}'].join(',')}'
           ].join(';')}';
 
-      final barData = BarChartData(
-        minY: bounds.minY,
-        maxY: bounds.maxY,
-        barGroups: barGroups,
-        titlesData: FlTitlesData(
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 28,
-              getTitlesWidget: (val, meta) {
-                final label = ordinalToLabel[val.toInt()];
-                if (label == null) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(top: 6.0),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 44,
-              getTitlesWidget: (val, meta) {
-                if (val == meta.min || val == meta.max) {
-                  return const SizedBox.shrink();
-                }
-                return Text(
-                  widget.percentage
-                      ? '${(val * 100).toStringAsFixed(0)}%'
-                      : _formatValue(val),
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (val) => FlLine(
-            color: theme.dividerColor.withValues(alpha: 0.4),
-            strokeWidth: 1,
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-      );
+      plotWidget = LayoutBuilder(
+        builder: (context, constraints) {
+          final usableWidth = constraints.maxWidth;
+          if (!usableWidth.isFinite || usableWidth <= 0) {
+            return const SizedBox.shrink();
+          }
+          final bucketCount = allBucketX.length;
+          final seriesCount = sortedSeries.length;
+          final rodWidth = math.min(
+            14.0,
+            usableWidth / (2 * bucketCount * math.max(1, seriesCount)),
+          );
 
-      plotWidget = BarChart(
-        key: ValueKey(topology),
-        barData,
-        duration: duration,
+          final barGroups = <BarChartGroupData>[];
+          for (var ord = 0; ord < allBucketX.length; ord++) {
+            final curX = ordinalToX[ord]!;
+            final rods = <BarChartRodData>[];
+            for (final s in sortedSeries) {
+              final p = s.points.where((p) => p.x == curX).firstOrNull;
+              if (p != null && p.value != null) {
+                final slot = _registry.slotFor(s.id);
+                final style = resolveSeriesVisualStyle(
+                  palette: palette,
+                  slot: slot,
+                  seriesId: s.id,
+                  outline: theme.colorScheme.onSurface,
+                );
+                rods.add(
+                  BarChartRodData(
+                    toY: p.value!,
+                    color: style.color,
+                    borderSide: style.rodBorder,
+                    width: rodWidth,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                );
+              }
+            }
+            barGroups.add(BarChartGroupData(x: ord, barRods: rods, barsSpace: 0));
+          }
+
+          final barData = BarChartData(
+            alignment: BarChartAlignment.spaceAround,
+            minY: bounds.minY,
+            maxY: bounds.maxY,
+            barGroups: barGroups,
+            titlesData: FlTitlesData(
+              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 28,
+                  getTitlesWidget: (val, meta) {
+                    final label = ordinalToLabel[val.toInt()];
+                    if (label == null) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 6.0),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 44,
+                  getTitlesWidget: (val, meta) {
+                    if (val == meta.min || val == meta.max) {
+                      return const SizedBox.shrink();
+                    }
+                    return Text(
+                      widget.percentage
+                          ? '${(val * 100).toStringAsFixed(0)}%'
+                          : _formatValue(val),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (val) => FlLine(
+                color: theme.dividerColor.withValues(alpha: 0.4),
+                strokeWidth: 1,
+              ),
+            ),
+            borderData: FlBorderData(show: false),
+          );
+
+          return BarChart(
+            key: ValueKey(topology),
+            barData,
+            duration: duration,
+          );
+        },
       );
     } else {
       // Line or Area chart

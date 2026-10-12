@@ -7,6 +7,7 @@ import 'package:analytic_app/src/widgets/charts/ranked_bar_chart.dart';
 import 'package:analytic_app/src/widgets/charts/time_series_chart.dart';
 import 'package:analytic_app/src/widgets/format.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:fl_chart/src/extensions/bar_chart_data_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -267,9 +268,48 @@ void main() {
       ),
     );
     final d = t.widget<BarChart>(find.byType(BarChart)).data;
-    expect(d.barGroups.map((g) => g.x), [0, 2]);
-    expect(d.barGroups.expand((g) => g.barRods).every((r) => r.toY == 0), isTrue);
+    expect(d.barGroups.map((g) => g.x), [0, 1, 2]);
+    expect(d.barGroups.map((g) => g.barRods.length), [1, 0, 1]);
+    expect(d.barGroups[0].barRods.single.toY, 0);
+    expect(d.barGroups[2].barRods.single.toY, 0);
     expect(d.maxY, greaterThan(d.minY));
+  });
+
+  testWidgets('blank bar bucket keeps physical space without a zero rod', (t) async {
+    await pumpRepairChart(
+      t,
+      const TimeSeriesChart(
+        kind: TimeChartKind.bars,
+        unit: 'events',
+        series: [
+          ChartSeries(
+            id: 'primary',
+            label: 'Current',
+            points: [
+              ChartPoint(.1, 4, label: 'first'),
+              ChartPoint(.2, null, label: 'missing'),
+              ChartPoint(900, 8, label: 'last'),
+            ],
+          ),
+        ],
+      ),
+      reduced: true,
+    );
+    final d = t.widget<BarChart>(find.byType(BarChart)).data;
+    expect(d.barGroups.map((g) => g.x), [0, 1, 2]);
+    expect(d.barGroups[1].barRods, isEmpty);
+    expect(d.barGroups[0].barRods.single.toY, 4);
+    expect(d.barGroups[2].barRods.single.toY, 8);
+    final positions = d.calculateGroupsX(240);
+    expect(positions.length, 3);
+    expect(positions[0], lessThan(positions[1]));
+    expect(positions[1], lessThan(positions[2]));
+    expect(
+      (positions[2] - positions[0]) / 2,
+      closeTo(positions[1] - positions[0], .01),
+    );
+    expect(find.text('missing'), findsOneWidget);
+    expect(t.takeException(), isNull);
   });
 
   testWidgets('fractional bar buckets retain separate ordinal identities', (t) async {
