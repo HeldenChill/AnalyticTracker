@@ -558,4 +558,90 @@ void main() {
     expect(ignored(), isFalse);
     expect(t.hasRunningAnimations, isFalse);
   });
+
+  testWidgets('actual renderer phase matches gate and topology', (t) async {
+    Future<void> show(double y, {bool gap = false, bool active = true, bool reduced = false}) =>
+        pumpRepairChart(
+          t,
+          TimeSeriesChart(
+            key: const ValueKey('stable-chart'),
+            unit: 'events',
+            series: [
+              ChartSeries(
+                id: 'primary',
+                label: 'Current',
+                points: [
+                  ChartPoint(0, y, label: 'a'),
+                  ChartPoint(1, gap ? null : 2, label: 'b'),
+                ],
+              ),
+            ],
+          ),
+          active: active,
+          reduced: reduced,
+        );
+    bool gated() =>
+        t.widget<IgnorePointer>(find.byKey(const ValueKey('chart-motion-plot'))).ignoring;
+    await show(1);
+    final initialKey = t.widget<LineChart>(find.byType(LineChart)).key;
+    expect(t.widget<LineChart>(find.byType(LineChart)).duration, Duration.zero);
+    expect(gated(), isTrue);
+    await t.pump(const Duration(milliseconds: 401));
+    expect(gated(), isFalse);
+    await show(3);
+    expect(t.widget<LineChart>(find.byType(LineChart)).key, initialKey);
+    expect(t.widget<LineChart>(find.byType(LineChart)).duration, const Duration(milliseconds: 350));
+    expect(gated(), isTrue);
+    await t.pump(const Duration(milliseconds: 351));
+    expect(gated(), isFalse);
+    await show(3, gap: true);
+    expect(t.widget<LineChart>(find.byType(LineChart)).key, isNot(initialKey));
+    expect(t.widget<LineChart>(find.byType(LineChart)).duration, Duration.zero);
+    final context = t.element(find.byType(LineChart));
+    expect(ChartMotion.of(context).markOpacity, lessThan(1));
+    await show(4, gap: true, active: false);
+    expect(t.widget<LineChart>(find.byType(LineChart)).duration, Duration.zero);
+    expect(ChartMotion.of(t.element(find.byType(LineChart))).markOpacity, 1);
+    expect(gated(), isFalse);
+    await show(4, gap: true, active: true);
+    expect(gated(), isFalse);
+    expect(t.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('ranked horizontal bar motion synchronizes geometry and opacity', (t) async {
+    Future<void> show(double val, {bool active = true, bool reduced = false}) =>
+        pumpRepairChart(
+          t,
+          RankedBarChart(
+            values: [
+              RankedValue('a', 'Alpha', val),
+              const RankedValue('max', 'Max', 100),
+            ],
+            unit: 'events',
+          ),
+          active: active,
+          reduced: reduced,
+        );
+
+    await show(50);
+    expect(find.text('Alpha'), findsOneWidget);
+    expect(find.text('50 events'), findsOneWidget);
+    final context = t.element(find.byKey(const ValueKey('ranked-bar:a')));
+    expect(ChartMotion.of(context).markOpacity, lessThan(1.0));
+    await t.pump(const Duration(milliseconds: 401));
+    expect(ChartMotion.of(t.element(find.byKey(const ValueKey('ranked-bar:a')))).markOpacity, 1.0);
+    final initialWidth = t.getRect(find.byKey(const ValueKey('ranked-bar:a'))).width;
+
+    await show(80);
+    await t.pump(const Duration(milliseconds: 175));
+    final midWidth = t.getRect(find.byKey(const ValueKey('ranked-bar:a'))).width;
+    expect(midWidth, greaterThan(initialWidth));
+    await t.pump(const Duration(milliseconds: 176));
+    final endWidth = t.getRect(find.byKey(const ValueKey('ranked-bar:a'))).width;
+    expect(endWidth, greaterThan(midWidth));
+
+    await show(20, reduced: true);
+    expect(t.hasRunningAnimations, isFalse);
+    expect(find.text('20 events'), findsOneWidget);
+  });
 }

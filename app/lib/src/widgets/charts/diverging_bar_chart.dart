@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/analytics_tokens.dart';
 import '../format.dart';
+import 'chart_motion.dart';
 import 'ranked_bar_chart.dart';
 
 class DivergingBarChart extends StatelessWidget {
@@ -61,113 +62,149 @@ class DivergingBarChart extends StatelessWidget {
     const valueWidth = 90.0;
     const spacing = 8.0;
 
-    return Stack(
-      children: [
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final v in values)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: labelWidth,
-                      child: Text(
-                        v.label,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: spacing),
-                    Expanded(
-                      child: SizedBox(
-                        height: 20,
-                        child: Row(
-                          children: [
-                            // Left half: negative
-                            Expanded(
-                              child: Align(
-                                alignment: Alignment.centerRight,
-                                child: v.value < 0
-                                    ? FractionallySizedBox(
-                                        widthFactor:
-                                            (v.value.abs() / m).clamp(0.0, 1.0),
-                                        child: Container(
-                                          key: ValueKey('ranked-bar:${v.id}'),
-                                          height: 20,
-                                          decoration: BoxDecoration(
-                                            color: tokens.bad,
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                          ),
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(),
+    final topology = values
+        .map((v) => '${v.id}:${v.value < 0 ? 'neg' : v.value > 0 ? 'pos' : 'zero'}')
+        .join(';');
+    final revision = values.map((v) => '${v.id}:${v.value}:${v.label}').join(';');
+
+    return ChartMotion(
+      dataRevision: revision,
+      topologyRevision: topology,
+      fadeChild: false,
+      child: Builder(
+        builder: (context) {
+          final motion = ChartMotion.of(context);
+          final badColor = tokens.bad.withValues(
+            alpha: tokens.bad.a * motion.markOpacity,
+          );
+          final goodColor = tokens.good.withValues(
+            alpha: tokens.good.a * motion.markOpacity,
+          );
+
+          return Stack(
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final v in values)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: labelWidth,
+                            child: Text(
+                              v.label,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: spacing),
+                          Expanded(
+                            child: SizedBox(
+                              height: 20,
+                              child: Row(
+                                children: [
+                                  // Left half: negative
+                                  Expanded(
+                                    child: Align(
+                                      alignment: Alignment.centerRight,
+                                      child: v.value < 0
+                                          ? TweenAnimationBuilder<double>(
+                                              key: ValueKey('ranked-bar:${v.id}'),
+                                              tween: Tween<double>(
+                                                end: (v.value.abs() / m).clamp(0.0, 1.0),
+                                              ),
+                                              duration: motion.geometryDuration,
+                                              builder: (context, widthFactor, _) {
+                                                return FractionallySizedBox(
+                                                  widthFactor: widthFactor,
+                                                  child: Container(
+                                                    height: 20,
+                                                    decoration: BoxDecoration(
+                                                      color: badColor,
+                                                      borderRadius:
+                                                          BorderRadius.circular(4),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            )
+                                          : const SizedBox.shrink(),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  // Right half: positive
+                                  Expanded(
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: v.value > 0
+                                          ? TweenAnimationBuilder<double>(
+                                              key: ValueKey('ranked-bar:${v.id}'),
+                                              tween: Tween<double>(
+                                                end: (v.value / m).clamp(0.0, 1.0),
+                                              ),
+                                              duration: motion.geometryDuration,
+                                              builder: (context, widthFactor, _) {
+                                                return FractionallySizedBox(
+                                                  widthFactor: widthFactor,
+                                                  child: Container(
+                                                    height: 20,
+                                                    decoration: BoxDecoration(
+                                                      color: goodColor,
+                                                      borderRadius:
+                                                          BorderRadius.circular(4),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            )
+                                          : const SizedBox.shrink(),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(width: 2),
-                            // Right half: positive
-                            Expanded(
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: v.value > 0
-                                    ? FractionallySizedBox(
-                                        widthFactor:
-                                            (v.value / m).clamp(0.0, 1.0),
-                                        child: Container(
-                                          key: ValueKey('ranked-bar:${v.id}'),
-                                          height: 20,
-                                          decoration: BoxDecoration(
-                                            color: tokens.good,
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                          ),
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(),
+                          ),
+                          const SizedBox(width: spacing),
+                          SizedBox(
+                            width: valueWidth,
+                            child: Text(
+                              unit.isEmpty
+                                  ? formatVal(v.value)
+                                  : '${formatVal(v.value)} $unit',
+                              textAlign: TextAlign.end,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: spacing),
-                    SizedBox(
-                      width: valueWidth,
-                      child: Text(
-                        unit.isEmpty
-                            ? formatVal(v.value)
-                            : '${formatVal(v.value)} $unit',
-                        textAlign: TextAlign.end,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
+                ],
+              ),
+              // Single central zero guide line
+              Positioned.fill(
+                left: labelWidth + spacing,
+                right: valueWidth + spacing,
+                child: Align(
+                  alignment: Alignment.center,
+                  child: Container(
+                    key: const ValueKey('diverging-zero-guide'),
+                    width: 2,
+                    color: theme.dividerColor,
+                  ),
                 ),
               ),
-          ],
-        ),
-        // Single central zero guide line
-        Positioned.fill(
-          left: labelWidth + spacing,
-          right: valueWidth + spacing,
-          child: Align(
-            alignment: Alignment.center,
-            child: Container(
-              key: const ValueKey('diverging-zero-guide'),
-              width: 2,
-              color: theme.dividerColor,
-            ),
-          ),
-        ),
-      ],
+            ],
+          );
+        },
+      ),
     );
   }
 }

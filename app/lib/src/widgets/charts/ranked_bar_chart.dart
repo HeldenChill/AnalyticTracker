@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/analytics_tokens.dart';
 import '../format.dart';
+import 'chart_motion.dart';
 
 class RankedValue {
   const RankedValue(this.id, this.label, this.value, {this.detail});
@@ -70,66 +71,91 @@ class RankedBarChart extends StatelessWidget {
       return fmtCount(v.round());
     }
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final v in values) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 140,
-                  child: Text(
-                    v.label,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Container(
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: FractionallySizedBox(
-                        widthFactor: maxVal > 0 ? (v.value / maxVal).clamp(0.0, 1.0) : 0.0,
+    final topology = values.map((v) => v.id).join(';');
+    final revision = values.map((v) => '${v.id}:${v.value}:${v.label}').join(';');
+
+    return ChartMotion(
+      dataRevision: revision,
+      topologyRevision: topology,
+      fadeChild: false,
+      child: Builder(
+        builder: (context) {
+          final motion = ChartMotion.of(context);
+          final markColor = primaryColor.withValues(
+            alpha: primaryColor.a * motion.markOpacity,
+          );
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final v in values) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 140,
+                        child: Text(
+                          v.label,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
                         child: Container(
-                          key: ValueKey('ranked-bar:${v.id}'),
                           height: 20,
                           decoration: BoxDecoration(
-                            color: primaryColor,
+                            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: TweenAnimationBuilder<double>(
+                              key: ValueKey('ranked-bar:${v.id}'),
+                              tween: Tween<double>(
+                                end: maxVal > 0 ? (v.value / maxVal).clamp(0.0, 1.0) : 0.0,
+                              ),
+                              duration: motion.geometryDuration,
+                              builder: (context, widthFactor, _) {
+                                return FractionallySizedBox(
+                                  widthFactor: widthFactor,
+                                  child: Container(
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      color: markColor,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 90,
-                  child: Text(
-                    unit.isEmpty ? formatVal(v.value) : '${formatVal(v.value)} $unit',
-                    textAlign: TextAlign.end,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 90,
+                        child: Text(
+                          unit.isEmpty ? formatVal(v.value) : '${formatVal(v.value)} $unit',
+                          textAlign: TextAlign.end,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      ],
+            ],
+          );
+        },
+      ),
     );
   }
 }

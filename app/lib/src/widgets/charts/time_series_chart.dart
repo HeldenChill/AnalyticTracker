@@ -5,7 +5,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/analytics_tokens.dart';
-import '../../theme/motion_policy.dart';
 import '../format.dart';
 import 'chart_models.dart';
 import 'chart_motion.dart';
@@ -153,7 +152,25 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
       },
     ]);
 
-    final duration = motionDuration(context, MotionKind.chartUpdate);
+    final String topology;
+    if (widget.kind == TimeChartKind.bars) {
+      final allBucketX = <double>{
+        for (final s in sortedSeries)
+          for (final p in s.points) p.x
+      }.toList()
+        ..sort();
+      topology =
+          'bars;${allBucketX.join(',')};${[
+            for (final s in sortedSeries)
+              '${s.id}:${[for (final p in s.points) '${p.x}:${p.value == null}'].join(',')}'
+          ].join(';')}';
+    } else {
+      topology =
+          '${widget.kind.name};${[
+            for (final s in sortedSeries)
+              '${s.id}:${[for (final p in s.points) '${p.x}:${p.value == null}:${p.incomplete}'].join(',')}'
+          ].join(';')}';
+    }
 
     Widget plotWidget;
 
@@ -174,14 +191,9 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
               .label,
       };
 
-      final topology =
-          'bars;${allBucketX.join(',')};${[
-            for (final s in sortedSeries)
-              '${s.id}:${[for (final p in s.points) '${p.x}:${p.value == null}'].join(',')}'
-          ].join(';')}';
-
       plotWidget = LayoutBuilder(
         builder: (context, constraints) {
+          final motion = ChartMotion.of(context);
           final usableWidth = constraints.maxWidth;
           if (!usableWidth.isFinite || usableWidth <= 0) {
             return const SizedBox.shrink();
@@ -209,11 +221,22 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                   outline: theme.colorScheme.onSurface,
                 );
                 rodSources[(ord, rods.length)] = (s, p);
+                final markColor = style.color.withValues(
+                  alpha: style.color.a * motion.markOpacity,
+                );
+                final rodBorder = style.rodBorder == BorderSide.none
+                    ? BorderSide.none
+                    : BorderSide(
+                        color: style.rodBorder.color.withValues(
+                          alpha: style.rodBorder.color.a * motion.markOpacity,
+                        ),
+                        width: style.rodBorder.width,
+                      );
                 rods.add(
                   BarChartRodData(
                     toY: p.value!,
-                    color: style.color,
-                    borderSide: style.rodBorder,
+                    color: markColor,
+                    borderSide: rodBorder,
                     width: rodWidth,
                     borderRadius: BorderRadius.circular(2),
                   ),
@@ -313,73 +336,75 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
           return BarChart(
             key: ValueKey(topology),
             barData,
-            duration: duration,
+            duration: motion.geometryDuration,
           );
         },
       );
     } else {
       // Line or Area chart
-      final lineBarsData = <LineChartBarData>[];
-      final renderedSeriesIdByBarIndex = <int, String>{};
-
-      for (final s in sortedSeries) {
-        final slot = _registry.slotFor(s.id);
-        final style = resolveSeriesVisualStyle(
-          palette: palette,
-          slot: slot,
-          seriesId: s.id,
-          outline: theme.colorScheme.onSurface,
-        );
-        final segments = splitSeries(s.points);
-
-        for (final segment in segments) {
-          final pattern = segment.incomplete
-              ? const <int>[1, 4]
-              : style.lineDash;
-
-          final spots = [
-            for (final p in segment.points)
-              p.value == null ? FlSpot.nullSpot : FlSpot(p.x, p.value!),
-          ];
-
-          if (spots.isEmpty) continue;
-
-          final barIndex = lineBarsData.length;
-          renderedSeriesIdByBarIndex[barIndex] = s.id;
-
-          lineBarsData.add(
-            LineChartBarData(
-              spots: spots,
-              color: style.color,
-              dashArray: pattern,
-              dotData: FlDotData(show: spots.length == 1),
-              barWidth: 2.5,
-              belowBarData: BarAreaData(
-                show: widget.kind == TimeChartKind.area,
-                color: style.color.withValues(alpha: 0.15),
-              ),
-            ),
-          );
-        }
-      }
-
       final xToLabel = <double, String>{
         for (final s in sortedSeries)
           for (final p in s.points) p.x: p.label
       };
 
-      final topology =
-          '${widget.kind.name};${[
-            for (final s in sortedSeries)
-              '${s.id}:${[for (final p in s.points) '${p.x}:${p.value == null}:${p.incomplete}'].join(',')}'
-          ].join(';')}';
-
       plotWidget = LayoutBuilder(
         builder: (context, constraints) {
+          final motion = ChartMotion.of(context);
           final usableWidth = constraints.maxWidth;
           final maxTipWidth = usableWidth.isFinite
               ? math.max(1.0, math.min(280.0, usableWidth - 32))
               : 280.0;
+
+          final lineBarsData = <LineChartBarData>[];
+          final renderedSeriesIdByBarIndex = <int, String>{};
+
+          for (final s in sortedSeries) {
+            final slot = _registry.slotFor(s.id);
+            final style = resolveSeriesVisualStyle(
+              palette: palette,
+              slot: slot,
+              seriesId: s.id,
+              outline: theme.colorScheme.onSurface,
+            );
+            final segments = splitSeries(s.points);
+
+            for (final segment in segments) {
+              final pattern = segment.incomplete
+                  ? const <int>[1, 4]
+                  : style.lineDash;
+
+              final spots = [
+                for (final p in segment.points)
+                  p.value == null ? FlSpot.nullSpot : FlSpot(p.x, p.value!),
+              ];
+
+              if (spots.isEmpty) continue;
+
+              final barIndex = lineBarsData.length;
+              renderedSeriesIdByBarIndex[barIndex] = s.id;
+
+              final markColor = style.color.withValues(
+                alpha: style.color.a * motion.markOpacity,
+              );
+              lineBarsData.add(
+                LineChartBarData(
+                  spots: spots,
+                  color: markColor,
+                  dashArray: pattern,
+                  dotData: FlDotData(
+                    show: spots.length == 1,
+                    getDotPainter: (spot, percent, barData, index) =>
+                        FlDotCirclePainter(color: markColor, radius: 3),
+                  ),
+                  barWidth: 2.5,
+                  belowBarData: BarAreaData(
+                    show: widget.kind == TimeChartKind.area,
+                    color: markColor.withValues(alpha: 0.15 * motion.markOpacity),
+                  ),
+                ),
+              );
+            }
+          }
 
           final lineData = LineChartData(
             minX: bounds.minX,
@@ -479,7 +504,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
           return LineChart(
             key: ValueKey(topology),
             lineData,
-            duration: duration,
+            duration: motion.geometryDuration,
           );
         },
       );
@@ -555,6 +580,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
           height: math.max(200, widget.plotHeight),
           child: ChartMotion(
             dataRevision: revision,
+            topologyRevision: topology,
+            fadeChild: false,
             child: plotWidget,
           ),
         ),
