@@ -266,10 +266,49 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('battle'), findsOneWidget);
 
-      // Resize window from 1400 to 720
       tester.view.physicalSize = const Size(720, 1000);
       await tester.pumpAndSettle();
       expect(find.text('battle'), findsOneWidget);
     });
+
+    testWidgets('Analytic opens with reduced motion without ticker exception', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [apiClientProvider.overrideWithValue(_FakeApi())],
+          child: const MaterialApp(
+            home: MediaQuery(
+              data: MediaQueryData(disableAnimations: true),
+              child: Scaffold(body: AnalyticPage()),
+            ),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Analytic tab transition tolerates reduced-motion live toggle', (tester) async {
+      bool reduce = false;
+      late StateSetter setHost;
+      await tester.pumpWidget(ProviderScope(
+        overrides: [apiClientProvider.overrideWithValue(_FakeApi())],
+        child: MaterialApp(home: StatefulBuilder(builder: (context, update) {
+          setHost = update;
+          return MediaQuery(data: MediaQueryData(disableAnimations: reduce),
+            child: const Scaffold(body: AnalyticPage()));
+        })),
+      ));
+      await tester.pumpAndSettle();
+      tester.widget<TabBar>(find.byType(TabBar)).controller!.animateTo(4);
+      await tester.pump(const Duration(milliseconds: 50));
+      setHost(() => reduce = true);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(tester.widget<TabBar>(find.byType(TabBar)).controller!.index, 4);
+      setHost(() => reduce = false);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(tester.widget<TabBar>(find.byType(TabBar)).controller!.index, 4);
+    });
   });
 }
+

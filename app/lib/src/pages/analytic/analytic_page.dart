@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/navigation.dart';
+import '../../theme/motion_policy.dart';
 import 'anomalies_tab.dart';
 import 'associations_tab.dart';
 import 'churn_tab.dart';
@@ -18,7 +19,7 @@ class AnalyticPage extends ConsumerStatefulWidget {
 }
 
 class _AnalyticPageState extends ConsumerState<AnalyticPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController _controller;
   Duration _animationDuration = const Duration(milliseconds: 200);
 
@@ -52,14 +53,13 @@ class _AnalyticPageState extends ConsumerState<AnalyticPage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    final targetDuration = reduceMotion ? Duration.zero : const Duration(milliseconds: 200);
+    final targetDuration = motionDuration(context, MotionKind.tab);
     if (_animationDuration != targetDuration) {
-      final oldIndex = _controller.index;
+      final targetIndex = _controller.index.clamp(0, 5);
       _controller.removeListener(_handleTabChanged);
       _controller.dispose();
       _animationDuration = targetDuration;
-      _controller = _createController(oldIndex, _animationDuration);
+      _controller = _createController(targetIndex, _animationDuration);
     }
   }
 

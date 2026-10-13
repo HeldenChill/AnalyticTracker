@@ -80,10 +80,12 @@ class _PageSlotState extends State<_PageSlot> with SingleTickerProviderStateMixi
   late final AnimationController _controller;
   late final Animation<double> _fade;
   late final Animation<Offset> _slide;
+  late final FocusScopeNode _focusScopeNode;
 
   @override
   void initState() {
     super.initState();
+    _focusScopeNode = FocusScopeNode(debugLabel: 'PageSlot-${widget.index}');
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 180),
@@ -106,6 +108,11 @@ class _PageSlotState extends State<_PageSlot> with SingleTickerProviderStateMixi
   @override
   void didUpdateWidget(_PageSlot oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!widget.isActive && oldWidget.isActive) {
+      if (_focusScopeNode.hasFocus) {
+        _focusScopeNode.unfocus(disposition: UnfocusDisposition.scope);
+      }
+    }
     if (widget.isActive && !oldWidget.isActive) {
       final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
       if (reduceMotion) {
@@ -118,6 +125,7 @@ class _PageSlotState extends State<_PageSlot> with SingleTickerProviderStateMixi
 
   @override
   void dispose() {
+    _focusScopeNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -126,19 +134,26 @@ class _PageSlotState extends State<_PageSlot> with SingleTickerProviderStateMixi
   Widget build(BuildContext context) {
     return Offstage(
       offstage: !widget.isActive,
-      child: TickerMode(
-        enabled: widget.isActive,
-        child: IgnorePointer(
-          ignoring: !widget.isActive,
-          child: ExcludeSemantics(
-            excluding: !widget.isActive,
-            child: FadeTransition(
-              opacity: _fade,
-              child: SlideTransition(
-                position: _slide,
-                child: KeyedSubtree(
-                  key: PageStorageKey('studio-page-${widget.index}'),
-                  child: widget.child,
+      child: FocusScope(
+        node: _focusScopeNode,
+        canRequestFocus: widget.isActive,
+        child: ExcludeFocus(
+          excluding: !widget.isActive,
+          child: TickerMode(
+            enabled: widget.isActive,
+            child: IgnorePointer(
+              ignoring: !widget.isActive,
+              child: ExcludeSemantics(
+                excluding: !widget.isActive,
+                child: FadeTransition(
+                  opacity: _fade,
+                  child: SlideTransition(
+                    position: _slide,
+                    child: KeyedSubtree(
+                      key: PageStorageKey('studio-page-${widget.index}'),
+                      child: widget.child,
+                    ),
+                  ),
                 ),
               ),
             ),

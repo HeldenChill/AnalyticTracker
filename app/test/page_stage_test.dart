@@ -249,5 +249,28 @@ void main() {
       await tester.pumpAndSettle();
       expect(fade.opacity.value, 1.0);
     });
+
+    testWidgets('hidden page cannot retain keyboard focus', (tester) async {
+      final focus = FocusNode();
+      addTearDown(focus.dispose);
+      Future<void> render(int index) => tester.pumpWidget(MaterialApp(
+            home: Scaffold(
+              body: PageStage(
+                index: index,
+                pages: [TextField(focusNode: focus), const Text('other')],
+              ),
+            ),
+          ));
+      await render(0);
+      focus.requestFocus();
+      await tester.pump();
+      expect(focus.hasFocus, isTrue);
+      await render(1);
+      await tester.pumpAndSettle();
+      expect(focus.hasFocus, isFalse, reason: 'hidden page must not keep keyboard input');
+      focus.requestFocus();
+      await tester.pump();
+      expect(focus.hasFocus, isFalse, reason: 'hidden page must not accept focus request');
+    });
   });
 }
