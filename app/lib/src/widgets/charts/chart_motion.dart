@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/motion_policy.dart';
+
 enum ChartMotionPhase { entrance, update, topology, settled }
 
 class ChartMotionSnapshot {
@@ -82,11 +84,9 @@ class _ChartMotionState extends State<ChartMotion> with SingleTickerProviderStat
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final isReduced = (MediaQuery.maybeOf(context)?.disableAnimations ?? false) ||
-        (MediaQuery.maybeOf(context)?.accessibleNavigation ?? false);
-    final isTickerActive = TickerMode.valuesOf(context).enabled;
+    final allowed = chartAnimationsAllowed(context);
 
-    if (isReduced || !isTickerActive) {
+    if (!allowed) {
       if (_controller.isAnimating) {
         _controller.stop();
       }
@@ -106,13 +106,11 @@ class _ChartMotionState extends State<ChartMotion> with SingleTickerProviderStat
   @override
   void didUpdateWidget(covariant ChartMotion oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final isReduced = (MediaQuery.maybeOf(context)?.disableAnimations ?? false) ||
-        (MediaQuery.maybeOf(context)?.accessibleNavigation ?? false);
-    final isTickerActive = TickerMode.valuesOf(context).enabled;
+    final allowed = chartAnimationsAllowed(context);
 
     if (widget.topologyRevision != oldWidget.topologyRevision) {
       _consumedEntrance = true;
-      if (isReduced || !isTickerActive) {
+      if (!allowed) {
         _controller.stop();
         _controller.value = 1.0;
         _phase = ChartMotionPhase.settled;
@@ -123,7 +121,7 @@ class _ChartMotionState extends State<ChartMotion> with SingleTickerProviderStat
       }
     } else if (widget.dataRevision != oldWidget.dataRevision) {
       _consumedEntrance = true;
-      if (isReduced || !isTickerActive) {
+      if (!allowed) {
         _controller.stop();
         _controller.value = 1.0;
         _phase = ChartMotionPhase.settled;
@@ -142,7 +140,7 @@ class _ChartMotionState extends State<ChartMotion> with SingleTickerProviderStat
   }
 
   ChartMotionSnapshot _buildSnapshot(bool isRunning) {
-    if (!isRunning || _phase == ChartMotionPhase.settled) {
+    if (!chartAnimationsAllowed(context) || !isRunning || _phase == ChartMotionPhase.settled) {
       return const ChartMotionSnapshot(
         phase: ChartMotionPhase.settled,
         geometryDuration: Duration.zero,

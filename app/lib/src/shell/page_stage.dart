@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/motion_policy.dart';
+
 /// Hosts top-level studio pages in a persistent stack.
 ///
 /// Features:
@@ -81,6 +83,7 @@ class _PageSlotState extends State<_PageSlot> with SingleTickerProviderStateMixi
   late final Animation<double> _fade;
   late final Animation<Offset> _slide;
   late final FocusScopeNode _focusScopeNode;
+  bool _initialized = false;
 
   @override
   void initState() {
@@ -95,11 +98,24 @@ class _PageSlotState extends State<_PageSlot> with SingleTickerProviderStateMixi
       begin: const Offset(0, 0.02),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+  }
 
-    if (widget.isActive) {
-      if (widget.animateIn) {
-        _controller.forward(from: 0.0);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final duration = motionDuration(context, MotionKind.navigation);
+    final allowed = duration > Duration.zero && TickerMode.valuesOf(context).enabled;
+    if (!_initialized) {
+      _initialized = true;
+      if (!widget.isActive || !widget.animateIn || !allowed) {
+        _controller.value = 1.0;
       } else {
+        _controller.duration = duration;
+        _controller.forward(from: 0.0);
+      }
+    } else {
+      if (!allowed && _controller.isAnimating) {
+        _controller.stop();
         _controller.value = 1.0;
       }
     }
@@ -114,10 +130,12 @@ class _PageSlotState extends State<_PageSlot> with SingleTickerProviderStateMixi
       }
     }
     if (widget.isActive && !oldWidget.isActive) {
-      final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-      if (reduceMotion) {
+      final duration = motionDuration(context, MotionKind.navigation);
+      final allowed = duration > Duration.zero && TickerMode.valuesOf(context).enabled;
+      if (!allowed) {
         _controller.value = 1.0;
       } else {
+        _controller.duration = duration;
         _controller.forward(from: 0.0);
       }
     }

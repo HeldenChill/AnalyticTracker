@@ -6,6 +6,7 @@ import '../../providers.dart';
 import '../../state/navigation.dart';
 import '../../state/refresh.dart';
 import '../../theme/analytics_tokens.dart';
+import '../../theme/motion_policy.dart';
 import '../../widgets/charts/diverging_bar_chart.dart';
 import '../../widgets/charts/ranked_bar_chart.dart';
 import '../../widgets/format.dart';
@@ -192,7 +193,7 @@ class ChurnTab extends ConsumerWidget {
             else
               for (final rule in r.rules)
                 AnimatedSize(
-                  duration: const Duration(milliseconds: 220),
+                  duration: motionDuration(context, MotionKind.expansion),
                   child: Card(
                     margin: const EdgeInsets.only(bottom: 8),
                     child: Padding(

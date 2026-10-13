@@ -712,4 +712,72 @@ void main() {
       }
     }
   });
+
+  for (final reduced in [false, true]) {
+    testWidgets('mid-animation ${reduced ? 'reduced motion' : 'inactive ticker'} snaps ranked geometry', (t) async {
+      Future<void> render(double n, {bool active = true, bool reduce = false}) => pumpRepairChart(t,
+        RankedBarChart(values: [RankedValue('a', 'A', n), const RankedValue('b', 'B', 20)],
+          unit: 'events'), active: active, reduced: reduce);
+      double factor() => t.widget<FractionallySizedBox>(find.descendant(
+        of: find.byKey(const ValueKey('ranked-bar:a')), matching: find.byType(FractionallySizedBox))).widthFactor!;
+      await render(10); await t.pump(const Duration(milliseconds: 401));
+      await render(20); await t.pump(const Duration(milliseconds: 100));
+      expect(factor(), lessThan(1));
+      await render(20, active: reduced, reduce: reduced);
+      expect(factor(), 1);
+    });
+
+    testWidgets('mid-animation ${reduced ? 'reduced motion' : 'inactive ticker'} snaps diverging positive geometry', (t) async {
+      Future<void> render(double n, {bool active = true, bool reduce = false}) => pumpRepairChart(t,
+        DivergingBarChart(values: [RankedValue('a', 'A', n), const RankedValue('b', 'B', -20)],
+          unit: 'events'), active: active, reduced: reduce);
+      double factor() => t.widget<FractionallySizedBox>(find.descendant(
+        of: find.byKey(const ValueKey('ranked-bar:a')), matching: find.byType(FractionallySizedBox))).widthFactor!;
+      await render(10); await t.pump(const Duration(milliseconds: 401));
+      await render(20); await t.pump(const Duration(milliseconds: 100));
+      expect(factor(), lessThan(1));
+      await render(20, active: reduced, reduce: reduced);
+      expect(factor(), 1);
+    });
+
+    testWidgets('mid-animation ${reduced ? 'reduced motion' : 'inactive ticker'} snaps diverging negative geometry', (t) async {
+      Future<void> render(double n, {bool active = true, bool reduce = false}) => pumpRepairChart(t,
+        DivergingBarChart(values: [RankedValue('a', 'A', -n), const RankedValue('b', 'B', 20)],
+          unit: 'events'), active: active, reduced: reduce);
+      double factor() => t.widget<FractionallySizedBox>(find.descendant(
+        of: find.byKey(const ValueKey('ranked-bar:a')), matching: find.byType(FractionallySizedBox))).widthFactor!;
+      await render(10); await t.pump(const Duration(milliseconds: 401));
+      await render(20); await t.pump(const Duration(milliseconds: 100));
+      expect(factor(), lessThan(1));
+      await render(20, active: reduced, reduce: reduced);
+      expect(factor(), 1);
+    });
+  }
+
+  testWidgets('mid-animation accessibleNavigation snaps ranked geometry', (t) async {
+    Future<void> render(double n, {bool accessible = false}) => t.pumpWidget(MaterialApp(
+      home: MediaQuery(
+        data: MediaQueryData(accessibleNavigation: accessible),
+        child: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 320,
+              child: RankedBarChart(
+                values: [RankedValue('a', 'A', n), const RankedValue('b', 'B', 20)],
+                unit: 'events',
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+    double factor() => t.widget<FractionallySizedBox>(find.descendant(
+      of: find.byKey(const ValueKey('ranked-bar:a')), matching: find.byType(FractionallySizedBox))).widthFactor!;
+    await render(10); await t.pump(const Duration(milliseconds: 401));
+    await render(20); await t.pump(const Duration(milliseconds: 100));
+    expect(factor(), lessThan(1));
+    await render(20, accessible: true);
+    expect(factor(), 1);
+  });
 }

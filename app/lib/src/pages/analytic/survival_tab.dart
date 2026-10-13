@@ -7,6 +7,7 @@ import '../../providers.dart';
 import '../../state/navigation.dart';
 import '../../state/refresh.dart';
 import '../../theme/analytics_tokens.dart';
+import '../../theme/motion_policy.dart';
 import '../../widgets/charts/chart_frame.dart';
 import '../../widgets/charts/chart_models.dart';
 import '../../widgets/charts/chart_motion.dart';
@@ -225,8 +226,14 @@ class _SurvivalChartState extends State<_SurvivalChart> {
         ],
         child: SizedBox(
           height: 260,
-          child: LineChart(
-            LineChartData(
+          child: Builder(
+            builder: (rendererContext) {
+              final motion = ChartMotion.of(rendererContext);
+              final allowed = chartAnimationsAllowed(rendererContext);
+              return LineChart(
+                key: ValueKey('survival-chart-$allowed'),
+                duration: motion.geometryDuration,
+                LineChartData(
               minX: 0,
               maxX: maxDay.toDouble(),
               minY: 0.0,
@@ -328,8 +335,10 @@ class _SurvivalChartState extends State<_SurvivalChart> {
                   ),
               ],
             ),
-          ),
-        ),
+          );
+        },
+      ),
+    ),
       ),
     );
   }

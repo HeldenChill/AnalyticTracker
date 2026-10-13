@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../theme/analytics_tokens.dart';
+import '../../theme/motion_policy.dart';
 import '../format.dart';
 import 'chart_motion.dart';
 
@@ -132,6 +133,8 @@ class RankedBarChart extends StatelessWidget {
               }
 
               Widget buildBar(RankedValue v) {
+                final targetWidth = maxVal > 0 ? (v.value / maxVal).clamp(0.0, 1.0) : 0.0;
+                final allowed = chartAnimationsAllowed(context);
                 return Container(
                   height: 20,
                   decoration: BoxDecoration(
@@ -140,24 +143,35 @@ class RankedBarChart extends StatelessWidget {
                   ),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: TweenAnimationBuilder<double>(
+                    child: KeyedSubtree(
                       key: ValueKey('ranked-bar:${v.id}'),
-                      tween: Tween<double>(
-                        end: maxVal > 0 ? (v.value / maxVal).clamp(0.0, 1.0) : 0.0,
-                      ),
-                      duration: motion.geometryDuration,
-                      builder: (context, widthFactor, _) {
-                        return FractionallySizedBox(
-                          widthFactor: widthFactor,
-                          child: Container(
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: markColor,
-                              borderRadius: BorderRadius.circular(4),
+                      child: !allowed
+                          ? FractionallySizedBox(
+                              widthFactor: targetWidth,
+                              child: Container(
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: markColor,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                            )
+                          : TweenAnimationBuilder<double>(
+                              tween: Tween<double>(end: targetWidth),
+                              duration: motion.geometryDuration,
+                              builder: (context, widthFactor, _) {
+                                return FractionallySizedBox(
+                                  widthFactor: widthFactor,
+                                  child: Container(
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      color: markColor,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
-                          ),
-                        );
-                      },
                     ),
                   ),
                 );

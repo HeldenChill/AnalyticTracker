@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../theme/analytics_tokens.dart';
+import '../../theme/motion_policy.dart';
 import '../format.dart';
 import 'chart_motion.dart';
 import 'ranked_bar_chart.dart';
@@ -123,6 +124,9 @@ class DivergingBarChart extends StatelessWidget {
               }
 
               Widget buildDivergingBar(RankedValue v, {bool includeGuide = false}) {
+                final allowed = chartAnimationsAllowed(context);
+                final negTarget = (v.value.abs() / m).clamp(0.0, 1.0);
+                final posTarget = (v.value / m).clamp(0.0, 1.0);
                 final barContent = SizedBox(
                   height: 20,
                   child: Row(
@@ -132,24 +136,35 @@ class DivergingBarChart extends StatelessWidget {
                         child: Align(
                           alignment: Alignment.centerRight,
                           child: v.value < 0
-                              ? TweenAnimationBuilder<double>(
+                              ? KeyedSubtree(
                                   key: ValueKey('ranked-bar:${v.id}'),
-                                  tween: Tween<double>(
-                                    end: (v.value.abs() / m).clamp(0.0, 1.0),
-                                  ),
-                                  duration: motion.geometryDuration,
-                                  builder: (context, widthFactor, _) {
-                                    return FractionallySizedBox(
-                                      widthFactor: widthFactor,
-                                      child: Container(
-                                        height: 20,
-                                        decoration: BoxDecoration(
-                                          color: badColor,
-                                          borderRadius: BorderRadius.circular(4),
+                                  child: !allowed
+                                      ? FractionallySizedBox(
+                                          widthFactor: negTarget,
+                                          child: Container(
+                                            height: 20,
+                                            decoration: BoxDecoration(
+                                              color: badColor,
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                          ),
+                                        )
+                                      : TweenAnimationBuilder<double>(
+                                          tween: Tween<double>(end: negTarget),
+                                          duration: motion.geometryDuration,
+                                          builder: (context, widthFactor, _) {
+                                            return FractionallySizedBox(
+                                              widthFactor: widthFactor,
+                                              child: Container(
+                                                height: 20,
+                                                decoration: BoxDecoration(
+                                                  color: badColor,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                              ),
+                                            );
+                                          },
                                         ),
-                                      ),
-                                    );
-                                  },
                                 )
                               : const SizedBox.shrink(),
                         ),
@@ -160,24 +175,35 @@ class DivergingBarChart extends StatelessWidget {
                         child: Align(
                           alignment: Alignment.centerLeft,
                           child: v.value > 0
-                              ? TweenAnimationBuilder<double>(
+                              ? KeyedSubtree(
                                   key: ValueKey('ranked-bar:${v.id}'),
-                                  tween: Tween<double>(
-                                    end: (v.value / m).clamp(0.0, 1.0),
-                                  ),
-                                  duration: motion.geometryDuration,
-                                  builder: (context, widthFactor, _) {
-                                    return FractionallySizedBox(
-                                      widthFactor: widthFactor,
-                                      child: Container(
-                                        height: 20,
-                                        decoration: BoxDecoration(
-                                          color: goodColor,
-                                          borderRadius: BorderRadius.circular(4),
+                                  child: !allowed
+                                      ? FractionallySizedBox(
+                                          widthFactor: posTarget,
+                                          child: Container(
+                                            height: 20,
+                                            decoration: BoxDecoration(
+                                              color: goodColor,
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                          ),
+                                        )
+                                      : TweenAnimationBuilder<double>(
+                                          tween: Tween<double>(end: posTarget),
+                                          duration: motion.geometryDuration,
+                                          builder: (context, widthFactor, _) {
+                                            return FractionallySizedBox(
+                                              widthFactor: widthFactor,
+                                              child: Container(
+                                                height: 20,
+                                                decoration: BoxDecoration(
+                                                  color: goodColor,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                              ),
+                                            );
+                                          },
                                         ),
-                                      ),
-                                    );
-                                  },
                                 )
                               : const SizedBox.shrink(),
                         ),

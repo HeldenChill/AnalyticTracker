@@ -7,6 +7,7 @@ import '../../providers.dart';
 import '../../state/navigation.dart';
 import '../../state/refresh.dart';
 import '../../theme/analytics_tokens.dart';
+import '../../theme/motion_policy.dart';
 import '../../widgets/charts/chart_frame.dart';
 import '../../widgets/charts/chart_motion.dart';
 import '../../widgets/format.dart';
@@ -138,8 +139,14 @@ class _LevelsLineChart extends StatelessWidget {
         ],
         child: SizedBox(
           height: 240,
-          child: LineChart(
-          LineChartData(
+          child: Builder(
+            builder: (rendererContext) {
+              final motion = ChartMotion.of(rendererContext);
+              final allowed = chartAnimationsAllowed(rendererContext);
+              return LineChart(
+                key: ValueKey('levels-trend-chart-$allowed'),
+                duration: motion.geometryDuration,
+                LineChartData(
             minX: minL,
             maxX: maxL,
             minY: 0.0,
@@ -194,9 +201,11 @@ class _LevelsLineChart extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-      ),
+        );
+      },
+    ),
+    ),
+    ),
     );
   }
 }
@@ -243,8 +252,14 @@ class _LevelsAttemptsChart extends StatelessWidget {
         ],
         child: SizedBox(
           height: 240,
-          child: BarChart(
-          BarChartData(
+          child: Builder(
+            builder: (rendererContext) {
+              final motion = ChartMotion.of(rendererContext);
+              final allowed = chartAnimationsAllowed(rendererContext);
+              return BarChart(
+                key: ValueKey('levels-attempts-chart-$allowed'),
+                duration: motion.geometryDuration,
+                BarChartData(
             maxY: maxAttempts * 1.15,
             gridData: const FlGridData(show: true, drawVerticalLine: false),
             borderData: FlBorderData(show: false),
@@ -294,9 +309,11 @@ class _LevelsAttemptsChart extends StatelessWidget {
                 ),
             ],
           ),
-        ),
-      ),
-      ),
+        );
+      },
+    ),
+    ),
+    ),
     );
   }
 }

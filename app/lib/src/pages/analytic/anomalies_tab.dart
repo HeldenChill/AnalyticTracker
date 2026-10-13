@@ -6,6 +6,7 @@ import '../../providers.dart';
 import '../../state/navigation.dart';
 import '../../state/refresh.dart';
 import '../../theme/analytics_tokens.dart';
+import '../../theme/motion_policy.dart';
 import '../../widgets/charts/chart_frame.dart';
 import '../../widgets/charts/chart_models.dart';
 import '../../widgets/charts/time_series_chart.dart';
@@ -159,7 +160,7 @@ class _AnomaliesTabState extends ConsumerState<AnomaliesTab> {
                 ],
               ),
               AnimatedSize(
-                duration: const Duration(milliseconds: 220),
+                duration: motionDuration(context, MotionKind.expansion),
                 curve: Curves.easeInOut,
                 alignment: Alignment.topCenter,
                 child: isSelected ? _buildDetail(alert, unit) : const SizedBox.shrink(),

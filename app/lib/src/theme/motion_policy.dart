@@ -25,3 +25,10 @@ Duration motionDuration(BuildContext context, MotionKind kind) {
     MotionKind.hover => const Duration(milliseconds: 120),
   };
 }
+
+bool chartAnimationsAllowed(BuildContext context) {
+  final media = MediaQuery.maybeOf(context);
+  return !(media?.disableAnimations ?? false) &&
+      !(media?.accessibleNavigation ?? false) &&
+      TickerMode.valuesOf(context).enabled;
+}
