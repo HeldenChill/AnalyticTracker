@@ -42,11 +42,9 @@ class _AnalyticPageState extends ConsumerState<AnalyticPage>
   }
 
   void _handleTabChanged() {
-    if (!_controller.indexIsChanging) {
-      final current = ref.read(analyticTabIndexProvider);
-      if (current != _controller.index) {
-        ref.read(analyticTabIndexProvider.notifier).state = _controller.index;
-      }
+    final next = _controller.index.clamp(0, 5);
+    if (ref.read(analyticTabIndexProvider) != next) {
+      ref.read(analyticTabIndexProvider.notifier).state = next;
     }
   }
 

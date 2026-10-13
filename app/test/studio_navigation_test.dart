@@ -4,6 +4,7 @@ import 'package:analytic_app/src/providers.dart';
 import 'package:analytic_app/src/shell/app_shell.dart';
 import 'package:analytic_app/src/state/events_explorer.dart';
 import 'package:analytic_app/src/state/navigation.dart';
+import 'package:analytic_app/src/state/refresh.dart';
 import 'package:analytic_app/src/widgets/bar_row.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
@@ -12,18 +13,23 @@ import 'package:flutter_test/flutter_test.dart';
 
 class _FakeApi extends ApiClient {
   _FakeApi() : super('http://fake');
+  int clusterCalls = 0;
+  int associationCalls = 0;
 
   @override
-  Future<ClusterResult> clusters(Filters f) async => const ClusterResult(
-        players: 10,
-        k: 2,
-        silhouette: 0.5,
-        features: [],
-        droppedFeatures: [],
-        overall: {},
-        clusters: [],
-        reason: null,
-      );
+  Future<ClusterResult> clusters(Filters f) async {
+    clusterCalls++;
+    return const ClusterResult(
+      players: 10,
+      k: 2,
+      silhouette: 0.5,
+      features: [],
+      droppedFeatures: [],
+      overall: {},
+      clusters: [],
+      reason: null,
+    );
+  }
 
   @override
   Future<ChurnResult> churn(Filters f) async => const ChurnResult(
@@ -72,12 +78,14 @@ class _FakeApi extends ApiClient {
       );
 
   @override
-  Future<AssociationResult> associations(Filters f) async =>
-      const AssociationResult(
-        players: 10,
-        rules: [],
-        reason: null,
-      );
+  Future<AssociationResult> associations(Filters f) async {
+    associationCalls++;
+    return const AssociationResult(
+      players: 10,
+      rules: [],
+      reason: null,
+    );
+  }
 
   @override
   Future<AnomalyResult> anomalies(Filters f) async =>
@@ -308,6 +316,50 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(tester.widget<TabBar>(find.byType(TabBar)).controller!.index, 4);
+    });
+
+    testWidgets('interrupted tab motion keeps visible index and refresh ownership synchronized', (t) async {
+      final api = _FakeApi();
+      final container = ProviderContainer(overrides: [
+        apiClientProvider.overrideWithValue(api),
+        selectedPageProvider.overrideWith((ref) => AppPage.analytic),
+      ]);
+      addTearDown(container.dispose);
+      addTearDown(api.close);
+      bool reduced = false;
+      late StateSetter updateHost;
+      await t.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, update) {
+              updateHost = update;
+              return MediaQuery(
+                data: MediaQueryData(disableAnimations: reduced),
+                child: const Scaffold(body: AnalyticPage()),
+              );
+            },
+          ),
+        ),
+      ));
+      await t.pumpAndSettle();
+      t.widget<TabBar>(find.byType(TabBar)).controller!.animateTo(4);
+      await t.pump(const Duration(milliseconds: 50));
+      updateHost(() => reduced = true);
+      await t.pumpAndSettle();
+      expect(t.widget<TabBar>(find.byType(TabBar)).controller!.index, 4);
+      final associationsBefore = api.associationCalls;
+      await container.read(activeRequestRegistryProvider).reload(
+        AppPage.analytic,
+        analyticTab: container.read(analyticTabIndexProvider),
+      );
+      await t.pumpAndSettle();
+      expect(
+        api.associationCalls,
+        associationsBefore + 1,
+        reason: 'refresh must reload visibly selected Associations, not hidden Clusters',
+      );
+      expect(container.read(analyticTabIndexProvider), 4);
     });
   });
 }
