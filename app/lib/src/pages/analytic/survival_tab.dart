@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers.dart';
+import '../../state/navigation.dart';
+import '../../state/refresh.dart';
 import '../../theme/analytics_tokens.dart';
 import '../../widgets/charts/chart_frame.dart';
 import '../../widgets/charts/chart_motion.dart';
@@ -47,7 +49,19 @@ class SurvivalTab extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
-          StudioAsyncPanel<SurvivalResult>(
+          ActiveRequestScope(
+            page: AppPage.analytic,
+            analyticTab: 3,
+            queryKey: (baseUrl, f, by),
+            reload: () async {
+              try {
+                await Future.wait([ref.refresh(survivalProvider((filters: f, by: by)).future)]);
+                return const RefreshResult();
+              } catch (e) {
+                return RefreshResult(errors: [e]);
+              }
+            },
+            child: StudioAsyncPanel<SurvivalResult>(
             queryKey: (baseUrl, f, by),
             value: ref.watch(survivalProvider((filters: f, by: by))),
             onRetry: () => ref.invalidate(survivalProvider((filters: f, by: by))),
@@ -101,16 +115,30 @@ class SurvivalTab extends ConsumerWidget {
               );
             },
           ),
+        ),
           const SizedBox(height: 24),
-          StudioAsyncPanel<VersionImpactResult>(
+          ActiveRequestScope(
+            page: AppPage.analytic,
+            analyticTab: 3,
             queryKey: (baseUrl, f, targetVersion),
-            value: ref.watch(versionImpactProvider((filters: f, version: targetVersion))),
-            onRetry: () => ref.invalidate(versionImpactProvider((filters: f, version: targetVersion))),
-            builder: (vi) => _VersionImpactCard(
-              impact: vi,
-              onVersionChanged: (v) {
-                ref.read(targetVersionProvider.notifier).state = v;
-              },
+            reload: () async {
+              try {
+                await Future.wait([ref.refresh(versionImpactProvider((filters: f, version: targetVersion)).future)]);
+                return const RefreshResult();
+              } catch (e) {
+                return RefreshResult(errors: [e]);
+              }
+            },
+            child: StudioAsyncPanel<VersionImpactResult>(
+              queryKey: (baseUrl, f, targetVersion),
+              value: ref.watch(versionImpactProvider((filters: f, version: targetVersion))),
+              onRetry: () => ref.invalidate(versionImpactProvider((filters: f, version: targetVersion))),
+              builder: (vi) => _VersionImpactCard(
+                impact: vi,
+                onVersionChanged: (v) {
+                  ref.read(targetVersionProvider.notifier).state = v;
+                },
+              ),
             ),
           ),
         ],

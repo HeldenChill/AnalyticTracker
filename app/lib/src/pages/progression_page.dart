@@ -6,16 +6,38 @@ import '../widgets/bar_row.dart';
 import '../widgets/error_retry.dart';
 import '../widgets/stage_table.dart';
 
+import '../state/navigation.dart';
+import '../state/refresh.dart';
+
 class ProgressionPage extends ConsumerWidget {
   const ProgressionPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final f = ref.watch(filtersProvider);
-    return ref.watch(progressionProvider(f)).when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(progressionProvider(f))),
-          data: (d) {
+    final baseUrl = ref.watch(baseUrlProvider);
+
+    return ActiveRequestScope(
+      page: AppPage.progression,
+      queryKey: (baseUrl, f),
+      reload: () async {
+        try {
+          await Future.wait([
+            ref.refresh(progressionProvider(f).future),
+            ref.refresh(filterOptionsProvider.future),
+          ]);
+          return const RefreshResult();
+        } catch (e) {
+          return RefreshResult(errors: [e]);
+        }
+      },
+      child: ref.watch(progressionProvider(f)).when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => ErrorRetry(
+              error: e,
+              onRetry: () => ref.invalidate(progressionProvider(f)),
+            ),
+            data: (d) {
             if (d.stages.isEmpty) {
               return const Center(
                 child: Padding(
@@ -39,6 +61,7 @@ class ProgressionPage extends ConsumerWidget {
               ],
             );
           },
-        );
+        ),
+      );
   }
 }

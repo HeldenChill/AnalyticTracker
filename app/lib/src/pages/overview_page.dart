@@ -9,17 +9,40 @@ import '../widgets/kpi_card.dart';
 import '../widgets/metric_line_chart.dart';
 import '../widgets/studio_layout.dart';
 
+import '../state/navigation.dart';
+import '../state/refresh.dart';
+
 class OverviewPage extends ConsumerWidget {
   const OverviewPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final f = ref.watch(filtersProvider);
-    return ref.watch(overviewProvider(f)).when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(overviewProvider(f))),
-          data: (d) => _OverviewBody(data: d),
-        );
+    final baseUrl = ref.watch(baseUrlProvider);
+
+    return ActiveRequestScope(
+      page: AppPage.overview,
+      queryKey: (baseUrl, f),
+      reload: () async {
+        try {
+          await Future.wait([
+            ref.refresh(overviewProvider(f).future),
+            ref.refresh(filterOptionsProvider.future),
+          ]);
+          return const RefreshResult();
+        } catch (e) {
+          return RefreshResult(errors: [e]);
+        }
+      },
+      child: ref.watch(overviewProvider(f)).when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => ErrorRetry(
+              error: e,
+              onRetry: () => ref.invalidate(overviewProvider(f)),
+            ),
+            data: (d) => _OverviewBody(data: d),
+          ),
+    );
   }
 }
 

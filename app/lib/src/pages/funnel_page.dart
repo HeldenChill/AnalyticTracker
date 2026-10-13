@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api_client.dart';
 import '../providers.dart';
+import '../state/navigation.dart';
+import '../state/refresh.dart';
 import '../theme/analytics_tokens.dart';
 import '../widgets/error_retry.dart';
 import '../widgets/format.dart';
@@ -75,10 +77,26 @@ class _FunnelPageState extends ConsumerState<FunnelPage> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return ref.watch(savedFunnelsProvider).when(
+    final f = ref.watch(filtersProvider);
+    final baseUrl = ref.watch(baseUrlProvider);
+    final savedAsync = ref.watch(savedFunnelsProvider);
+
+    return ActiveRequestScope(
+      page: AppPage.funnels,
+      queryKey: (baseUrl, f, _selectedId, _draft),
+      reload: () async {
+        try {
+          await Future.wait([ref.refresh(savedFunnelsProvider.future)]);
+          return const RefreshResult();
+        } catch (e) {
+          return RefreshResult(errors: [e]);
+        }
+      },
+      child: savedAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(savedFunnelsProvider)),
           data: (list) {
@@ -140,7 +158,8 @@ class _FunnelPageState extends ConsumerState<FunnelPage> {
               ],
             );
           },
-        );
+        ),
+      );
   }
 }
 

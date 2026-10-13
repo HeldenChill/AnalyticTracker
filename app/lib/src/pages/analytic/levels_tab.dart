@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers.dart';
+import '../../state/navigation.dart';
+import '../../state/refresh.dart';
 import '../../theme/analytics_tokens.dart';
 import '../../widgets/charts/chart_frame.dart';
 import '../../widgets/charts/chart_motion.dart';
@@ -20,7 +22,19 @@ class LevelsTab extends ConsumerWidget {
     final f = ref.watch(filtersProvider);
     final baseUrl = ref.watch(baseUrlProvider);
 
-    return StudioAsyncPanel<LevelResult>(
+    return ActiveRequestScope(
+      page: AppPage.analytic,
+      analyticTab: 2,
+      queryKey: (baseUrl, f),
+      reload: () async {
+        try {
+          await Future.wait([ref.refresh(levelsProvider(f).future)]);
+          return const RefreshResult();
+        } catch (e) {
+          return RefreshResult(errors: [e]);
+        }
+      },
+      child: StudioAsyncPanel<LevelResult>(
       queryKey: (baseUrl, f),
       value: ref.watch(levelsProvider(f)),
       onRetry: () => ref.invalidate(levelsProvider(f)),
@@ -73,8 +87,9 @@ class LevelsTab extends ConsumerWidget {
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 }
 
 class _LevelsLineChart extends StatelessWidget {

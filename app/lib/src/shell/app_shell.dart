@@ -16,6 +16,8 @@ import '../theme/analytics_tokens.dart';
 import '../widgets/filter_bar.dart';
 import 'page_stage.dart';
 
+import '../state/refresh.dart';
+
 class _NavItem {
   const _NavItem(this.label, this.icon, this.page);
   final String label;
@@ -61,48 +63,54 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (_refreshing || (isDataHealth && ref.read(daysProvider).isLoading)) return;
     final originUrl = ref.read(baseUrlProvider);
     final originPage = currentPage;
+    final currentTab = ref.read(analyticTabIndexProvider);
+
     setState(() => _refreshing = true);
     try {
-      ref.invalidate(filterOptionsProvider);
-      ref.invalidate(overviewProvider);
-      ref.invalidate(retentionProvider);
-      ref.invalidate(progressionProvider);
-      ref.invalidate(eventNamesProvider);
-      ref.invalidate(countsProvider);
-      ref.invalidate(paramProvider);
-      ref.invalidate(savedFunnelsProvider);
-      ref.invalidate(funnelResultProvider);
-      ref.invalidate(paramKeysProvider);
-      ref.invalidate(paramValuesProvider);
-      ref.invalidate(clustersProvider);
-      ref.invalidate(churnProvider);
-      ref.invalidate(levelsProvider);
-      ref.invalidate(survivalProvider);
-      ref.invalidate(versionImpactProvider);
-      ref.invalidate(associationsProvider);
-      ref.invalidate(anomaliesProvider);
+      final result = await refreshActivePage(
+        ref,
+        originPage,
+        analyticTab: currentTab,
+      );
 
-      final refreshedDays = ref.refresh(daysProvider.future);
-      await refreshedDays;
       if (!mounted ||
           ref.read(baseUrlProvider) != originUrl ||
           ref.read(selectedPageProvider) != originPage) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-          originPage == AppPage.dataHealth ? 'Refreshed Data health' : 'Refreshed',
-        ),
-        duration: const Duration(seconds: 1),
-      ));
+
+      final pageItem = _items.firstWhere((i) => i.page == originPage);
+      final pageName = pageItem.label;
+
+      if (result.errors.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Could not refresh $pageName'),
+          action: SnackBarAction(label: 'Retry', onPressed: _refresh),
+        ));
+      } else if (result.warnings.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Updated $pageName; some comparison data is unavailable'),
+          duration: const Duration(seconds: 2),
+        ));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            originPage == AppPage.dataHealth
+                ? 'Refreshed Data health'
+                : (originPage == AppPage.overview ? 'Refreshed' : 'Refreshed $pageName'),
+          ),
+          duration: const Duration(seconds: 1),
+        ));
+      }
     } catch (_) {
       if (mounted &&
-          originPage == AppPage.dataHealth &&
           ref.read(selectedPageProvider) == originPage &&
           ref.read(baseUrlProvider) == originUrl) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not refresh Data health')),
-        );
+        final pageName = _items.firstWhere((i) => i.page == originPage).label;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Could not refresh $pageName'),
+          action: SnackBarAction(label: 'Retry', onPressed: _refresh),
+        ));
       }
     } finally {
       if (mounted) setState(() => _refreshing = false);

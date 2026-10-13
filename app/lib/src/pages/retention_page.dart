@@ -7,16 +7,38 @@ import '../widgets/error_retry.dart';
 import '../widgets/format.dart';
 import '../widgets/retention_table.dart';
 
+import '../state/navigation.dart';
+import '../state/refresh.dart';
+
 class RetentionPage extends ConsumerWidget {
   const RetentionPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final f = ref.watch(filtersProvider);
-    return ref.watch(retentionProvider(f)).when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(retentionProvider(f))),
-          data: (d) {
+    final baseUrl = ref.watch(baseUrlProvider);
+
+    return ActiveRequestScope(
+      page: AppPage.retention,
+      queryKey: (baseUrl, f),
+      reload: () async {
+        try {
+          await Future.wait([
+            ref.refresh(retentionProvider(f).future),
+            ref.refresh(filterOptionsProvider.future),
+          ]);
+          return const RefreshResult();
+        } catch (e) {
+          return RefreshResult(errors: [e]);
+        }
+      },
+      child: ref.watch(retentionProvider(f)).when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => ErrorRetry(
+              error: e,
+              onRetry: () => ref.invalidate(retentionProvider(f)),
+            ),
+            data: (d) {
             if (d.cohorts.isEmpty) {
               return const Center(child: Text('No installs (first_open) in this range'));
             }
@@ -29,7 +51,8 @@ class RetentionPage extends ConsumerWidget {
               ],
             );
           },
-        );
+        ),
+      );
   }
 
   String _summary(RetentionData d) {

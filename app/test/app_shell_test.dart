@@ -62,15 +62,16 @@ void main() {
             .overrideWith((ref, f) async => const ProgressionData(stages: [])),
         countsProvider.overrideWith((ref, q) async => const <EventCount>[]),
         savedFunnelsProvider.overrideWith((ref) async => const <SavedFunnel>[]),
-        clustersProvider.overrideWith((ref, f) async => const ClusterResult(
-            players: 3,
-            k: 0,
-            silhouette: null,
-            features: [],
-            droppedFeatures: [],
-            overall: {},
-            clusters: [],
-            reason: 'too_few_players')),
+        if (api == null)
+          clustersProvider.overrideWith((ref, f) async => const ClusterResult(
+              players: 3,
+              k: 0,
+              silhouette: null,
+              features: [],
+              droppedFeatures: [],
+              overall: {},
+              clusters: [],
+              reason: 'too_few_players')),
       ],
       child: const MaterialApp(home: AppShell()),
     ));
@@ -134,10 +135,10 @@ void main() {
 
   testWidgets('refresh refetches and confirms', (t) async {
     await pumpShell(t);
-    final before = daysCalls;
+    final before = overviewCalls.length;
     await t.tap(find.byTooltip('Refresh'));
     await t.pumpAndSettle();
-    expect(daysCalls, greaterThan(before));
+    expect(overviewCalls.length, greaterThan(before));
     expect(find.text('Refreshed'), findsOneWidget);
   });
 
@@ -220,5 +221,65 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Refreshed Data health'), findsOneWidget);
     expect(t.widget<IconButton>(find.byKey(const ValueKey('refresh-button'))).onPressed, isNotNull);
+  });
+
+  testWidgets('Analytic refresh handles slow and failing requests', (t) async {
+    final pending = Completer<http.Response>();
+    final api = ApiClient('http://test', client: MockClient((request) async {
+      if (request.url.path == '/analysis/clusters') {
+        return pending.future;
+      }
+      final Object result = switch (request.url.path) {
+        '/analysis/levels' => const LevelResult(
+                players: 1,
+                observable: 0,
+                levels: [],
+                exitEvents: [],
+                transitions: [],
+                medianHazard: 0,
+                reason: 'too_few_players')
+            .toJson(),
+        '/analysis/survival' => const SurvivalResult(
+                players: 1,
+                by: 'version',
+                curves: [],
+                logRank: null,
+                reason: 'too_few_players')
+            .toJson(),
+        '/analysis/version-impact' => const VersionImpactResult(
+                targetVersion: 'new',
+                targetPlayers: 1,
+                baselineVersion: 'old',
+                baselinePlayers: 1,
+                metrics: [],
+                availableVersions: ['old', 'new'],
+                reason: null)
+            .toJson(),
+        '/analysis/associations' => const AssociationResult(
+                players: 1, rules: [], reason: 'too_few_players')
+            .toJson(),
+        '/analysis/anomalies' =>
+          const AnomalyResult(days: 1, alerts: [], reason: null).toJson(),
+        _ => const <String, dynamic>{},
+      };
+      return http.Response(jsonEncode(result), 200);
+    }));
+    addTearDown(api.close);
+
+    await pumpShell(t, api: api);
+    await t.tap(find.text('Analytic'));
+    await t.pumpAndSettle();
+
+    await t.tap(find.byTooltip('Refresh'));
+    await t.pump();
+
+    expect(find.textContaining('Refreshed'), findsNothing);
+    expect(t.widget<IconButton>(find.byKey(const ValueKey('refresh-button'))).onPressed, isNull);
+
+    pending.complete(http.Response('Server failed', 500));
+    await t.pumpAndSettle();
+
+    expect(find.textContaining('Could not refresh Analytic'), findsOneWidget);
+    expect(find.textContaining('Refreshed Analytic'), findsNothing);
   });
 }

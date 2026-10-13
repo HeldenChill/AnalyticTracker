@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers.dart';
+import '../../state/navigation.dart';
+import '../../state/refresh.dart';
 import '../../theme/analytics_tokens.dart';
 import '../../widgets/charts/chart_frame.dart';
 import '../../widgets/charts/chart_models.dart';
@@ -34,7 +36,19 @@ class _AnomaliesTabState extends ConsumerState<AnomaliesTab> {
     final baseUrl = ref.watch(baseUrlProvider);
     final tokens = AnalyticsTokens.of(context);
 
-    return StudioAsyncPanel<AnomalyResult>(
+    return ActiveRequestScope(
+      page: AppPage.analytic,
+      analyticTab: 5,
+      queryKey: (baseUrl, filters),
+      reload: () async {
+        try {
+          await Future.wait([ref.refresh(anomaliesProvider(filters).future)]);
+          return const RefreshResult();
+        } catch (e) {
+          return RefreshResult(errors: [e]);
+        }
+      },
+      child: StudioAsyncPanel<AnomalyResult>(
       queryKey: (baseUrl, filters),
       value: ref.watch(anomaliesProvider(filters)),
       onRetry: () => ref.invalidate(anomaliesProvider(filters)),
@@ -72,7 +86,8 @@ class _AnomaliesTabState extends ConsumerState<AnomaliesTab> {
           ),
         );
       },
-    );
+    ),
+  );
   }
 
   Widget _buildAlertCard(AnomalyAlert alert, AnalyticsTokens tokens) {

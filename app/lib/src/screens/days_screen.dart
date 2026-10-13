@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
+import '../state/navigation.dart';
+import '../state/refresh.dart';
 import '../view_models/data_health_view_model.dart';
 import '../view_models/storage_observations.dart';
 import '../widgets/charts/chart_frame.dart';
@@ -100,14 +102,26 @@ class _DaysScreenState extends ConsumerState<DaysScreen>
     final baseUrl = ref.watch(baseUrlProvider);
     final rows = ref.watch(daysProvider);
 
-    return StudioAsyncPanel<List<DayStat>>(
+    return ActiveRequestScope(
+      page: AppPage.dataHealth,
       queryKey: baseUrl,
-      value: rows,
-      onRetry: () => ref.invalidate(daysProvider),
-      builder: (stored) {
-        final model = buildDataHealth(stored, f, now: _readNow());
-        return _buildHealthContent(model, f, hasAnyStorage: stored.isNotEmpty);
+      reload: () async {
+        try {
+          await Future.wait([ref.refresh(daysProvider.future)]);
+          return const RefreshResult();
+        } catch (e) {
+          return RefreshResult(errors: [e]);
+        }
       },
+      child: StudioAsyncPanel<List<DayStat>>(
+        queryKey: baseUrl,
+        value: rows,
+        onRetry: () => ref.invalidate(daysProvider),
+        builder: (stored) {
+          final model = buildDataHealth(stored, f, now: _readNow());
+          return _buildHealthContent(model, f, hasAnyStorage: stored.isNotEmpty);
+        },
+      ),
     );
   }
 

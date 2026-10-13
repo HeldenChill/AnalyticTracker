@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/format.dart';
 import '../providers.dart';
 import '../state/events_explorer.dart';
+import '../state/navigation.dart';
+import '../state/refresh.dart';
 import '../view_models/events_view_model.dart';
 import '../widgets/charts/chart_models.dart';
 import '../widgets/charts/ranked_bar_chart.dart';
@@ -81,22 +83,38 @@ class _CountsScreenState extends ConsumerState<CountsScreen> {
   @override
   Widget build(BuildContext context) {
     final f = ref.watch(filtersProvider);
+    final baseUrl = ref.watch(baseUrlProvider);
     final q = (filters: f, compare: _compare);
 
-    return StudioAsyncPanel<EventsPayload>(
-      queryKey: (ref.watch(baseUrlProvider), q),
-      value: ref.watch(eventsExplorerProvider(q)),
-      onRetry: () => ref.invalidate(eventsExplorerProvider(q)),
-      builder: (payload) {
-        final model = buildEventSummary(
-          current: payload.current,
-          previous: payload.previous,
-          stored: payload.days,
-          filters: f,
-          now: (widget.now ?? DateTime.now)(),
-        );
-        return _buildEventsContent(model, payload.previousError, f, q);
+    return ActiveRequestScope(
+      page: AppPage.events,
+      queryKey: (baseUrl, q),
+      reload: () async {
+        try {
+          final payload = await ref.refresh(eventsExplorerProvider(q).future);
+          final warnings = payload.previousError != null
+              ? ['Comparison data unavailable: ${payload.previousError}']
+              : const <String>[];
+          return RefreshResult(warnings: warnings);
+        } catch (e) {
+          return RefreshResult(errors: [e]);
+        }
       },
+      child: StudioAsyncPanel<EventsPayload>(
+        queryKey: (baseUrl, q),
+        value: ref.watch(eventsExplorerProvider(q)),
+        onRetry: () => ref.invalidate(eventsExplorerProvider(q)),
+        builder: (payload) {
+          final model = buildEventSummary(
+            current: payload.current,
+            previous: payload.previous,
+            stored: payload.days,
+            filters: f,
+            now: (widget.now ?? DateTime.now)(),
+          );
+          return _buildEventsContent(model, payload.previousError, f, q);
+        },
+      ),
     );
   }
 

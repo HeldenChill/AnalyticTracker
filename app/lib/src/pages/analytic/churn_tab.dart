@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers.dart';
+import '../../state/navigation.dart';
+import '../../state/refresh.dart';
 import '../../theme/analytics_tokens.dart';
 import '../../widgets/charts/diverging_bar_chart.dart';
 import '../../widgets/charts/ranked_bar_chart.dart';
@@ -25,11 +27,23 @@ class ChurnTab extends ConsumerWidget {
     final f = ref.watch(filtersProvider);
     final baseUrl = ref.watch(baseUrlProvider);
 
-    return StudioAsyncPanel<ChurnResult>(
+    return ActiveRequestScope(
+      page: AppPage.analytic,
+      analyticTab: 1,
       queryKey: (baseUrl, f),
-      value: ref.watch(churnProvider(f)),
-      onRetry: () => ref.invalidate(churnProvider(f)),
-      builder: (r) {
+      reload: () async {
+        try {
+          await Future.wait([ref.refresh(churnProvider(f).future)]);
+          return const RefreshResult();
+        } catch (e) {
+          return RefreshResult(errors: [e]);
+        }
+      },
+      child: StudioAsyncPanel<ChurnResult>(
+        queryKey: (baseUrl, f),
+        value: ref.watch(churnProvider(f)),
+        onRetry: () => ref.invalidate(churnProvider(f)),
+        builder: (r) {
         if (r.reason == 'not_observable') {
           return const Center(
             child: Text('Date range too short to observe churn: need at least 8 days in the date range.'),
@@ -215,6 +229,7 @@ class ChurnTab extends ConsumerWidget {
           ),
         );
       },
-    );
+    ),
+  );
   }
 }

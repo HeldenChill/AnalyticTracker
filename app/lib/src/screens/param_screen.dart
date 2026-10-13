@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
 import '../state/navigation.dart';
+import '../state/refresh.dart';
 import '../widgets/bar_row.dart';
 import '../widgets/error_retry.dart';
 import '../widgets/event_picker.dart';
@@ -52,12 +53,33 @@ class _ParamScreenState extends ConsumerState<ParamScreen> {
     final currentEvent = ref.watch(parameterEventProvider);
     final currentKey = ref.watch(parameterKeyProvider);
     final f = ref.watch(filtersProvider);
+    final baseUrl = ref.watch(baseUrlProvider);
 
     final keysAsync = currentEvent != null && currentEvent.isNotEmpty
         ? ref.watch(paramKeysProvider((event: currentEvent, filters: f)))
         : null;
 
-    return Column(
+    return ActiveRequestScope(
+      page: AppPage.parameters,
+      queryKey: (baseUrl, currentEvent, currentKey, f),
+      reload: () async {
+        try {
+          final futures = <Future<dynamic>>[
+            ref.refresh(eventNamesProvider.future),
+          ];
+          if (currentEvent != null && currentEvent.isNotEmpty) {
+            futures.add(ref.refresh(paramKeysProvider((event: currentEvent, filters: f)).future));
+            if (currentKey.isNotEmpty) {
+              futures.add(ref.refresh(paramValuesProvider((event: currentEvent, key: currentKey, filters: f)).future));
+            }
+          }
+          await Future.wait(futures);
+          return const RefreshResult();
+        } catch (e) {
+          return RefreshResult(errors: [e]);
+        }
+      },
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -146,7 +168,8 @@ class _ParamScreenState extends ConsumerState<ParamScreen> {
         const Divider(height: 1),
         Expanded(child: _body(currentEvent, currentKey, f)),
       ],
-    );
+    ),
+  );
   }
 
   Widget _body(String? event, String key, Filters f) {

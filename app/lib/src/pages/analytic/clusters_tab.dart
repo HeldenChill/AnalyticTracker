@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers.dart';
+import '../../state/navigation.dart';
+import '../../state/refresh.dart';
 import '../../theme/analytics_tokens.dart';
 import '../../widgets/charts/feature_heatmap.dart';
 import '../../widgets/format.dart';
@@ -27,11 +29,23 @@ class ClustersTab extends ConsumerWidget {
     final f = ref.watch(filtersProvider);
     final baseUrl = ref.watch(baseUrlProvider);
 
-    return StudioAsyncPanel<ClusterResult>(
+    return ActiveRequestScope(
+      page: AppPage.analytic,
+      analyticTab: 0,
       queryKey: (baseUrl, f),
-      value: ref.watch(clustersProvider(f)),
-      onRetry: () => ref.invalidate(clustersProvider(f)),
-      builder: (r) {
+      reload: () async {
+        try {
+          await Future.wait([ref.refresh(clustersProvider(f).future)]);
+          return const RefreshResult();
+        } catch (e) {
+          return RefreshResult(errors: [e]);
+        }
+      },
+      child: StudioAsyncPanel<ClusterResult>(
+        queryKey: (baseUrl, f),
+        value: ref.watch(clustersProvider(f)),
+        onRetry: () => ref.invalidate(clustersProvider(f)),
+        builder: (r) {
         if (r.reason == 'too_few_players') {
           return Center(
             child: Text(
@@ -99,7 +113,8 @@ class ClustersTab extends ConsumerWidget {
         ),
       );
     },
-  );
+  ),
+);
   }
 }
 
