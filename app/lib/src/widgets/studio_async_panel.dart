@@ -115,20 +115,13 @@ class _StudioAsyncPanelState<T> extends State<StudioAsyncPanel<T>> {
   Widget build(BuildContext context) {
     final incoming = widget.value;
 
-    if (_hasSuccess) {
-      return _buildCachedContent(context, incoming);
+    if (_hasSuccess) return _buildCachedContent(context, incoming);
+    if (incoming.isLoading) {
+      return widget.loading ?? const Center(child: CircularProgressIndicator());
     }
-
     if (incoming.hasError) {
-      return ErrorRetry(
-        error: incoming.error!,
-        onRetry: widget.onRetry,
-      );
+      return ErrorRetry(error: incoming.error!, onRetry: widget.onRetry);
     }
-
-    return widget.loading ??
-        const Center(
-          child: CircularProgressIndicator(),
-        );
+    return widget.loading ?? const Center(child: CircularProgressIndicator());
   }
 }

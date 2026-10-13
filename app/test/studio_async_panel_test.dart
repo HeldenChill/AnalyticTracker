@@ -209,7 +209,70 @@ void main() {
     expect(replacement.controller.offset, 0);
     expect(replacement.selected, isFalse);
   });
+
+  testWidgets('new-server loading does not display previous-server error', (t) async {
+    final value = const AsyncLoading<int>().copyWithPrevious(
+      AsyncError<int>(StateError('old server failed'), StackTrace.empty));
+    expect(value.isLoading, isTrue);
+    expect(value.hasError, isTrue);
+    await t.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: StudioAsyncPanel<int>(
+          queryKey: 'new-server',
+          value: value,
+          onRetry: () {},
+          builder: (n) => Text('$n'),
+        ),
+      ),
+    ));
+    expect(find.textContaining('old server failed'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets('switching server key with previous error never renders old error under new key', (t) async {
+    final key = ValueNotifier<Object>('serverA');
+    final value = ValueNotifier<AsyncValue<int>>(const AsyncData(10));
+    addTearDown(key.dispose);
+    addTearDown(value.dispose);
+    await t.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: ValueListenableBuilder<Object>(
+          valueListenable: key,
+          builder: (_, k, __) => ValueListenableBuilder<AsyncValue<int>>(
+            valueListenable: value,
+            builder: (_, v, __) => StudioAsyncPanel<int>(
+              queryKey: k,
+              value: v,
+              onRetry: () {},
+              builder: (n) => Text('Value: $n'),
+            ),
+          ),
+        ),
+      ),
+    ));
+    expect(find.text('Value: 10'), findsOneWidget);
+
+    value.value = AsyncError<int>(StateError('serverA exploded'), StackTrace.empty)
+        .copyWithPrevious(const AsyncData(10));
+    await t.pump();
+    expect(find.textContaining('serverA exploded'), findsOneWidget);
+
+    key.value = 'serverB';
+    value.value = const AsyncLoading<int>().copyWithPrevious(
+      AsyncError<int>(StateError('serverA exploded'), StackTrace.empty),
+    );
+    await t.pump();
+    expect(find.textContaining('serverA exploded'), findsNothing);
+    expect(find.text('Value: 10'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    value.value = const AsyncData(20);
+    await t.pump();
+    expect(find.text('Value: 20'), findsOneWidget);
+    expect(find.textContaining('serverA exploded'), findsNothing);
+  });
 }
+
 
 class _ScrollProbe extends StatefulWidget {
   const _ScrollProbe();
