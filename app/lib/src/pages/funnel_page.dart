@@ -7,7 +7,6 @@ import '../providers.dart';
 import '../state/navigation.dart';
 import '../state/refresh.dart';
 import '../theme/analytics_tokens.dart';
-import '../widgets/error_retry.dart';
 import '../widgets/format.dart';
 import '../widgets/funnel_chart.dart';
 import '../widgets/funnel_drilldown_panel.dart';
@@ -15,6 +14,7 @@ import '../widgets/funnel_editor.dart';
 import '../widgets/funnel_segment_table.dart';
 import '../widgets/funnel_step_table.dart';
 import '../widgets/funnel_trend_view.dart';
+import '../widgets/studio_async_panel.dart';
 
 class FunnelPage extends ConsumerStatefulWidget {
   const FunnelPage({super.key});
@@ -81,13 +81,12 @@ class _FunnelPageState extends ConsumerState<FunnelPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final f = ref.watch(filtersProvider);
     final baseUrl = ref.watch(baseUrlProvider);
     final savedAsync = ref.watch(savedFunnelsProvider);
 
     return ActiveRequestScope(
       page: AppPage.funnels,
-      queryKey: (baseUrl, f, _selectedId, _draft),
+      queryKey: baseUrl,
       reload: () async {
         try {
           await Future.wait([ref.refresh(savedFunnelsProvider.future)]);
@@ -96,10 +95,11 @@ class _FunnelPageState extends ConsumerState<FunnelPage> {
           return RefreshResult(errors: [e]);
         }
       },
-      child: savedAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(savedFunnelsProvider)),
-          data: (list) {
+      child: StudioAsyncPanel<List<SavedFunnel>>(
+        queryKey: baseUrl,
+        value: savedAsync,
+        onRetry: () => ref.invalidate(savedFunnelsProvider),
+        builder: (list) {
             final selected = _selected(list);
             final def = _draft ?? selected?.def;
             if (def == null) {
@@ -198,20 +198,30 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
       breakdown = FunnelBreakdown(by: FunnelBreakdownBy.userProp, key: _userPropKey);
     }
 
+    final baseUrl = ref.watch(baseUrlProvider);
     final q = (
       def: widget.def,
       filters: filters,
       breakdown: breakdown,
       interval: _viewMode == _FunnelViewMode.trend ? _interval : null,
     );
-    return ref.watch(funnelResultProvider(q)).when(
-          loading: () => const Padding(
-            padding: EdgeInsets.all(32),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(funnelResultProvider(q))),
-          data: (r) {
-            final first = r.steps.isEmpty ? 0 : r.steps.first.players;
+    return ActiveRequestScope(
+      page: AppPage.funnels,
+      queryKey: (baseUrl, q),
+      reload: () async {
+        try {
+          await Future.wait([ref.refresh(funnelResultProvider(q).future)]);
+          return const RefreshResult();
+        } catch (e) {
+          return RefreshResult(errors: [e]);
+        }
+      },
+      child: StudioAsyncPanel<FunnelResult>(
+        queryKey: (baseUrl, q),
+        value: ref.watch(funnelResultProvider(q)),
+        onRetry: () => ref.invalidate(funnelResultProvider(q)),
+        builder: (r) {
+          final first = r.steps.isEmpty ? 0 : r.steps.first.players;
             final drop = r.biggestDropIndex;
 
             final step1Event = widget.def.steps.isEmpty ? null : widget.def.steps.first.event;
@@ -383,7 +393,8 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
               },
             );
           },
-        );
+        ),
+      );
   }
 }
 

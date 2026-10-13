@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:analytic_app/src/pages/funnel_page.dart';
 import 'package:analytic_app/src/providers.dart';
+import 'package:analytic_app/src/state/navigation.dart';
+import 'package:analytic_app/src/state/refresh.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,5 +73,58 @@ void main() {
     ]);
     expect(find.text('No players reached step 1 in this range'), findsOneWidget);
     expect(find.text('Biggest drop'), findsOneWidget);
+  });
+
+  testWidgets('Funnel refresh waits for visible result', (t) async {
+    final pending = Completer<FunnelResult>();
+    addTearDown(() {
+      if (!pending.isCompleted) pending.complete(result);
+    });
+    var resultCalls = 0;
+    var completed = false;
+    t.view.physicalSize = const Size(1400, 1000);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(ProviderScope(
+      overrides: [
+        savedFunnelsProvider.overrideWith((ref) async => const [
+              SavedFunnel(
+                id: 1,
+                name: 'Onboarding',
+                windowMinutes: 1440,
+                steps: steps,
+                updatedAt: 'x',
+              ),
+            ]),
+        funnelResultProvider.overrideWith((ref, q) async {
+          resultCalls++;
+          return resultCalls == 1 ? result : pending.future;
+        }),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: Consumer(
+            builder: (context, ref, child) => Column(
+              children: [
+                TextButton(
+                  onPressed: () async {
+                    await refreshActivePage(ref, AppPage.funnels, analyticTab: 0);
+                    completed = true;
+                  },
+                  child: const Text('probe refresh'),
+                ),
+                const Expanded(child: FunnelPage()),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ));
+    await t.pumpAndSettle();
+    await t.tap(find.text('probe refresh'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 50));
+    expect(resultCalls, greaterThan(1));
+    expect(completed, isFalse, reason: 'visible funnel analysis still pending');
   });
 }
