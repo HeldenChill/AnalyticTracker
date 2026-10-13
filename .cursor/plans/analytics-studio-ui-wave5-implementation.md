@@ -459,17 +459,17 @@ Use actual shell with fixture providers:
 6. Offstage pages cannot receive taps/focus and their ticker-enabled flag is false.
 7. Repeat with reduced motion; transitions settle immediately.
 
-- [ ] Observe red for active-request success timing, state resets and width overflow.
-- [ ] Implement page stage, registry, shell integration and remaining wrapping.
-- [ ] Run new and relevant existing shell/filter/editor/drill-down/trend/style tests.
-- [ ] Run full shared/server/app gates.
-- [ ] Verify the three separate15A/15B/15C commits exist with their test evidence before reporting Task15 complete.
+- [x] Observe red for active-request success timing, state resets and width overflow.
+- [x] Implement page stage, registry, shell integration and remaining wrapping.
+- [x] Run new and relevant existing shell/filter/editor/drill-down/trend/style tests.
+- [x] Run full shared/server/app gates.
+- [x] Verify the three separate15A/15B/15C commits exist with their test evidence before reporting Task15 complete.
 
 ## Wave 5 exit
 
-- [ ] Six tabs have appropriate charts, full labels and exact data access.
-- [ ] Ten-player views do not invent tree rules or significant comparisons.
-- [ ] Current-tab refresh awaits its own real requests and errors.
-- [ ] State survives navigation and window size changes.
-- [ ] Legacy funnel/CSV/provider regressions pass.
-- [ ] Full gates reported; stop before final runtime Wave6.
+- [x] Six tabs have appropriate charts, full labels and exact data access.
+- [x] Ten-player views do not invent tree rules or significant comparisons.
+- [x] Current-tab refresh awaits its own real requests and errors.
+- [x] State survives navigation and window size changes.
+- [x] Legacy funnel/CSV/provider regressions pass.
+- [x] Full gates reported; stop before final runtime Wave6.
