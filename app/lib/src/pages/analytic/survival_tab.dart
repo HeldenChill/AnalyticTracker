@@ -54,7 +54,8 @@ class SurvivalTab extends ConsumerWidget {
           ActiveRequestScope(
             page: AppPage.analytic,
             analyticTab: 3,
-            queryKey: (baseUrl, f, by),
+            queryKey: ('survival', baseUrl, f, by),
+            cacheKey: ('survival', baseUrl, f, by),
             reload: () async {
               try {
                 await Future.wait([ref.refresh(survivalProvider((filters: f, by: by)).future)]);
@@ -64,7 +65,7 @@ class SurvivalTab extends ConsumerWidget {
               }
             },
             child: StudioAsyncPanel<SurvivalResult>(
-            queryKey: (baseUrl, f, by),
+            queryKey: ('survival', baseUrl, f, by),
             value: ref.watch(survivalProvider((filters: f, by: by))),
             onRetry: () => ref.invalidate(survivalProvider((filters: f, by: by))),
             builder: (r) {
@@ -122,7 +123,8 @@ class SurvivalTab extends ConsumerWidget {
           ActiveRequestScope(
             page: AppPage.analytic,
             analyticTab: 3,
-            queryKey: (baseUrl, f, targetVersion),
+            queryKey: ('versionImpact', baseUrl, f, targetVersion),
+            cacheKey: ('versionImpact', baseUrl, f, targetVersion),
             reload: () async {
               try {
                 await Future.wait([ref.refresh(versionImpactProvider((filters: f, version: targetVersion)).future)]);
@@ -132,7 +134,7 @@ class SurvivalTab extends ConsumerWidget {
               }
             },
             child: StudioAsyncPanel<VersionImpactResult>(
-              queryKey: (baseUrl, f, targetVersion),
+              queryKey: ('versionImpact', baseUrl, f, targetVersion),
               value: ref.watch(versionImpactProvider((filters: f, version: targetVersion))),
               onRetry: () => ref.invalidate(versionImpactProvider((filters: f, version: targetVersion))),
               builder: (vi) => _VersionImpactCard(

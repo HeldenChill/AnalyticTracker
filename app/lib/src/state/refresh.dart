@@ -56,7 +56,7 @@ class ActiveRequestRegistry {
     int? analyticTab,
     required Future<RefreshResult> Function() reload,
   }) {
-    final identity = cacheKey ?? (page, analyticTab, queryKey);
+    final identity = cacheKey ?? (owner, page, analyticTab, queryKey);
     _freshByQuery.putIfAbsent(identity, () => _generation);
     final reg = (
       page: page,
