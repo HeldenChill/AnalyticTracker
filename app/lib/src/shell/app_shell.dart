@@ -47,6 +47,7 @@ class AppShell extends ConsumerStatefulWidget {
 }
 
 class _AppShellState extends ConsumerState<AppShell> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _refreshing = false;
   final Object _filterOptionsOwner = Object();
   ActiveRequestRegistry? _registry;
@@ -154,48 +155,10 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   Widget _buildSidebar(
     BuildContext context,
-    bool isCompact,
     AppPage currentPage,
     AnalyticsTokens tokens,
     ThemeData theme,
   ) {
-    if (isCompact) {
-      return SizedBox(
-        width: 72,
-        child: Material(
-          color: tokens.sidebar,
-          child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            children: [
-              const SizedBox(height: 8),
-              for (var i = 0; i < _items.length; i++) ...[
-                if (i == _footerStart)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: Divider(),
-                  ),
-                Tooltip(
-                  message: _items[i].label,
-                  child: IconButton(
-                    icon: Icon(_items[i].icon),
-                    isSelected: _items[i].page == currentPage,
-                    color: _items[i].page == currentPage ? tokens.activeNavFg : tokens.sidebarFg,
-                    style: _items[i].page == currentPage
-                        ? IconButton.styleFrom(backgroundColor: tokens.activeNav)
-                        : null,
-                    onPressed: () {
-                      ref.read(selectedPageProvider.notifier).state = _items[i].page;
-                    },
-                  ),
-                ),
-                const SizedBox(height: 4),
-              ],
-            ],
-          ),
-        ),
-      );
-    }
-
     return SizedBox(
       width: 220,
       child: Material(
@@ -257,6 +220,101 @@ class _AppShellState extends ConsumerState<AppShell> {
     );
   }
 
+  Widget _buildNavigationRail(
+    BuildContext context,
+    AppPage currentPage,
+    AnalyticsTokens tokens,
+    ThemeData theme,
+  ) {
+    return NavigationRail(
+      backgroundColor: tokens.sidebar,
+      selectedIndex: currentPage.index,
+      labelType: NavigationRailLabelType.selected,
+      selectedIconTheme: IconThemeData(color: tokens.activeNavFg),
+      unselectedIconTheme: IconThemeData(color: tokens.sidebarFg),
+      selectedLabelTextStyle: TextStyle(color: tokens.activeNavFg),
+      unselectedLabelTextStyle: TextStyle(color: tokens.sidebarFg),
+      onDestinationSelected: (index) {
+        ref.read(selectedPageProvider.notifier).state = _items[index].page;
+      },
+      destinations: [
+        for (final item in _items)
+          NavigationRailDestination(
+            icon: Tooltip(
+              message: item.label,
+              child: Icon(item.icon),
+            ),
+            label: Text(item.label),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDrawer(
+    BuildContext context,
+    AppPage currentPage,
+    AnalyticsTokens tokens,
+    ThemeData theme,
+  ) {
+    return Drawer(
+      backgroundColor: tokens.sidebar,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
+            child: Text(
+              'PVM Analytics',
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+          for (var i = 0; i < _items.length; i++) ...[
+            if (i == _exploreStart)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 16, 4),
+                child: Text(
+                  'EXPLORE',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    letterSpacing: 1.2,
+                    color: tokens.sidebarFg.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            if (i == _footerStart)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Divider(),
+              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+              child: ListTile(
+                dense: true,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    tokens.radius > 6 ? tokens.radius - 4 : tokens.radius,
+                  ),
+                ),
+                leading: Icon(_items[i].icon, size: 20),
+                title: Text(_items[i].label),
+                selected: _items[i].page == currentPage,
+                selectedTileColor: tokens.activeNav,
+                selectedColor: tokens.activeNavFg,
+                iconColor: tokens.sidebarFg,
+                textColor: tokens.sidebarFg,
+                onTap: () {
+                  _scaffoldKey.currentState?.closeDrawer();
+                  ref.read(selectedPageProvider.notifier).state = _items[i].page;
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -295,16 +353,41 @@ class _AppShellState extends ConsumerState<AppShell> {
       registry.remove(_filterOptionsOwner);
     }
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isSmall = screenWidth < 900;
+    final pageTitle = _items.firstWhere((i) => i.page == currentPage).label;
+
     return Scaffold(
+      key: _scaffoldKey,
+      appBar: isSmall
+          ? AppBar(
+              title: Text(pageTitle),
+              leading: IconButton(
+                tooltip: 'Open navigation',
+                icon: const Icon(Icons.menu),
+                onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+              ),
+            )
+          : null,
+      drawer: isSmall ? _buildDrawer(context, currentPage, tokens, theme) : null,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isCompact = constraints.maxWidth < 800;
+          final width = constraints.maxWidth;
+          Widget? navWidget;
+          if (width >= 1200) {
+            navWidget = _buildSidebar(context, currentPage, tokens, theme);
+          } else if (width >= 900) {
+            navWidget = _buildNavigationRail(context, currentPage, tokens, theme);
+          }
 
           return Row(
             children: [
-              _buildSidebar(context, isCompact, currentPage, tokens, theme),
-              const VerticalDivider(width: 1),
+              if (navWidget != null) ...[
+                navWidget,
+                const VerticalDivider(width: 1),
+              ],
               Expanded(
+                key: const ValueKey('studio-content'),
                 child: Column(
                   children: [
                     FilterBar(
@@ -317,6 +400,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                     const Divider(height: 1),
                     Expanded(
                       child: PageStage(
+                        key: const ValueKey('studio-page-stage'),
                         index: currentPage.index,
                         pages: [
                           const OverviewPage(key: PageStorageKey('page-overview')),

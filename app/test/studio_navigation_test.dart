@@ -11,6 +11,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/studio_matrix_fixtures.dart';
+import 'support/studio_test_host.dart';
+
 class _FakeApi extends ApiClient {
   _FakeApi() : super('http://fake');
   int clusterCalls = 0;
@@ -98,57 +101,116 @@ class _FakeApi extends ApiClient {
 
 void main() {
   group('Studio Navigation & Responsive Shell', () {
-    testWidgets('responsive breakpoint resize preserves PageStage subtree', (tester) async {
-      tester.view.physicalSize = const Size(1400, 1000);
+    testWidgets('1024 width uses approved NavigationRail', (t) async {
+      await pumpStudio(t, const AppShell(), width: 1024,
+        overrides: studioMatrixOverrides());
+      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(AppBar), findsNothing);
+    });
+
+    testWidgets('720 width exposes approved menu app bar', (t) async {
+      await pumpStudio(t, const AppShell(), width: 720,
+        overrides: studioMatrixOverrides());
+      expect(find.byType(AppBar), findsOneWidget);
+      expect(find.byType(NavigationRail), findsNothing);
+    });
+
+    testWidgets('breakpoint boundaries 1440, 1200, 1199, 900, 899 navigation layout', (t) async {
+      // 1440: full sidebar
+      await pumpStudio(t, const AppShell(), width: 1440, overrides: studioMatrixOverrides());
+      expect(find.text('PVM Analytics'), findsOneWidget);
+      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byType(AppBar), findsNothing);
+
+      // 1200: full sidebar boundary
+      await pumpStudio(t, const AppShell(), width: 1200, overrides: studioMatrixOverrides());
+      expect(find.text('PVM Analytics'), findsOneWidget);
+      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byType(AppBar), findsNothing);
+
+      // 1199: NavigationRail boundary
+      await pumpStudio(t, const AppShell(), width: 1199, overrides: studioMatrixOverrides());
+      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.text('PVM Analytics'), findsNothing);
+      expect(find.byType(AppBar), findsNothing);
+
+      // 900: NavigationRail boundary
+      await pumpStudio(t, const AppShell(), width: 900, overrides: studioMatrixOverrides());
+      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(AppBar), findsNothing);
+
+      // 899: AppBar + Drawer boundary
+      await pumpStudio(t, const AppShell(), width: 899, overrides: studioMatrixOverrides());
+      expect(find.byType(AppBar), findsOneWidget);
+      expect(find.byType(NavigationRail), findsNothing);
+    });
+
+    testWidgets('drawer opens via menu button, lists grouped items, and closes on selection', (t) async {
+      final container = ProviderContainer(overrides: studioMatrixOverrides());
+      addTearDown(container.dispose);
+      await t.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: MediaQuery(
+              data: MediaQueryData(size: Size(720, 1000)),
+              child: AppShell(),
+            ),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+
+      expect(find.byType(AppBar), findsOneWidget);
+      final menuBtn = find.byTooltip('Open navigation');
+      expect(menuBtn, findsOneWidget);
+
+      // Open drawer
+      await t.tap(menuBtn);
+      await t.pumpAndSettle();
+
+      expect(find.byType(Drawer), findsOneWidget);
+      expect(find.text('PVM Analytics'), findsOneWidget);
+      expect(find.text('EXPLORE'), findsOneWidget);
+
+      // Tap Events in drawer
+      await t.tap(find.widgetWithText(ListTile, 'Events'));
+      await t.pumpAndSettle();
+
+      // Drawer is closed and selected page is Events
+      expect(find.byType(Drawer), findsNothing);
+      expect(container.read(selectedPageProvider), AppPage.events);
+    });
+
+    testWidgets('responsive breakpoint resize preserves PageStage subtree across 1440, 1024, 720', (tester) async {
+      tester.view.physicalSize = const Size(1440, 1000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            apiClientProvider.overrideWithValue(_FakeApi()),
-            daysProvider.overrideWith((ref) async => const <DayStat>[]),
-            eventNamesProvider.overrideWith((ref) async => const <String>[]),
-            filterOptionsProvider.overrideWith((ref) async => const FilterOptions(
-                  platforms: ['ANDROID'],
-                  versions: ['1.0'],
-                )),
-            overviewProvider.overrideWith((ref, f) async => const OverviewData(
-                  kpis: Kpis(
-                    dau: 10,
-                    newUsers: 5,
-                    sessions: 20,
-                    sessionsPerDau: 2,
-                    playtimeMinPerDau: 15,
-                    uninstalls: 0,
-                  ),
-                  previous: null,
-                  daily: [],
-                )),
-            countsProvider.overrideWith((ref, q) async => const <EventCount>[]),
-            savedFunnelsProvider.overrideWith((ref) async => const <SavedFunnel>[]),
-          ],
+          overrides: studioMatrixOverrides(),
           child: const MaterialApp(home: AppShell()),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('PVM Analytics'), findsOneWidget);
-      expect(find.text('Overview'), findsWidgets);
+      final stageBefore = tester.state(find.byKey(const ValueKey('studio-page-stage')));
 
-      // Resize to narrow width (compact sidebar)
+      // Resize to rail breakpoint (1024)
+      tester.view.physicalSize = const Size(1024, 1000);
+      await tester.pumpAndSettle();
+      expect(tester.state(find.byKey(const ValueKey('studio-page-stage'))), same(stageBefore));
+
+      // Resize to drawer breakpoint (720)
       tester.view.physicalSize = const Size(720, 1000);
       await tester.pumpAndSettle();
+      expect(tester.state(find.byKey(const ValueKey('studio-page-stage'))), same(stageBefore));
 
-      // PVM Analytics title hidden in compact mode, but shell and content remain alive
-      expect(find.text('PVM Analytics'), findsNothing);
-      expect(find.byType(AppShell), findsOneWidget);
-      expect(tester.takeException(), isNull);
-
-      // Resize back to wide
-      tester.view.physicalSize = const Size(1400, 1000);
+      // Resize back to full (1440)
+      tester.view.physicalSize = const Size(1440, 1000);
       await tester.pumpAndSettle();
-      expect(find.text('PVM Analytics'), findsOneWidget);
+      expect(tester.state(find.byKey(const ValueKey('studio-page-stage'))), same(stageBefore));
     });
 
     testWidgets('AnalyticPage synchronizes TabController with analyticTabIndexProvider', (tester) async {
