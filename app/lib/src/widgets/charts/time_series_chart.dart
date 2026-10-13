@@ -264,10 +264,15 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
               final p = s.points.where((p) => p.x == curX).firstOrNull;
               if (p != null && p.value != null) {
                 final slot = _registry.slotFor(s.id);
-                final style = resolveSeriesVisualStyle(
+                final baseStyle = resolveSeriesVisualStyle(
                   palette: palette,
                   slot: slot,
                   seriesId: s.id,
+                  outline: theme.colorScheme.onSurface,
+                );
+                final style = barObservationStyle(
+                  baseStyle,
+                  incomplete: p.incomplete,
                   outline: theme.colorScheme.onSurface,
                 );
                 rodSources[(ord, rods.length)] = (s, p);
@@ -847,9 +852,11 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
       );
     }
 
-    final showLegend =
-        sortedSeries.length > 1 ||
+    final hasPartialBar = widget.kind == TimeChartKind.bars &&
+        sortedSeries.any((s) => s.points.any((p) => p.value != null && p.incomplete));
+    final showSeriesLegend = sortedSeries.length > 1 ||
         (sortedSeries.isNotEmpty && sortedSeries.first.id != 'primary');
+    final showLegend = showSeriesLegend || hasPartialBar;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -865,40 +872,84 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                   runSpacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    for (final s in sortedSeries) () {
-                      final slot = _registry.slotFor(s.id);
-                      final style = resolveSeriesVisualStyle(
+                    if (showSeriesLegend)
+                      for (final s in sortedSeries) () {
+                        final slot = _registry.slotFor(s.id);
+                        final style = resolveSeriesVisualStyle(
+                          palette: palette,
+                          slot: slot,
+                          seriesId: s.id,
+                          outline: theme.colorScheme.onSurface,
+                        );
+                        final semanticsLabel = describeSeriesVisualStyle(
+                          style,
+                          isBars: widget.kind == TimeChartKind.bars,
+                          seriesId: s.id,
+                        );
+                        return ConstrainedBox(
+                          key: ValueKey('series-legend:${s.id}'),
+                          constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Semantics(
+                                label: semanticsLabel,
+                                child: CustomPaint(
+                                  key: ValueKey('series-sample:${s.id}'),
+                                  size: const Size(20, 10),
+                                  painter: SeriesSamplePainter(
+                                    style: style,
+                                    isBars: widget.kind == TimeChartKind.bars,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  s.label,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }(),
+                    if (hasPartialBar) () {
+                      final baseStyle = resolveSeriesVisualStyle(
                         palette: palette,
-                        slot: slot,
-                        seriesId: s.id,
+                        slot: 0,
+                        seriesId: 'partial',
                         outline: theme.colorScheme.onSurface,
                       );
-                      final semanticsLabel = describeSeriesVisualStyle(
-                        style,
-                        isBars: widget.kind == TimeChartKind.bars,
-                        seriesId: s.id,
+                      final partialStyle = barObservationStyle(
+                        baseStyle,
+                        incomplete: true,
+                        outline: theme.colorScheme.onSurface,
                       );
+                      const label = 'Partial observation — may be incomplete';
                       return ConstrainedBox(
-                        key: ValueKey('series-legend:${s.id}'),
+                        key: const ValueKey('partial-bar-legend'),
                         constraints: BoxConstraints(maxWidth: constraints.maxWidth),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Semantics(
-                              label: semanticsLabel,
+                              label: label,
                               child: CustomPaint(
-                                key: ValueKey('series-sample:${s.id}'),
+                                key: const ValueKey('partial-bar-sample'),
                                 size: const Size(20, 10),
                                 painter: SeriesSamplePainter(
-                                  style: style,
-                                  isBars: widget.kind == TimeChartKind.bars,
+                                  style: partialStyle,
+                                  isBars: true,
                                 ),
                               ),
                             ),
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
-                                s.label,
+                                label,
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   fontWeight: FontWeight.w500,
                                 ),

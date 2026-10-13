@@ -938,4 +938,23 @@ void main() {
     await t.pump();
     expect(t.widget<LineChartLeaf>(find.byType(LineChartLeaf)).targetData.showingTooltipIndicators, isEmpty);
   });
+
+  testWidgets('partial bar rendering differs from complete measured rod', (t) async {
+    await pumpRepairChart(t, const TimeSeriesChart(
+      kind: TimeChartKind.bars,
+      unit: 'events',
+      series: [
+        ChartSeries(id: 'primary', label: 'P', points: [
+          ChartPoint(0, 1, label: 'complete'),
+          ChartPoint(1, 1, label: 'partial', incomplete: true),
+        ]),
+      ],
+    ));
+    final d = t.widget<BarChart>(find.byType(BarChart)).data;
+    final first = d.barGroups[0].barRods.first;
+    final second = d.barGroups[1].barRods.first;
+    expect((first.color, first.borderSide), isNot((second.color, second.borderSide)));
+    expect(second.borderSide.width, 4);
+    expect(find.byKey(const ValueKey('partial-bar-legend')), findsOneWidget);
+  });
 }

@@ -56,6 +56,22 @@ SeriesVisualStyle resolveSeriesVisualStyle({
   );
 }
 
+SeriesVisualStyle barObservationStyle(
+  SeriesVisualStyle base, {
+  required bool incomplete,
+  required Color outline,
+}) {
+  if (!incomplete) return base;
+  return SeriesVisualStyle(
+    color: base.color.withValues(alpha: base.color.a * 0.65),
+    lineDash: base.lineDash,
+    rodBorder: BorderSide(
+      color: outline.withValues(alpha: outline.a * 0.65),
+      width: 4,
+    ),
+  );
+}
+
 String describeSeriesVisualStyle(
   SeriesVisualStyle style, {
   required bool isBars,
@@ -63,6 +79,9 @@ String describeSeriesVisualStyle(
 }) {
   final reference = seriesId == 'previous' || seriesId == 'alert-baseline';
   if (isBars) {
+    if (style.rodBorder.width == 4) {
+      return 'partial observation';
+    }
     if (style.rodBorder != BorderSide.none) {
       return reference ? 'reference outlined' : 'outlined';
     }
