@@ -5,8 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers.dart';
 import '../../theme/analytics_tokens.dart';
-import '../../widgets/error_retry.dart';
+import '../../widgets/charts/chart_frame.dart';
+import '../../widgets/charts/chart_motion.dart';
+import '../../widgets/charts/series_visual_style.dart';
 import '../../widgets/format.dart';
+import '../../widgets/studio_async_panel.dart';
+import '../../widgets/studio_layout.dart';
+import '../../widgets/studio_table.dart';
 
 class SurvivalTab extends ConsumerWidget {
   const SurvivalTab({super.key});
@@ -16,98 +21,108 @@ class SurvivalTab extends ConsumerWidget {
     final f = ref.watch(filtersProvider);
     final by = ref.watch(survivalByProvider);
     final targetVersion = ref.watch(targetVersionProvider);
+    final baseUrl = ref.watch(baseUrlProvider);
 
-    final survivalAsync = ref.watch(survivalProvider((filters: f, by: by)));
-    final impactAsync = ref.watch(versionImpactProvider((filters: f, version: targetVersion)));
-
-    return survivalAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => ErrorRetry(
-        error: e,
-        onRetry: () {
-          ref.invalidate(survivalProvider((filters: f, by: by)));
-          ref.invalidate(versionImpactProvider((filters: f, version: targetVersion)));
-        },
-      ),
-      data: (r) {
-        if (r.reason == 'too_few_players') {
-          return Center(
-            child: Text(
-              'Not enough players in this range to analyze survival: ${r.players} in range, need at least $minAnalysisPlayers.',
-            ),
-          );
-        }
-        if (r.curves.isEmpty) {
-          return const Center(child: Text('No survival curves available for this range.'));
-        }
-
-        final theme = Theme.of(context);
-        final tokens = AnalyticsTokens.of(context);
-
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Kaplan–Meier survival curves S(t) with Greenwood 95% confidence intervals.',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Player Retention Over Days · Grouped by ${by[0].toUpperCase()}${by.substring(1)}',
-                        style: theme.textTheme.titleMedium,
-                      ),
-                    ],
-                  ),
-                ),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'version', label: Text('Version')),
-                    ButtonSegment(value: 'platform', label: Text('Platform')),
-                    ButtonSegment(value: 'cluster', label: Text('Cluster')),
-                  ],
-                  selected: {by},
-                  onSelectionChanged: (val) {
-                    ref.read(survivalByProvider.notifier).state = val.first;
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _SurvivalChart(curves: r.curves),
-            const SizedBox(height: 12),
-            if (r.logRank != null) _LogRankCard(logRank: r.logRank!),
-            const SizedBox(height: 16),
-            Text('Group Retention & Median Survival', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            _CurvesTable(curves: r.curves),
-            const SizedBox(height: 24),
-            impactAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text('Failed to load version impact: $e', style: TextStyle(color: tokens.bad)),
-              data: (vi) => _VersionImpactCard(
-                impact: vi,
-                onVersionChanged: (v) {
-                  ref.read(targetVersionProvider.notifier).state = v;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          StudioHeading(
+            title: 'Survival',
+            subtitle:
+                'Kaplan–Meier survival curves S(t) with Greenwood 95% confidence intervals.',
+            actions: [
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'version', label: Text('Version')),
+                  ButtonSegment(value: 'platform', label: Text('Platform')),
+                  ButtonSegment(value: 'cluster', label: Text('Cluster')),
+                ],
+                selected: {by},
+                onSelectionChanged: (val) {
+                  ref.read(survivalByProvider.notifier).state = val.first;
                 },
               ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          StudioAsyncPanel<SurvivalResult>(
+            queryKey: (baseUrl, f, by),
+            value: ref.watch(survivalProvider((filters: f, by: by))),
+            onRetry: () => ref.invalidate(survivalProvider((filters: f, by: by))),
+            builder: (r) {
+              if (r.reason == 'too_few_players' && r.curves.isEmpty) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Center(
+                      child: Text(
+                        'Not enough players in this range to analyze survival: ${r.players} in range, need at least $minAnalysisPlayers.',
+                      ),
+                    ),
+                  ),
+                );
+              }
+              if (r.curves.isEmpty) {
+                return const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: Text('No survival curves available for this range.')),
+                  ),
+                );
+              }
+
+              final hasPooledOther = r.curves.any((c) => c.group == 'Other');
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _SurvivalChart(curves: r.curves, by: by),
+                  if (hasPooledOther) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Groups with small sample sizes have been pooled into "Other".',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
+                          ),
+                    ),
+                  ],
+                  if (r.logRank != null) ...[
+                    const SizedBox(height: 16),
+                    _LogRankCard(logRank: r.logRank!),
+                  ],
+                  const SizedBox(height: 24),
+                  Text('Group Retention & Median Survival', style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 8),
+                  Card(child: _CurvesTable(curves: r.curves)),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+          StudioAsyncPanel<VersionImpactResult>(
+            queryKey: (baseUrl, f, targetVersion),
+            value: ref.watch(versionImpactProvider((filters: f, version: targetVersion))),
+            onRetry: () => ref.invalidate(versionImpactProvider((filters: f, version: targetVersion))),
+            builder: (vi) => _VersionImpactCard(
+              impact: vi,
+              onVersionChanged: (v) {
+                ref.read(targetVersionProvider.notifier).state = v;
+              },
             ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _SurvivalChart extends StatelessWidget {
-  const _SurvivalChart({required this.curves});
+  const _SurvivalChart({required this.curves, required this.by});
   final List<SurvivalCurve> curves;
+  final String by;
 
   @override
   Widget build(BuildContext context) {
@@ -122,127 +137,162 @@ class _SurvivalChart extends StatelessWidget {
     }
     if (maxDay == 0) maxDay = 7;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Wrap(
-              spacing: 16,
-              runSpacing: 8,
-              children: [
-                for (var i = 0; i < curves.length; i++)
-                  Row(
+    // Stable group slot assignment
+    final sortedGroups = [for (final c in curves) c.group]..sort();
+
+    final styles = {
+      for (final c in curves)
+        c.group: resolveSeriesVisualStyle(
+          palette: tokens.chart,
+          slot: sortedGroups.indexOf(c.group),
+          seriesId: c.group,
+          outline: theme.colorScheme.outline,
+        ),
+    };
+
+    final revision = curves
+        .map((c) => '${c.group}:${c.players}:${c.points.map((p) => '${p.day}:${p.survival}').join(',')}')
+        .join(';');
+
+    return ChartMotion(
+      dataRevision: revision,
+      child: ChartFrame(
+        title: 'Player Retention Over Days',
+        subtitle: 'Kaplan-Meier survival curves S(t) with Greenwood 95% confidence intervals.',
+        unit: '%',
+        legend: [
+          for (final c in curves)
+            Builder(
+              builder: (ctx) {
+                final style = styles[c.group]!;
+                return Container(
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 12,
-                        height: 12,
-                        color: tokens.chart[i % tokens.chart.length],
+                      CustomPaint(
+                        size: const Size(16, 12),
+                        painter: SeriesSamplePainter(style: style, isBars: false),
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        '${curves[i].group} (n=${curves[i].players})',
-                        style: theme.textTheme.bodySmall,
+                      Flexible(
+                        child: Text(
+                          '${c.group} (n=${c.players})',
+                          style: theme.textTheme.bodySmall,
+                          softWrap: true,
+                        ),
                       ),
                     ],
                   ),
-              ],
+                );
+              },
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 260,
-              child: LineChart(
-                LineChartData(
-                  minX: 0,
-                  maxX: maxDay.toDouble(),
-                  minY: 0.0,
-                  maxY: 1.05,
-                  lineTouchData: LineTouchData(
-                    touchTooltipData: LineTouchTooltipData(
-                      getTooltipColor: (_) => theme.colorScheme.inverseSurface,
-                      getTooltipItems: (spots) => [
-                        for (final spot in spots)
-                          spot.barIndex % 3 != 0
-                              ? null
-                              : LineTooltipItem(
-                                  '${curves[spot.barIndex ~/ 3].group}\nD${spot.x.toInt()}: ${(spot.y * 100).round()}%',
-                                  TextStyle(
-                                      color:
-                                          theme.colorScheme.onInverseSurface),
+        ],
+        child: SizedBox(
+          height: 260,
+          child: LineChart(
+            LineChartData(
+              minX: 0,
+              maxX: maxDay.toDouble(),
+              minY: 0.0,
+              maxY: 1.05,
+              lineTouchData: LineTouchData(
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipColor: (_) => theme.colorScheme.inverseSurface,
+                  getTooltipItems: (spots) => [
+                    for (final spot in spots)
+                      spot.barIndex % 3 != 0
+                          ? null
+                          : () {
+                              final curveIndex = spot.barIndex ~/ 3;
+                              final curve = curves[curveIndex];
+                              final p = curve.points.firstWhere(
+                                (pt) => pt.day.toDouble() == spot.x,
+                                orElse: () => SurvivalPoint(
+                                  day: spot.x.toInt(),
+                                  survival: spot.y,
+                                  ciLower: spot.y,
+                                  ciUpper: spot.y,
+                                  atRisk: curve.players,
+                                  events: 0,
+                                  censored: 0,
                                 ),
-                      ],
-                    ),
-                  ),
-                  gridData:
-                      const FlGridData(show: true, drawVerticalLine: false),
-                  titlesData: FlTitlesData(
-                    rightTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
-                    topTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 40,
-                        getTitlesWidget: (val, _) => Text(
-                          '${(val * 100).round()}%',
-                          style: theme.textTheme.labelSmall,
-                        ),
-                      ),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 24,
-                        getTitlesWidget: (val, _) => Text(
-                          'D${val.toInt()}',
-                          style: theme.textTheme.labelSmall,
-                        ),
-                      ),
-                    ),
-                  ),
-                  lineBarsData: [
-                    for (var i = 0; i < curves.length; i++) ...[
-                      LineChartBarData(
-                        spots: [
-                          for (final p in curves[i].points)
-                            FlSpot(p.day.toDouble(), p.survival),
-                        ],
-                        color: tokens.chart[i % tokens.chart.length],
-                        isStepLineChart: true,
-                        barWidth: 2.5,
-                        dotData: const FlDotData(show: false),
-                      ),
-                      for (final upper in [false, true])
-                        LineChartBarData(
-                          spots: [
-                            for (final p in curves[i].points)
-                              FlSpot(p.day.toDouble(),
-                                  upper ? p.ciUpper : p.ciLower),
-                          ],
-                          color: tokens.chart[i % tokens.chart.length]
-                              .withValues(alpha: 0.35),
-                          isStepLineChart: true,
-                          barWidth: 0.8,
-                          dotData: const FlDotData(show: false),
-                        ),
-                    ],
-                  ],
-                  betweenBarsData: [
-                    for (var i = 0; i < curves.length; i++)
-                      BetweenBarsData(
-                        fromIndex: i * 3 + 1,
-                        toIndex: i * 3 + 2,
-                        color: tokens.chart[i % tokens.chart.length]
-                            .withValues(alpha: 0.12),
-                      ),
+                              );
+                              return LineTooltipItem(
+                                '${curve.group}\nD${spot.x.toInt()}: ${(spot.y * 100).round()}% [${(p.ciLower * 100).round()}%, ${(p.ciUpper * 100).round()}%]',
+                                TextStyle(color: theme.colorScheme.onInverseSurface),
+                              );
+                            }(),
                   ],
                 ),
               ),
+              gridData: const FlGridData(show: true, drawVerticalLine: false),
+              titlesData: FlTitlesData(
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 40,
+                    getTitlesWidget: (val, _) => Text(
+                      '${(val * 100).round()}%',
+                      style: theme.textTheme.labelSmall,
+                    ),
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 24,
+                    getTitlesWidget: (val, _) => Text(
+                      'D${val.toInt()}',
+                      style: theme.textTheme.labelSmall,
+                    ),
+                  ),
+                ),
+              ),
+              lineBarsData: [
+                for (var i = 0; i < curves.length; i++) ...[
+                  () {
+                    final style = styles[curves[i].group]!;
+                    return LineChartBarData(
+                      spots: [
+                        for (final p in curves[i].points)
+                          FlSpot(p.day.toDouble(), p.survival),
+                      ],
+                      color: style.color,
+                      isStepLineChart: true,
+                      barWidth: 2.5,
+                      dotData: const FlDotData(show: false),
+                    );
+                  }(),
+                  for (final upper in [false, true]) ...[
+                    () {
+                      final style = styles[curves[i].group]!;
+                      return LineChartBarData(
+                        spots: [
+                          for (final p in curves[i].points)
+                            FlSpot(p.day.toDouble(), upper ? p.ciUpper : p.ciLower),
+                        ],
+                        color: style.color.withValues(alpha: 0.35),
+                        isStepLineChart: true,
+                        barWidth: 0.8,
+                        dotData: const FlDotData(show: false),
+                      );
+                    }(),
+                  ],
+                ],
+              ],
+              betweenBarsData: [
+                for (var i = 0; i < curves.length; i++)
+                  BetweenBarsData(
+                    fromIndex: i * 3 + 1,
+                    toIndex: i * 3 + 2,
+                    color: styles[curves[i].group]!.color.withValues(alpha: 0.12),
+                  ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -258,34 +308,44 @@ class _LogRankCard extends StatelessWidget {
     final theme = Theme.of(context);
     final tokens = AnalyticsTokens.of(context);
 
-    final isSig = logRank.significant;
-    final badgeColor = isSig ? tokens.good : theme.colorScheme.onSurfaceVariant;
-    final badgeBg = isSig ? tokens.good.withValues(alpha: 0.12) : theme.colorScheme.surfaceContainerHighest;
-
     return Card(
-      color: theme.colorScheme.surface,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(isSig ? Icons.check_circle_outline : Icons.info_outline, color: badgeColor, size: 20),
-            const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                'Log-rank test: χ² = ${fmtDecimal(logRank.chiSquare, digits: 2)}, df = ${logRank.degreesOfFreedom}, p = ${fmtDecimal(logRank.pValue, digits: 4)}',
-                style: theme.textTheme.bodyMedium,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Log-Rank Test of Equality Across Groups',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'χ² = ${fmtDecimal(logRank.chiSquare, digits: 2)} (df = ${logRank.degreesOfFreedom}) · p = ${fmtDecimal(logRank.pValue, digits: 4)}',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ],
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: badgeBg,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: badgeColor, width: 1),
+                color: (logRank.significant ? tokens.good : theme.colorScheme.surfaceContainerHighest)
+                    .withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: logRank.significant ? tokens.good : theme.colorScheme.outlineVariant,
+                ),
               ),
               child: Text(
-                isSig ? 'Difference likely real (p < 0.05)' : 'Could be chance (p ≥ 0.05)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: badgeColor),
+                logRank.significant ? 'Difference likely real (p < 0.05)' : 'Could be chance (p ≥ 0.05)',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: logRank.significant ? tokens.good : theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ],
@@ -301,41 +361,42 @@ class _CurvesTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columnSpacing: 24,
-          columns: const [
-            DataColumn(label: Text('Group')),
-            DataColumn(label: Text('Players'), numeric: true),
-            DataColumn(label: Text('Churned'), numeric: true),
-            DataColumn(label: Text('Censored'), numeric: true),
-            DataColumn(label: Text('Median Survival'), numeric: true),
-            DataColumn(label: Text('D1 Survival'), numeric: true),
-            DataColumn(label: Text('D7 Survival'), numeric: true),
-          ],
-          rows: [
-            for (final c in curves) ...[
-              () {
-                final d1Pt = c.points.where((p) => p.day == 1).firstOrNull;
-                final d7Pt = c.points.where((p) => p.day == 7).firstOrNull;
-                return DataRow(
-                  cells: [
-                    DataCell(Text(c.group, style: const TextStyle(fontWeight: FontWeight.bold))),
-                    DataCell(Text('${c.players}')),
-                    DataCell(Text('${c.events}')),
-                    DataCell(Text('${c.censored}')),
-                    DataCell(Text(c.medianDays != null ? 'Day ${c.medianDays!.toInt()}' : '> max range')),
-                    DataCell(Text(d1Pt != null ? '${(d1Pt.survival * 100).round()}%' : '—')),
-                    DataCell(Text(d7Pt != null ? '${(d7Pt.survival * 100).round()}%' : '—')),
-                  ],
-                );
-              }(),
-            ],
-          ],
-        ),
-      ),
+    return StudioTable(
+      columns: const [
+        StudioColumn('Group', width: 220),
+        StudioColumn('Players', width: 100, numeric: true),
+        StudioColumn('Churned', width: 90, numeric: true),
+        StudioColumn('Censored', width: 90, numeric: true),
+        StudioColumn('Median survival', width: 130, numeric: true),
+        StudioColumn('D1 Survival', width: 110, numeric: true),
+        StudioColumn('D7 Survival', width: 110, numeric: true),
+      ],
+      rows: [
+        for (final c in curves) ...[
+          () {
+            final p1 = c.points.where((p) => p.day == 1).firstOrNull;
+            final p7 = c.points.where((p) => p.day == 7).firstOrNull;
+            return StudioRow([
+              StudioTextCell(c.group, width: 220),
+              StudioTextCell('${c.players}', numeric: true),
+              StudioTextCell('${c.events}', numeric: true),
+              StudioTextCell('${c.censored}', numeric: true),
+              StudioTextCell(
+                c.medianDays != null ? '${fmtDecimal(c.medianDays, digits: 1)} d' : '—',
+                numeric: true,
+              ),
+              StudioTextCell(
+                p1 != null ? '${(p1.survival * 100).round()}%' : '—',
+                numeric: true,
+              ),
+              StudioTextCell(
+                p7 != null ? '${(p7.survival * 100).round()}%' : '—',
+                numeric: true,
+              ),
+            ]);
+          }(),
+        ],
+      ],
     );
   }
 }
@@ -367,32 +428,44 @@ class _VersionImpactCard extends StatelessWidget {
       );
     }
 
+    if (impact.baselineVersion.isEmpty || impact.availableVersions.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            'No previous eligible version available to compare.',
+            style: theme.textTheme.bodyMedium,
+          ),
+        ),
+      );
+    }
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 8,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'What changed in version ${impact.targetVersion}',
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Compared with version ${impact.baselineVersion} (n=${impact.baselinePlayers}) · 1,000 bootstrap resamples (95% CI)',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'What changed in version ${impact.targetVersion}',
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Compared with version ${impact.baselineVersion} (n=${impact.baselinePlayers}) · 1,000 bootstrap resamples (95% CI)',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
                 if (impact.availableVersions.isNotEmpty)
                   DropdownButton<String>(
                     value: impact.availableVersions.contains(impact.targetVersion)
@@ -410,68 +483,71 @@ class _VersionImpactCard extends StatelessWidget {
             if (impact.metrics.isEmpty)
               const Text('No metrics available for comparison.')
             else
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  columnSpacing: 24,
-                  columns: const [
-                    DataColumn(label: Text('Metric')),
-                    DataColumn(label: Text('Baseline'), numeric: true),
-                    DataColumn(label: Text('Target'), numeric: true),
-                    DataColumn(label: Text('Difference (95% CI)'), numeric: true),
-                    DataColumn(label: Text('Significance')),
-                  ],
-                  rows: [
-                    for (final m in impact.metrics) ...[
-                      () {
-                        final isRate = m.metric.contains('rate') || m.metric.contains('survival');
-                        final baseStr = isRate ? '${(m.baselineValue * 100).round()}%' : fmtDecimal(m.baselineValue, digits: 1);
-                        final targetStr = isRate ? '${(m.targetValue * 100).round()}%' : fmtDecimal(m.targetValue, digits: 1);
-                        final diffPrefix = m.difference >= 0 ? '+' : '';
-                        final diffStr = isRate
-                            ? '$diffPrefix${(m.difference * 100).round()}% [${(m.ciLower * 100).round()}%, ${(m.ciUpper * 100).round()}%]'
-                            : '$diffPrefix${fmtDecimal(m.difference, digits: 1)} [${fmtDecimal(m.ciLower, digits: 1)}, ${fmtDecimal(m.ciUpper, digits: 1)}]';
+              StudioTable(
+                columns: const [
+                  StudioColumn('Metric', width: 220),
+                  StudioColumn('Baseline', width: 110, numeric: true),
+                  StudioColumn('Target', width: 110, numeric: true),
+                  StudioColumn('Difference (95% CI)', width: 170, numeric: true),
+                  StudioColumn('Significance', width: 130),
+                ],
+                rows: [
+                  for (final m in impact.metrics) ...[
+                    () {
+                      final isRate = m.metric.contains('rate') || m.metric.contains('survival');
+                      final baseStr = isRate
+                          ? '${(m.baselineValue * 100).round()}%'
+                          : fmtDecimal(m.baselineValue, digits: 1);
+                      final targetStr = isRate
+                          ? '${(m.targetValue * 100).round()}%'
+                          : fmtDecimal(m.targetValue, digits: 1);
+                      final diffPrefix = m.difference >= 0 ? '+' : '';
+                      final diffStr = isRate
+                          ? '$diffPrefix${(m.difference * 100).round()}% [${(m.ciLower * 100).round()}%, ${(m.ciUpper * 100).round()}%]'
+                          : '$diffPrefix${fmtDecimal(m.difference, digits: 1)} [${fmtDecimal(m.ciLower, digits: 1)}, ${fmtDecimal(m.ciUpper, digits: 1)}]';
 
-                        final chipColor = m.significant
-                            ? (m.difference >= 0 ? tokens.good : tokens.bad)
-                            : theme.colorScheme.onSurfaceVariant;
+                      final chipColor = m.significant
+                          ? (m.difference >= 0 ? tokens.good : tokens.bad)
+                          : theme.colorScheme.onSurfaceVariant;
 
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(m.metric, style: const TextStyle(fontWeight: FontWeight.bold))),
-                            DataCell(Text(baseStr)),
-                            DataCell(Text(targetStr)),
-                            DataCell(
-                              Text(
-                                diffStr,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: chipColor,
+                      return StudioRow([
+                        StudioTextCell(
+                          m.metric,
+                          width: 220,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        StudioTextCell(baseStr, numeric: true),
+                        StudioTextCell(targetStr, numeric: true),
+                        StudioTextCell(
+                          diffStr,
+                          numeric: true,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: chipColor,
+                          ),
+                        ),
+                        m.significant
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: chipColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: chipColor, width: 1),
                                 ),
-                              ),
-                            ),
-                            DataCell(
-                              m.significant
-                                  ? Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: chipColor.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(color: chipColor, width: 1),
-                                      ),
-                                      child: Text(
-                                        'SIGNIFICANT',
-                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: chipColor),
-                                      ),
-                                    )
-                                  : const Text('—'),
-                            ),
-                          ],
-                        );
-                      }(),
-                    ],
+                                child: Text(
+                                  'SIGNIFICANT',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: chipColor,
+                                  ),
+                                ),
+                              )
+                            : const Text('—'),
+                      ]);
+                    }(),
                   ],
-                ),
+                ],
               ),
           ],
         ),
