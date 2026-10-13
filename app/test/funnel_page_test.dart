@@ -6,8 +6,11 @@ import 'package:analytic_app/src/state/navigation.dart';
 import 'package:analytic_app/src/state/refresh.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/studio_test_host.dart';
 
 const steps = [
   FunnelStepDef(event: 'first_open'),
@@ -127,4 +130,30 @@ void main() {
     expect(resultCalls, greaterThan(1));
     expect(completed, isFalse, reason: 'visible funnel analysis still pending');
   });
+
+  for (final menu in [false, true]) {
+    testWidgets('full saved Funnel name readable in ${menu ? 'menu' : 'selected value'}', (t) async {
+      final prefix = List.filled(20, 'Reward_request_legendary_completion_').join();
+      final alpha = '${prefix}Alpha';
+      final beta = '${prefix}Beta';
+      await pumpStudio(t, const FunnelPage(), width: 720, textScale: 1.5, overrides: [
+        savedFunnelsProvider.overrideWith((ref) async => [
+          SavedFunnel(id: 1, name: alpha, windowMinutes: 1440, steps: steps, updatedAt: 'x'),
+          SavedFunnel(id: 2, name: beta, windowMinutes: 1440, steps: steps, updatedAt: 'x'),
+        ]),
+        funnelResultProvider.overrideWith((ref, q) async => result),
+      ]);
+      expect(t.takeException(), isNull);
+      final dropdown = find.byType(DropdownButton<int>);
+      if (menu) {
+        await t.tap(dropdown);
+        await t.pumpAndSettle();
+        await t.scrollUntilVisible(find.text(beta), 100, scrollable: find.byType(Scrollable).last);
+      }
+      final text = menu ? find.text(beta).last : find.descendant(of: dropdown, matching: find.text(alpha)).first;
+      final paragraph = t.renderObject<RenderParagraph>(text);
+      expect(paragraph.didExceedMaxLines, isFalse,
+        reason: 'names differing only in suffix must stay distinguishable');
+    });
+  }
 }

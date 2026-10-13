@@ -131,13 +131,28 @@ class _FunnelPageState extends ConsumerState<FunnelPage> {
                         child: DropdownButton<int>(
                           value: selected.id,
                           isExpanded: true,
-                          items: [
+                          itemHeight: null,
+                          menuMaxHeight: 400,
+                          selectedItemBuilder: (context) => [
                             for (final s in list)
-                              DropdownMenuItem(
-                                value: s.id,
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0),
                                 child: Text(
                                   s.name,
-                                  overflow: TextOverflow.ellipsis,
+                                  softWrap: true,
+                                ),
+                              ),
+                          ],
+                          items: [
+                            for (final s in list)
+                              DropdownMenuItem<int>(
+                                value: s.id,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                  child: Text(
+                                    s.name,
+                                    softWrap: true,
+                                  ),
                                 ),
                               ),
                           ],
