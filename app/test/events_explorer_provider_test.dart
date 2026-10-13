@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'package:analytic_app/src/api_client.dart';
 import 'package:analytic_app/src/providers.dart';
 import 'package:analytic_app/src/state/events_explorer.dart';
+import 'package:analytic_app/src/state/navigation.dart';
+import 'package:analytic_app/src/state/refresh.dart';
 import 'package:analytic_shared/analytic_shared.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -233,4 +236,58 @@ void main() {
     expect(p2.current.single.eventName, 'host2_event');
     expect(p2.days.single.rowCount, 20);
   });
+
+  testWidgets('Events refresh also refreshes coverage metadata', (t) async {
+    final api = _CountsApi();
+    addTearDown(api.close);
+    late WidgetRef shellRef;
+    const f = Filters(from: '2026-10-01', to: '2026-10-04');
+    const q = (filters: f, compare: false);
+    await t.pumpWidget(ProviderScope(
+      overrides: [
+        apiClientProvider.overrideWithValue(api),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: Consumer(builder: (context, ref, child) {
+            shellRef = ref;
+            ref.watch(eventsExplorerProvider(q));
+            return ActiveRequestScope(
+              page: AppPage.events,
+              queryKey: q,
+              reload: () async {
+                await Future.wait([ref.refresh(eventsExplorerProvider(q).future)]);
+                return const RefreshResult();
+              },
+              child: const Text('events'),
+            );
+          }),
+        ),
+      ),
+    ));
+    await t.pumpAndSettle();
+    expect(api.dayCalls, 1);
+    await refreshActivePage(shellRef, AppPage.events, analyticTab: 0);
+    await t.pumpAndSettle();
+    expect(api.calls, 2);
+    expect(api.dayCalls, 2, reason: 'counts refresh must not retain old coverage');
+  });
 }
+
+class _CountsApi extends ApiClient {
+  _CountsApi() : super('http://review-fixture');
+  int calls = 0;
+  int dayCalls = 0;
+  @override
+  Future<List<DayStat>> days() async {
+    dayCalls++;
+    return [DayStat(day: '2026-10-01', rowCount: dayCalls, pulledAt: '2026-10-05T01:00:00Z')];
+  }
+  @override
+  Future<List<EventCount>> counts(String from, String to, {String? name,
+    String? platform, String? version, bool includeTest = false}) async {
+    calls++;
+    return [EventCount(day: from, eventName: 'event', count: calls)];
+  }
+}
+

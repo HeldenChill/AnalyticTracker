@@ -40,7 +40,7 @@ final eventsExplorerProvider =
       : Future.value(<EventCount>[]);
   final requiredResults = await Future.wait<Object>([
     load(f),
-    ref.watch(daysProvider.future),
+    api.days(),
   ]);
   final previousRows = await previousFuture;
   return EventsPayload(

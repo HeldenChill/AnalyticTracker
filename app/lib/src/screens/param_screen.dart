@@ -70,7 +70,11 @@ class _ParamScreenState extends ConsumerState<ParamScreen> {
           if (currentEvent != null && currentEvent.isNotEmpty) {
             futures.add(ref.refresh(paramKeysProvider((event: currentEvent, filters: f)).future));
             if (currentKey.isNotEmpty) {
-              futures.add(ref.refresh(paramValuesProvider((event: currentEvent, key: currentKey, filters: f)).future));
+              futures.add(ref.refresh(paramProvider((
+                filters: f,
+                name: currentEvent,
+                key: currentKey,
+              )).future));
             }
           }
           await Future.wait(futures);

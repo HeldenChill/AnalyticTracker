@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:analytic_app/src/api_client.dart';
 import 'package:analytic_app/src/providers.dart';
+import 'package:analytic_app/src/screens/param_screen.dart';
 import 'package:analytic_app/src/shell/app_shell.dart';
 import 'package:analytic_app/src/state/navigation.dart';
+import 'package:analytic_app/src/state/refresh.dart';
 import 'package:analytic_app/src/widgets/event_detail_panel.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
@@ -181,4 +184,53 @@ void main() {
     expect(container.read(parameterEventProvider), 'custom_event');
     expect(container.read(parameterKeyProvider), '');
   });
+
+  testWidgets('Parameters refresh waits for visible buckets', (t) async {
+    final pending = Completer<List<ParamBucket>>();
+    addTearDown(() {
+      if (!pending.isCompleted) pending.complete(const []);
+    });
+    var bucketCalls = 0;
+    var completed = false;
+    await t.pumpWidget(ProviderScope(
+      overrides: [
+        eventNamesProvider.overrideWith((ref) async => ['event']),
+        parameterEventProvider.overrideWith((ref) => 'event'),
+        parameterKeyProvider.overrideWith((ref) => 'key'),
+        paramKeysProvider.overrideWith((ref, q) async => ['key']),
+        paramValuesProvider.overrideWith((ref, q) async => const []),
+        paramProvider.overrideWith((ref, q) async {
+          bucketCalls++;
+          return bucketCalls == 1
+              ? const [ParamBucket(value: 'old', count: 1)]
+              : pending.future;
+        }),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: Consumer(
+            builder: (context, ref, child) => Column(
+              children: [
+                TextButton(
+                  onPressed: () async {
+                    await refreshActivePage(ref, AppPage.parameters, analyticTab: 0);
+                    completed = true;
+                  },
+                  child: const Text('probe refresh'),
+                ),
+                const Expanded(child: ParamScreen()),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ));
+    await t.pumpAndSettle();
+    await t.tap(find.text('probe refresh'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 50));
+    expect(bucketCalls, greaterThan(1));
+    expect(completed, isFalse, reason: 'visible bucket request still pending');
+  });
 }
+
