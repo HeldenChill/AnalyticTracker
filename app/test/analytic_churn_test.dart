@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:analytic_app/src/api_client.dart';
 import 'package:analytic_app/src/pages/analytic/churn_tab.dart';
 import 'package:analytic_app/src/providers.dart';
+import 'package:analytic_app/src/widgets/studio_table.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -81,8 +82,8 @@ void main() {
   testWidgets('ChurnTab renders summary, drivers table, small sample badges, and rules', (t) async {
     await pump(t, churnResult);
     expect(find.text('80 observable · 20 churned (25%) · 60 stayed · 20 excluded'), findsOneWidget);
-    expect(find.text('level_fails'), findsOneWidget);
-    expect(find.text('sessions'), findsOneWidget);
+    expect(find.descendant(of: find.byType(StudioTable), matching: find.text('level_fails')), findsOneWidget);
+    expect(find.descendant(of: find.byType(StudioTable), matching: find.text('sessions')), findsOneWidget);
     expect(find.text('small sample'), findsOneWidget);
     expect(find.text('IF level_fails >= 3 → 85% left (n = 15)'), findsOneWidget);
   });

@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers.dart';
 import '../../theme/analytics_tokens.dart';
-import '../../widgets/error_retry.dart';
+import '../../widgets/charts/feature_heatmap.dart';
 import '../../widgets/format.dart';
+import '../../widgets/studio_async_panel.dart';
+import '../../widgets/studio_layout.dart';
+import '../../widgets/studio_table.dart';
 
 /// Groups smaller than this get a "small sample" badge (spec §1 honesty rule).
 const smallSample = 10;
@@ -22,50 +25,81 @@ class ClustersTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final f = ref.watch(filtersProvider);
-    return ref.watch(clustersProvider(f)).when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(clustersProvider(f))),
-          data: (r) {
-            if (r.reason == 'too_few_players') {
-              return Center(
-                  child: Text('Not enough players to find groups: ${r.players} in this range, '
-                      'need at least $minAnalysisPlayers. Try a longer date range.'));
-            }
-            if (r.reason != null || r.clusters.isEmpty) {
-              return const Center(child: Text('Every player looks the same on every feature, so there are no groups.'));
-            }
-            final theme = Theme.of(context);
-            return ListView(
-              padding: const EdgeInsets.all(16),
+    final baseUrl = ref.watch(baseUrlProvider);
+
+    return StudioAsyncPanel<ClusterResult>(
+      queryKey: (baseUrl, f),
+      value: ref.watch(clustersProvider(f)),
+      onRetry: () => ref.invalidate(clustersProvider(f)),
+      builder: (r) {
+        if (r.reason == 'too_few_players') {
+          return Center(
+            child: Text(
+              'Not enough players to find groups: ${r.players} in this range, '
+              'need at least $minAnalysisPlayers. Try a longer date range.',
+            ),
+          );
+        }
+        if (r.reason != null || r.clusters.isEmpty) {
+          return const Center(
+            child: Text(
+              'Every player looks the same on every feature, so there are no groups.',
+            ),
+          );
+        }
+
+        final theme = Theme.of(context);
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+            StudioHeading(
+              title: 'Clusters',
+              subtitle:
+                  'Players grouped by similar behaviour (k-means). Each card shows what sets a group apart from the average player.',
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${r.players} players · ${r.k} groups · separation ${separationWord(r.silhouette!)} '
+              '(${fmtDecimal(r.silhouette, digits: 2)})',
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 16),
+            StudioGrid(
+              minChildWidth: 300,
+              maxColumns: 3,
+              gap: 12,
               children: [
-                Text(
-                  'Players grouped by similar behaviour (k-means). Each card shows what sets a group '
-                  'apart from the average player.',
-                  style: theme.textTheme.bodySmall,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${r.players} players · ${r.k} groups · separation ${separationWord(r.silhouette!)} '
-                  '(${fmtDecimal(r.silhouette, digits: 2)})',
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [for (final c in r.clusters) ClusterCard(cluster: c, overall: r.overall)],
-                ),
-                const SizedBox(height: 20),
-                Text('All features by group', style: theme.textTheme.titleSmall),
-                const SizedBox(height: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Card(child: ClusterHeatTable(result: r)),
-                ),
+                for (final c in r.clusters)
+                  ClusterCard(cluster: c, overall: r.overall),
               ],
-            );
-          },
-        );
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Profile heatmap (z-score)',
+              style: theme.textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            FeatureHeatmap(
+              rowLabels: [for (final c in r.clusters) c.label],
+              columnLabels: [for (final key in r.features) featureName(key)],
+              values: [
+                for (final c in r.clusters)
+                  [for (final key in r.features) c.z[key]],
+              ],
+            ),
+            const SizedBox(height: 24),
+            Text('Raw feature means by group', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Card(
+              child: ClusterRawTable(result: r),
+            ),
+          ],
+        ),
+      );
+    },
+  );
   }
 }
 
@@ -78,80 +112,76 @@ class ClusterCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tokens = AnalyticsTokens.of(context);
-    return SizedBox(
-      width: 320,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(child: Text(cluster.label, style: theme.textTheme.titleSmall)),
-                  if (cluster.size < smallSample)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: tokens.bad.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text('small sample', style: theme.textTheme.labelSmall),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    cluster.label,
+                    style: theme.textTheme.titleSmall,
+                    softWrap: true,
+                  ),
+                ),
+                if (cluster.size < smallSample)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: tokens.bad.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                ],
+                    child: Text('small sample', style: theme.textTheme.labelSmall),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${cluster.size} players · ${fmtPct(cluster.share)}',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            for (final key in cluster.top)
+              Text(
+                '${cluster.z[key]! >= 0 ? '▲' : '▼'} ${featureName(key)}  '
+                '${fmtDecimal(cluster.means[key])} vs ${fmtDecimal(overall[key])} avg',
               ),
-              const SizedBox(height: 4),
-              Text('${cluster.size} players · ${fmtPct(cluster.share)}', style: theme.textTheme.bodySmall),
-              const SizedBox(height: 8),
-              for (final key in cluster.top)
-                Text('${cluster.z[key]! >= 0 ? '▲' : '▼'} ${featureName(key)}  '
-                    '${fmtDecimal(cluster.means[key])} vs ${fmtDecimal(overall[key])} avg'),
-            ],
-          ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// Groups × features; cell = raw mean, tinted by the group's z (good = above
-/// average, bad = below), plus an "All players" row.
-class ClusterHeatTable extends StatelessWidget {
-  const ClusterHeatTable({super.key, required this.result});
+class ClusterRawTable extends StatelessWidget {
+  const ClusterRawTable({super.key, required this.result});
   final ClusterResult result;
 
   @override
   Widget build(BuildContext context) {
-    final tokens = AnalyticsTokens.of(context);
-    Widget cell(double? mean, double? z) {
-      final tint = z == null
-          ? null
-          : (z >= 0 ? tokens.good : tokens.bad).withValues(alpha: (z.abs() / 2).clamp(0.0, 1.0) * 0.4);
-      return Container(
-        color: tint,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Text(fmtDecimal(mean)),
-      );
-    }
-
-    return DataTable(
-      columnSpacing: 8,
+    return StudioTable(
       columns: [
-        const DataColumn(label: Text('Group')),
-        const DataColumn(label: Text('Players'), numeric: true),
-        for (final key in result.features) DataColumn(label: Text(featureName(key))),
+        const StudioColumn('Group', width: 220),
+        const StudioColumn('Players', width: 100, numeric: true),
+        for (final key in result.features)
+          StudioColumn(featureName(key), width: 120, numeric: true),
       ],
       rows: [
         for (final c in result.clusters)
-          DataRow(cells: [
-            DataCell(Text(c.label)),
-            DataCell(Text('${c.size}')),
-            for (final key in result.features) DataCell(cell(c.means[key], c.z[key])),
+          StudioRow([
+            StudioTextCell(c.label, width: 220),
+            StudioTextCell('${c.size}', numeric: true),
+            for (final key in result.features)
+              StudioTextCell(fmtDecimal(c.means[key]), numeric: true),
           ]),
-        DataRow(cells: [
-          const DataCell(Text('All players')),
-          DataCell(Text('${result.players}')),
-          for (final key in result.features) DataCell(cell(result.overall[key], null)),
+        StudioRow([
+          const StudioTextCell('All players', width: 220),
+          StudioTextCell('${result.players}', numeric: true),
+          for (final key in result.features)
+            StudioTextCell(fmtDecimal(result.overall[key]), numeric: true),
         ]),
       ],
     );

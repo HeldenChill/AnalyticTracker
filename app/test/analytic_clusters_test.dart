@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:analytic_app/src/api_client.dart';
 import 'package:analytic_app/src/pages/analytic/analytic_page.dart';
+import 'package:analytic_app/src/pages/analytic/clusters_tab.dart';
 import 'package:analytic_app/src/providers.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
@@ -65,10 +66,11 @@ void main() {
 
   testWidgets('Clusters tab: summary, cards, small-sample badge, heat table', (t) async {
     await pump(t, result);
-    expect(find.text('Clusters'), findsOneWidget);
+    expect(find.text('Clusters'), findsWidgets);
     expect(find.text('24 players · 2 groups · separation strong (0.62)'), findsOneWidget);
-    // Label appears on the card and in the heat table.
-    expect(find.text('High level_fails · High sessions'), findsNWidgets(2));
+    // Label appears on the card, heatmap and in the raw table.
+    expect(find.descendant(of: find.byType(ClusterCard), matching: find.text('High level_fails · High sessions')), findsOneWidget);
+    expect(find.descendant(of: find.byType(ClusterRawTable), matching: find.text('High level_fails · High sessions')), findsOneWidget);
     expect(find.text('16 players · 67%'), findsOneWidget);
     expect(find.text('8 players · 33%'), findsOneWidget);
     // Only the group of 8 (< 10) gets the badge.
@@ -77,7 +79,7 @@ void main() {
     expect(find.text('▼ sessions  1.5 vs 7.8 avg'), findsOneWidget);
     // ev: prefix hidden in card lines and table headers.
     expect(find.text('▲ pet_buy  1.0 vs 0.5 avg'), findsOneWidget);
-    expect(find.text('pet_buy'), findsOneWidget);
+    expect(find.descendant(of: find.byType(ClusterRawTable), matching: find.text('pet_buy')), findsOneWidget);
     expect(find.text('All players'), findsOneWidget);
     expect(find.text('20.5'), findsOneWidget);
   });
