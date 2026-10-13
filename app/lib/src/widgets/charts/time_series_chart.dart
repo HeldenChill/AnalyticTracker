@@ -205,7 +205,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             for (var i = 0; i < allBucketX.length; i++)
               ChartPoint(i.toDouble(), null, label: ordinalToLabel[i] ?? ''),
           ];
-          final axisLayout = measureChartAxes(
+          var axisLayout = measureChartAxes(
             context: context,
             width: usableWidth,
             bounds: bounds,
@@ -217,7 +217,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             plotHeight: math.max(200, widget.plotHeight),
           );
 
-          final plotUsableWidth = math.max(1.0, usableWidth - axisLayout.yReservedSize - 8);
+          final plotUsableWidth = axisLayout.plotWidth;
           final bucketCount = allBucketX.length;
           final seriesCount = sortedSeries.length;
           final rodWidth = math.min(
@@ -227,6 +227,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
 
           final rodSources = <(int, int), (ChartSeries, ChartPoint)>{};
           final barGroups = <BarChartGroupData>[];
+          final groupWidths = <double>[];
           for (var ord = 0; ord < allBucketX.length; ord++) {
             final curX = ordinalToX[ord]!;
             final rods = <BarChartRodData>[];
@@ -264,7 +265,22 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
               }
             }
             barGroups.add(BarChartGroupData(x: ord, barRods: rods, barsSpace: 0));
+            groupWidths.add(rods.isEmpty ? 0.0 : rods.length * rodWidth);
           }
+
+          final centers = spaceAroundCenters(plotUsableWidth, groupWidths);
+          axisLayout = measureChartAxes(
+            context: context,
+            width: usableWidth,
+            bounds: bounds,
+            buckets: buckets,
+            ordinalBars: true,
+            formatY: (y) =>
+                widget.percentage ? '${(y * 100).toStringAsFixed(0)}%' : _formatValue(y),
+            style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+            plotHeight: math.max(200, widget.plotHeight),
+            barCenters: centers.map((x) => x / plotUsableWidth).toList(),
+          );
 
           final barData = BarChartData(
             alignment: BarChartAlignment.spaceAround,
@@ -375,18 +391,19 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
 
           Widget? xLabelStrip;
           if (axisLayout.xReservedSize > 0 && axisLayout.xTicks.isNotEmpty) {
-            final plotLeft = axisLayout.yReservedSize > 0 ? axisLayout.yReservedSize : 0.0;
-            final plotUsable = math.max(1.0, usableWidth - plotLeft - 8);
+            final plotLeft = axisLayout.plotLeft;
+            final plotWidth = axisLayout.plotWidth;
             xLabelStrip = SizedBox(
               height: axisLayout.xReservedSize,
               child: Stack(
                 children: [
                   for (final entry in axisLayout.xTicks.entries) () {
-                    final idx = entry.key.toInt();
-                    final normalized = buckets.isEmpty ? 0.0 : (idx + 0.5) / buckets.length;
-                    final center = normalized.clamp(0.0, 1.0) * plotUsable;
+                    final ord = entry.key.toInt();
+                    final center = (ord >= 0 && ord < centers.length)
+                        ? centers[ord]
+                        : (buckets.isEmpty ? 0.0 : (ord + 0.5) / buckets.length * plotWidth);
                     final left = (center - axisLayout.xLabelWidth / 2)
-                        .clamp(0.0, math.max(0.0, plotUsable - axisLayout.xLabelWidth));
+                        .clamp(0.0, math.max(0.0, plotWidth - axisLayout.xLabelWidth));
                     return Positioned(
                       left: plotLeft + left,
                       top: 4,
@@ -635,8 +652,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
 
           Widget? xLabelStrip;
           if (axisLayout.xReservedSize > 0 && axisLayout.xTicks.isNotEmpty) {
-            final plotLeft = axisLayout.yReservedSize > 0 ? axisLayout.yReservedSize : 0.0;
-            final plotUsable = math.max(1.0, usableWidth - plotLeft - 8);
+            final plotLeft = axisLayout.plotLeft;
+            final plotWidth = axisLayout.plotWidth;
             final span = bounds.maxX - bounds.minX;
             xLabelStrip = SizedBox(
               height: axisLayout.xReservedSize,
@@ -644,9 +661,9 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                 children: [
                   for (final entry in axisLayout.xTicks.entries) () {
                     final normalized = span <= 0 ? 0.0 : (entry.key - bounds.minX) / span;
-                    final center = normalized.clamp(0.0, 1.0) * plotUsable;
+                    final center = normalized.clamp(0.0, 1.0) * plotWidth;
                     final left = (center - axisLayout.xLabelWidth / 2)
-                        .clamp(0.0, math.max(0.0, plotUsable - axisLayout.xLabelWidth));
+                        .clamp(0.0, math.max(0.0, plotWidth - axisLayout.xLabelWidth));
                     return Positioned(
                       left: plotLeft + left,
                       top: 4,

@@ -11,11 +11,32 @@ class ChartAxisLayout {
     required this.yReservedSize,
     required this.xReservedSize,
     required this.xLabelWidth,
+    required this.plotLeft,
+    required this.plotWidth,
   });
 
   final Map<double, String> xTicks;
   final List<double> yTicks;
   final double yReservedSize, xReservedSize, xLabelWidth;
+  final double plotLeft, plotWidth;
+}
+
+List<double> spaceAroundCenters(double plotWidth, List<double> groupWidths) {
+  if (!plotWidth.isFinite || plotWidth <= 0 ||
+      groupWidths.any((w) => !w.isFinite || w < 0)) {
+    throw ArgumentError('Invalid bar plot geometry');
+  }
+  if (groupWidths.isEmpty) return const [];
+  final sum = groupWidths.fold<double>(0, (a, b) => a + b);
+  if (sum > plotWidth) throw ArgumentError('Bar groups exceed plot width');
+  final halfGap = (plotWidth - sum) / (2 * groupWidths.length);
+  var x = 0.0;
+  return [for (final width in groupWidths) () {
+    x += halfGap + width / 2;
+    final center = x;
+    x += width / 2 + halfGap;
+    return center;
+  }()];
 }
 
 ChartAxisLayout measureChartAxes({
@@ -61,10 +82,11 @@ ChartAxisLayout measureChartAxes({
       ) +
       8;
   final reservedY = width - measuredY - 8 >= 64 ? measuredY : 0.0;
-  final usable = math.max(1.0, width - reservedY - 8);
-  final capacity = math.max(2, (usable / 88).floor());
+  final plotLeft = reservedY;
+  final plotWidth = math.max(1.0, width - reservedY);
+  final capacity = math.max(2, (plotWidth / 88).floor());
   final stride = math.max(1, (buckets.length / capacity).ceil());
-  final labelWidth = math.max(1.0, usable / capacity - 8);
+  final labelWidth = math.max(1.0, plotWidth / capacity - 8);
   final chosen = <double, String>{};
   var lastRight = double.negativeInfinity;
   var maxHeight = 0.0;
@@ -73,11 +95,12 @@ ChartAxisLayout measureChartAxes({
     final normalized = ordinalBars
         ? (barCenters?[i] ?? (buckets.isEmpty ? 0.0 : (i + .5) / buckets.length))
         : (span <= 0 ? 0.0 : (buckets[i].x - bounds.minX) / span);
-    final center = normalized.clamp(0.0, 1.0) * usable;
-    final left = (center - labelWidth / 2).clamp(0.0, usable - labelWidth);
+    final textWidth = measure(buckets[i].label).width;
+    final center = normalized.clamp(0.0, 1.0) * plotWidth;
+    final left = (center - textWidth / 2).clamp(0.0, math.max(0.0, plotWidth - textWidth));
     if (left < lastRight + 8) continue;
     chosen[ordinalBars ? i.toDouble() : buckets[i].x] = buckets[i].label;
-    lastRight = left + labelWidth;
+    lastRight = left + textWidth;
     maxHeight = math.max(maxHeight, measure(buckets[i].label, maxWidth: labelWidth).height);
   }
   final measuredX = chosen.isEmpty ? 0.0 : maxHeight + 8;
@@ -88,5 +111,7 @@ ChartAxisLayout measureChartAxes({
     yReservedSize: reservedY,
     xReservedSize: reservedX,
     xLabelWidth: labelWidth,
+    plotLeft: plotLeft,
+    plotWidth: plotWidth,
   );
 }

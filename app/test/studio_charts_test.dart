@@ -7,6 +7,7 @@ import 'package:analytic_app/src/widgets/charts/ranked_bar_chart.dart';
 import 'package:analytic_app/src/widgets/charts/time_series_chart.dart';
 import 'package:analytic_app/src/widgets/format.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:fl_chart/src/chart/bar_chart/bar_chart_renderer.dart';
 import 'package:fl_chart/src/extensions/bar_chart_data_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -779,5 +780,53 @@ void main() {
     expect(factor(), lessThan(1));
     await render(20, accessible: true);
     expect(factor(), 1);
+  });
+
+  for (final width in [720.0, 1024.0, 1440.0]) {
+    for (final scale in [1.0, 1.5]) {
+      testWidgets('sparse grouped bar date label aligns at width $width scale $scale', (t) async {
+        final series = [for (var i = 0; i < 20; i++) ChartSeries(id: 's$i', label: 'S$i',
+          points: [ChartPoint(0, 1, label: 'first'),
+            ChartPoint(1, i == 0 ? 2 : null, label: 'middle'),
+            ChartPoint(2, i == 0 ? 3 : null, label: 'last')])];
+        await t.pumpWidget(MaterialApp(home: MediaQuery(data: MediaQueryData(disableAnimations: true, textScaler: TextScaler.linear(scale)),
+          child: Scaffold(body: Align(alignment: Alignment.topLeft, child: SizedBox(width: width,
+            child: SingleChildScrollView(child: TimeSeriesChart(series: series, unit: 'events', kind: TimeChartKind.bars))))))));
+        final leafFinder = find.byType(BarChartLeaf);
+        final leaf = t.widget<BarChartLeaf>(leafFinder);
+        final rect = t.getRect(leafFinder);
+        final centers = leaf.targetData.calculateGroupsX(rect.width);
+        final label = t.getRect(find.byKey(const ValueKey('chart-x-tick:1.0')));
+        expect(label.center.dx, closeTo(rect.left + centers[1], .5));
+      });
+    }
+  }
+
+  testWidgets('line chart source tick alignment matches plot geometry', (t) async {
+    const series = [
+      ChartSeries(id: 's1', label: 'S1', points: [
+        ChartPoint(0, 10, label: 'd0'),
+        ChartPoint(5, 20, label: 'd5'),
+        ChartPoint(10, 30, label: 'd10'),
+      ]),
+    ];
+    await t.pumpWidget(MaterialApp(home: MediaQuery(data: const MediaQueryData(disableAnimations: true),
+      child: const Scaffold(body: SizedBox(width: 720,
+        child: TimeSeriesChart(series: series, unit: 'events', kind: TimeChartKind.line))))));
+    expect(find.byKey(const ValueKey('chart-x-tick:0.0')), findsOneWidget);
+    expect(find.byKey(const ValueKey('chart-x-tick:10.0')), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('empty and single bucket bar charts render without crash', (t) async {
+    for (final series in [
+      <ChartSeries>[],
+      const [ChartSeries(id: 's', label: 'S', points: [ChartPoint(0, 5, label: 'one')])],
+    ]) {
+      await t.pumpWidget(MaterialApp(home: MediaQuery(data: const MediaQueryData(disableAnimations: true),
+        child: Scaffold(body: SizedBox(width: 720,
+          child: TimeSeriesChart(series: series, unit: 'events', kind: TimeChartKind.bars))))));
+      expect(t.takeException(), isNull);
+    }
   });
 }

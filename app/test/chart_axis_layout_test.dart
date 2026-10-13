@@ -180,7 +180,50 @@ void main() {
         style: const TextStyle(fontSize: 10),
       );
       expect(layout.xTicks, {.1: 'A', 900.0: 'C'});
+      expect(layout.plotWidth, 720 - layout.yReservedSize);
+      expect(layout.plotLeft, layout.yReservedSize);
       return const SizedBox.shrink();
     })));
+  });
+
+  group('spaceAroundCenters', () {
+    test('returns empty for empty groups', () {
+      expect(spaceAroundCenters(100, []), isEmpty);
+    });
+
+    test('centers single group', () {
+      final centers = spaceAroundCenters(100, [20]);
+      expect(centers, [50.0]);
+    });
+
+    test('centers equal groups with space around', () {
+      final centers = spaceAroundCenters(100, [20, 20]);
+      // sum=40, remaining=60, 4 gaps of 15.
+      // group0: 15 + 10 = 25
+      // group1: 15 + 20 + 30 + 10 = 75
+      expect(centers, [25.0, 75.0]);
+    });
+
+    test('centers unequal groups matching fl_chart spacing', () {
+      final centers = spaceAroundCenters(120, [10, 30, 20]);
+      // sum=60, remaining=60, 6 half-gaps of 10.
+      // halfGap = 10.
+      // group0: 10 + 5 = 15. right=20.
+      // group1: 20 + 10 + 15 = 45. right=60.
+      // group2: 60 + 10 + 10 = 80. right=90.
+      // (Wait, remaining = 120-60 = 60. halfGap = 60 / (2*3) = 10).
+      // group0: x=0 + 10 + 5 = 15. x += 5 + 10 -> x=30.
+      // group1: 30 + 10 + 15 = 55. x += 15 + 10 -> x=80.
+      // group2: 80 + 10 + 10 = 100.
+      expect(centers, [15.0, 55.0, 100.0]);
+    });
+
+    test('rejects invalid inputs', () {
+      expect(() => spaceAroundCenters(0, [10]), throwsArgumentError);
+      expect(() => spaceAroundCenters(-10, [10]), throwsArgumentError);
+      expect(() => spaceAroundCenters(double.infinity, [10]), throwsArgumentError);
+      expect(() => spaceAroundCenters(100, [-5]), throwsArgumentError);
+      expect(() => spaceAroundCenters(100, [60, 50]), throwsArgumentError);
+    });
   });
 }
