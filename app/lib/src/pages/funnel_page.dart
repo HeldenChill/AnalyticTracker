@@ -126,13 +126,26 @@ class _FunnelPageState extends ConsumerState<FunnelPage> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     if (selected != null)
-                      DropdownButton<int>(
-                        value: selected.id,
-                        items: [for (final s in list) DropdownMenuItem(value: s.id, child: Text(s.name))],
-                        onChanged: (v) => setState(() {
-                          _selectedId = v;
-                          _draft = null;
-                        }),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 320),
+                        child: DropdownButton<int>(
+                          value: selected.id,
+                          isExpanded: true,
+                          items: [
+                            for (final s in list)
+                              DropdownMenuItem(
+                                value: s.id,
+                                child: Text(
+                                  s.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                          ],
+                          onChanged: (v) => setState(() {
+                            _selectedId = v;
+                            _draft = null;
+                          }),
+                        ),
                       ),
                     OutlinedButton.icon(
                       onPressed: () => _openEditor(),
@@ -241,7 +254,15 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
                       runSpacing: 8,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Text(widget.def.name, style: theme.textTheme.titleLarge),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 400),
+                          child: Text(
+                            widget.def.name,
+                            style: theme.textTheme.titleLarge,
+                            softWrap: true,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                         Chip(label: Text(funnelWindowLabel(widget.def.windowMinutes))),
                         Chip(label: Text(widget.def.order.label)),
                         const SizedBox(width: 8),
