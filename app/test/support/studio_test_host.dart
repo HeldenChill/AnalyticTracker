@@ -15,6 +15,7 @@ Future<void> pumpStudio(
   AppStyle style = AppStyle.tremor,
   bool reducedMotion = false,
   List<Override> overrides = const [],
+  bool settle = true,
 }) async {
   t.view.physicalSize = Size(width, height);
   t.view.devicePixelRatio = 1;
@@ -32,5 +33,9 @@ Future<void> pumpStudio(
           child: Scaffold(body: child),
         )),
   ));
-  await t.pumpAndSettle();
+  if (settle) {
+    await t.pumpAndSettle();
+  } else {
+    await t.pump();
+  }
 }
