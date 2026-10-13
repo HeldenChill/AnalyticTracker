@@ -6,11 +6,11 @@ import '../../providers.dart';
 import '../../state/navigation.dart';
 import '../../state/refresh.dart';
 import '../../theme/analytics_tokens.dart';
-import '../../theme/motion_policy.dart';
 import '../../widgets/charts/chart_frame.dart';
 import '../../widgets/charts/chart_models.dart';
 import '../../widgets/charts/time_series_chart.dart';
 import '../../widgets/format.dart';
+import '../../widgets/studio_animated_size.dart';
 import '../../widgets/studio_async_panel.dart';
 
 class AnomaliesTab extends ConsumerStatefulWidget {
@@ -159,10 +159,10 @@ class _AnomaliesTabState extends ConsumerState<AnomaliesTab> {
                   ),
                 ],
               ),
-              AnimatedSize(
-                duration: motionDuration(context, MotionKind.expansion),
-                curve: Curves.easeInOut,
+              StudioAnimatedSize(
+                key: ValueKey('anomaly-expansion:${alert.series}:${alert.day}'),
                 alignment: Alignment.topCenter,
+                curve: Curves.easeInOut,
                 child: isSelected ? _buildDetail(alert, unit) : const SizedBox.shrink(),
               ),
             ],

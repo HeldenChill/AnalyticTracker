@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/analytics_tokens.dart';
+import '../../theme/motion_policy.dart';
 import '../format.dart';
 import 'chart_axis_layout.dart';
 import 'chart_models.dart';
@@ -412,7 +413,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             key: const ValueKey('chart-mark-area'),
             height: chartHeight,
             child: BarChart(
-              key: ValueKey(topology),
+              key: ValueKey((topology, chartAnimationsAllowed(context))),
               barData,
               duration: motion.geometryDuration,
             ),
@@ -672,7 +673,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             key: const ValueKey('chart-mark-area'),
             height: chartHeight,
             child: LineChart(
-              key: ValueKey(topology),
+              key: ValueKey((topology, chartAnimationsAllowed(context))),
               lineData,
               duration: motion.geometryDuration,
             ),

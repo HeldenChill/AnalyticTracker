@@ -6,10 +6,10 @@ import '../../providers.dart';
 import '../../state/navigation.dart';
 import '../../state/refresh.dart';
 import '../../theme/analytics_tokens.dart';
-import '../../theme/motion_policy.dart';
 import '../../widgets/charts/diverging_bar_chart.dart';
 import '../../widgets/charts/ranked_bar_chart.dart';
 import '../../widgets/format.dart';
+import '../../widgets/studio_animated_size.dart';
 import '../../widgets/studio_async_panel.dart';
 import '../../widgets/studio_layout.dart';
 import '../../widgets/studio_table.dart';
@@ -192,8 +192,8 @@ class ChurnTab extends ConsumerWidget {
               )
             else
               for (final rule in r.rules)
-                AnimatedSize(
-                  duration: motionDuration(context, MotionKind.expansion),
+                StudioAnimatedSize(
+                  key: ValueKey('churn-rule:${rule.text}'),
                   child: Card(
                     margin: const EdgeInsets.only(bottom: 8),
                     child: Padding(
