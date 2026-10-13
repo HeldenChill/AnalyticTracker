@@ -3,12 +3,27 @@ import 'package:analytic_app/src/widgets/stage_table.dart';
 import 'package:analytic_app/src/widgets/studio_table.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/studio_test_host.dart';
 import 'support/studio_text_assertions.dart';
 
 void main() {
+  setUpAll(() async {
+    for (final entry in {
+      'Inter': ['400', '700'],
+      'Geist': ['400', '700'],
+      'Manrope': ['400', '700'],
+      'ChakraPetch': ['500', '700'],
+    }.entries) {
+      final loader = FontLoader(entry.key);
+      for (final weight in entry.value) {
+        loader.addFont(rootBundle.load('assets/fonts/${entry.key}-$weight.ttf'));
+      }
+      await loader.load();
+    }
+  });
   for (final style in AppStyle.values) {
     testWidgets('table wraps long identifiers in ${style.name}', (t) async {
       await pumpStudio(
@@ -127,4 +142,53 @@ void main() {
     await t.tap(find.text(label));
     expect(sorted, [(0, false)]);
   });
+
+  for (final style in AppStyle.values) {
+    for (final scale in [1.0, 1.5]) {
+      testWidgets('bold numeric paragraph fits ${style.name} at scale $scale', (t) async {
+        await pumpStudio(t, Builder(builder: (context) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(boldText: true),
+          child: const StudioTable(
+            columns: [StudioColumn('Players', width: 80, numeric: true)],
+            rows: [StudioRow([
+              StudioTextCell('123456789012', numeric: true,
+                style: TextStyle(fontWeight: FontWeight.w400)),
+            ])],
+          ),
+        )), style: style, textScale: scale);
+        expectCompleteSingleLine(t, find.text('123456789012'));
+        expect(t.takeException(), isNull);
+      });
+
+      testWidgets('bold header height wraps completely in ${style.name} at scale $scale', (t) async {
+        const label = 'Median time from step 1';
+        await pumpStudio(t, Builder(builder: (context) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(boldText: true),
+          child: StudioTable(
+            columns: [StudioColumn(label, width: 140, numeric: true,
+                onSort: (index, ascending) {})],
+            sortColumnIndex: 0,
+            rows: const [StudioRow([StudioTextCell('40s', numeric: true)])],
+          ),
+        )), style: style, textScale: scale);
+        expectCompleteWrappedText(t, find.text(label));
+        expect(t.takeException(), isNull);
+      });
+    }
+
+    testWidgets('normal flag preserves caller weight in ${style.name}', (t) async {
+      await pumpStudio(t, Builder(builder: (context) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(boldText: false),
+        child: const StudioTable(
+          columns: [StudioColumn('Players', width: 80, numeric: true)],
+          rows: [StudioRow([
+            StudioTextCell('123456789012', numeric: true,
+              style: TextStyle(fontWeight: FontWeight.w400)),
+          ])],
+        ),
+      )), style: style, textScale: 1.0);
+      expectCompleteSingleLine(t, find.text('123456789012'));
+      expect(t.takeException(), isNull);
+    });
+  }
 }

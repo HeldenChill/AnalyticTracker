@@ -45,7 +45,10 @@ class StudioTextCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inherited = DefaultTextStyle.of(context).style;
-    final effectiveStyle = style == null ? inherited : inherited.merge(style);
+    var effectiveStyle = style == null ? inherited : inherited.merge(style);
+    if (MediaQuery.boldTextOf(context)) {
+      effectiveStyle = effectiveStyle.copyWith(fontWeight: FontWeight.bold);
+    }
     if (numeric) {
       final painter = TextPainter(
         text: TextSpan(text: text, style: effectiveStyle),
@@ -151,7 +154,10 @@ class _StudioTableState extends State<StudioTable> {
     final tableTheme = DataTableTheme.of(context);
     final baseStyle = tableTheme.headingTextStyle ??
         theme.dataTableTheme.headingTextStyle ?? theme.textTheme.titleSmall!;
-    final headingStyle = DefaultTextStyle.of(context).style.merge(baseStyle);
+    var headingStyle = DefaultTextStyle.of(context).style.merge(baseStyle);
+    if (MediaQuery.boldTextOf(context)) {
+      headingStyle = headingStyle.copyWith(fontWeight: FontWeight.bold);
+    }
     var headingHeight = tableTheme.headingRowHeight ??
         theme.dataTableTheme.headingRowHeight ?? 56.0;
     for (final column in widget.columns) {
