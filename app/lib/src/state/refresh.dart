@@ -8,6 +8,7 @@ typedef RequestRegistration = ({
   AppPage page,
   int? analyticTab,
   Object queryKey,
+  Object cacheKey,
   Future<RefreshResult> Function() reload,
 });
 
@@ -27,42 +28,46 @@ class RefreshResult {
 
 class ReloadTicket {
   ReloadTicket({
-    required this.queryKey,
+    required this.cacheKey,
     required this.generation,
     required this.future,
   });
-  final Object queryKey;
+  final Object cacheKey;
   final int generation;
   final Future<RefreshResult> future;
 }
 
 class OwnerEntry {
-  OwnerEntry(this.registration, this.freshGeneration);
+  OwnerEntry(this.registration);
   RequestRegistration registration;
-  int freshGeneration;
   ReloadTicket? inFlight;
 }
 
 class ActiveRequestRegistry {
   final Map<Object, OwnerEntry> _owners = {};
+  final Map<Object, int> _freshByQuery = {};
   int _generation = 0;
 
   void register({
     required AppPage page,
     required Object owner,
     required Object queryKey,
+    Object? cacheKey,
     int? analyticTab,
     required Future<RefreshResult> Function() reload,
   }) {
+    final identity = cacheKey ?? (page, analyticTab, queryKey);
+    _freshByQuery.putIfAbsent(identity, () => _generation);
     final reg = (
       page: page,
       analyticTab: analyticTab,
       queryKey: queryKey,
+      cacheKey: identity,
       reload: reload,
     );
     final existing = _owners[owner];
     if (existing == null) {
-      _owners[owner] = OwnerEntry(reg, _generation);
+      _owners[owner] = OwnerEntry(reg);
     } else {
       existing.registration = reg;
     }
@@ -70,7 +75,10 @@ class ActiveRequestRegistry {
 
   void remove(Object owner) => _owners.remove(owner);
 
-  void dispose() => _owners.clear();
+  void dispose() {
+    _owners.clear();
+    _freshByQuery.clear();
+  }
 
   Future<RefreshResult> runOwner(
     Object owner,
@@ -79,13 +87,14 @@ class ActiveRequestRegistry {
     int requestedGeneration,
   ) async {
     final key = snapshot.queryKey;
+    final identity = snapshot.cacheKey;
     final existing = entry.inFlight;
     final ticket = existing != null &&
-            existing.queryKey == key &&
+            existing.cacheKey == identity &&
             existing.generation == requestedGeneration
         ? existing
         : ReloadTicket(
-            queryKey: key,
+            cacheKey: identity,
             generation: requestedGeneration,
             future: Future<RefreshResult>.sync(snapshot.reload).catchError(
               (Object e) => RefreshResult(errors: [e]),
@@ -94,9 +103,11 @@ class ActiveRequestRegistry {
     entry.inFlight = ticket;
     final result = await ticket.future;
     final current = identical(_owners[owner], entry) &&
+        entry.registration.cacheKey == identity &&
         entry.registration.queryKey == key;
     if (current && result.errors.isEmpty && !result.superseded) {
-      entry.freshGeneration = math.max(entry.freshGeneration, requestedGeneration);
+      final currentFresh = _freshByQuery[identity] ?? 0;
+      _freshByQuery[identity] = math.max(currentFresh, requestedGeneration);
     }
     if (identical(entry.inFlight, ticket)) entry.inFlight = null;
     return RefreshResult(
@@ -110,7 +121,9 @@ class ActiveRequestRegistry {
     final entry = _owners[owner];
     if (entry == null) return const RefreshResult();
     final currentGen = _generation;
-    if (entry.freshGeneration >= currentGen) {
+    final identity = entry.registration.cacheKey;
+    final freshGen = _freshByQuery[identity] ?? 0;
+    if (freshGen >= currentGen) {
       return const RefreshResult();
     }
     final snapshot = entry.registration;
@@ -173,6 +186,7 @@ class ActiveRequestScope extends ConsumerStatefulWidget {
     required this.page,
     this.analyticTab,
     required this.queryKey,
+    this.cacheKey,
     required this.reload,
     required this.child,
   });
@@ -180,6 +194,7 @@ class ActiveRequestScope extends ConsumerStatefulWidget {
   final AppPage page;
   final int? analyticTab;
   final Object queryKey;
+  final Object? cacheKey;
   final Future<RefreshResult> Function() reload;
   final Widget child;
 
@@ -190,7 +205,10 @@ class ActiveRequestScope extends ConsumerStatefulWidget {
 class _ActiveRequestScopeState extends ConsumerState<ActiveRequestScope> {
   late ActiveRequestRegistry _registry;
   bool? _wasActive;
-  bool _activationQueued = false;
+  bool _staleCheckQueued = false;
+
+  Object _resolvedCacheKey(ActiveRequestScope w) =>
+      w.cacheKey ?? (w.page, w.analyticTab, w.queryKey);
 
   bool _isActive(AppPage currentPage, int currentTab) {
     if (widget.page != currentPage) return false;
@@ -208,8 +226,12 @@ class _ActiveRequestScopeState extends ConsumerState<ActiveRequestScope> {
     _registry = ref.read(activeRequestRegistryProvider);
     final curPage = ref.read(selectedPageProvider);
     final curTab = ref.read(analyticTabIndexProvider);
-    _wasActive = _isActive(curPage, curTab);
+    final active = _isActive(curPage, curTab);
+    _wasActive = active;
     _register();
+    if (active) {
+      _queueStaleCheck();
+    }
   }
 
   @override
@@ -221,7 +243,16 @@ class _ActiveRequestScopeState extends ConsumerState<ActiveRequestScope> {
   @override
   void didUpdateWidget(ActiveRequestScope oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final oldIdentity = _resolvedCacheKey(oldWidget);
+    final newIdentity = _resolvedCacheKey(widget);
     _register();
+    final curPage = ref.read(selectedPageProvider);
+    final curTab = ref.read(analyticTabIndexProvider);
+    final active = _isActive(curPage, curTab);
+    _wasActive = active;
+    if (active && oldIdentity != newIdentity) {
+      _queueStaleCheck();
+    }
   }
 
   void _register() {
@@ -229,6 +260,7 @@ class _ActiveRequestScopeState extends ConsumerState<ActiveRequestScope> {
       page: widget.page,
       owner: this,
       queryKey: widget.queryKey,
+      cacheKey: widget.cacheKey,
       analyticTab: widget.analyticTab,
       reload: () => widget.reload(),
     );
@@ -239,15 +271,15 @@ class _ActiveRequestScopeState extends ConsumerState<ActiveRequestScope> {
     final previouslyActive = _wasActive ?? nowActive;
     _wasActive = nowActive;
     if (!previouslyActive && nowActive) {
-      _queueActivation();
+      _queueStaleCheck();
     }
   }
 
-  void _queueActivation() {
-    if (_activationQueued) return;
-    _activationQueued = true;
+  void _queueStaleCheck() {
+    if (_staleCheckQueued) return;
+    _staleCheckQueued = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _activationQueued = false;
+      _staleCheckQueued = false;
       if (!mounted) return;
       final curPage = ref.read(selectedPageProvider);
       final curTab = ref.read(analyticTabIndexProvider);

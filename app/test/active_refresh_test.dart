@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:analytic_app/src/api_client.dart';
 import 'package:analytic_app/src/providers.dart';
 import 'package:analytic_app/src/shell/page_stage.dart';
+import 'package:analytic_app/src/state/events_explorer.dart';
 import 'package:analytic_app/src/state/navigation.dart';
 import 'package:analytic_app/src/state/refresh.dart';
 import 'package:analytic_shared/analytic_shared.dart';
@@ -142,12 +144,22 @@ void main() {
       expect(b, 1);
     });
 
-    test('start stale owner reload for key old, re-register key new, finishes old, calls new', () async {
+    test('start stale owner reload for key old, re-register known key new, finishes old, calls new', () async {
       final registry = ActiveRequestRegistry();
       final owner = Object();
       final completerOld = Completer<RefreshResult>();
       var oldCalls = 0;
       var newCalls = 0;
+
+      registry.register(
+        page: AppPage.retention,
+        owner: owner,
+        queryKey: 'new',
+        reload: () async {
+          newCalls++;
+          return const RefreshResult();
+        },
+      );
 
       registry.register(
         page: AppPage.retention,
@@ -244,6 +256,88 @@ void main() {
 
       await registry.reloadOwnerIfStale(owner);
       expect(calls, 2);
+    });
+
+    test('Registry unit trace: per-query freshness persists across owner removal and key switching', () async {
+      final registry = ActiveRequestRegistry();
+      final owner = Object();
+      var offCalls = 0;
+      var onCalls = 0;
+
+      registry.register(
+        page: AppPage.events,
+        owner: owner,
+        queryKey: 'compare-off',
+        reload: () async {
+          offCalls++;
+          return const RefreshResult();
+        },
+      );
+
+      registry.register(
+        page: AppPage.events,
+        owner: owner,
+        queryKey: 'compare-on',
+        reload: () async {
+          onCalls++;
+          return const RefreshResult();
+        },
+      );
+
+      final res = await registry.reload(AppPage.events, analyticTab: 0);
+      expect(res.succeeded, isTrue);
+      expect(onCalls, 1);
+      expect(offCalls, 0);
+
+      registry.register(
+        page: AppPage.events,
+        owner: owner,
+        queryKey: 'compare-off',
+        reload: () async {
+          offCalls++;
+          return const RefreshResult();
+        },
+      );
+
+      await registry.reloadOwnerIfStale(owner);
+      expect(offCalls, 1);
+
+      await registry.reloadOwnerIfStale(owner);
+      expect(offCalls, 1);
+
+      registry.remove(owner);
+      final newOwner = Object();
+      registry.register(
+        page: AppPage.events,
+        owner: newOwner,
+        queryKey: 'compare-off',
+        reload: () async {
+          offCalls++;
+          return const RefreshResult();
+        },
+      );
+      await registry.reloadOwnerIfStale(newOwner);
+      expect(offCalls, 1);
+
+      registry.register(
+        page: AppPage.events,
+        owner: newOwner,
+        queryKey: 'other',
+        reload: () async => const RefreshResult(),
+      );
+      await registry.reload(AppPage.events, analyticTab: 0);
+
+      registry.register(
+        page: AppPage.events,
+        owner: newOwner,
+        queryKey: 'compare-off',
+        reload: () async {
+          offCalls++;
+          return const RefreshResult();
+        },
+      );
+      await registry.reloadOwnerIfStale(newOwner);
+      expect(offCalls, 2);
     });
 
     test('midflight disposal does not crash or reinsert owner', () async {
@@ -370,6 +464,109 @@ void main() {
       await tester.pumpAndSettle();
       expect(hiddenCalls, before, reason: 'hidden retention must not fetch on Overview refresh');
     });
+
+    testWidgets('returning to cached Events query after refresh uses fresh data', (t) async {
+      const f = Filters(from: '2026-10-01', to: '2026-10-04');
+      final api = _ReviewApi(f);
+      final container = ProviderContainer(overrides: [
+        apiClientProvider.overrideWithValue(api),
+        selectedPageProvider.overrideWith((ref) => AppPage.events),
+      ]);
+      addTearDown(container.dispose);
+      addTearDown(api.close);
+      var compare = false;
+      late StateSetter updateHost;
+      await t.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, update) {
+                updateHost = update;
+                return Consumer(
+                  builder: (context, ref, child) {
+                    final q = (filters: f, compare: compare);
+                    final value = ref.watch(eventsExplorerProvider(q));
+                    return ActiveRequestScope(
+                      page: AppPage.events,
+                      queryKey: ('server', q),
+                      reload: () async {
+                        await Future.wait([ref.refresh(eventsExplorerProvider(q).future)]);
+                        return const RefreshResult();
+                      },
+                      child: Text('count=${value.valueOrNull?.current.first.count}'),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      ));
+      await t.pumpAndSettle();
+      expect(find.text('count=1'), findsOneWidget);
+      updateHost(() => compare = true);
+      await t.pumpAndSettle();
+      api.dataVersion = 2;
+      await container.read(activeRequestRegistryProvider).reload(AppPage.events, analyticTab: 0);
+      await t.pumpAndSettle();
+      expect(find.text('count=2'), findsOneWidget);
+      updateHost(() => compare = false);
+      await t.pumpAndSettle();
+      container.read(selectedPageProvider.notifier).state = AppPage.overview;
+      await t.pump();
+      container.read(selectedPageProvider.notifier).state = AppPage.events;
+      await t.pumpAndSettle();
+      expect(
+        container.read(eventsExplorerProvider((filters: f, compare: false)))
+            .requireValue.current.first.count,
+        2,
+        reason: 'previously cached comparison-off query predates manual refresh',
+      );
+    });
   });
 }
 
+class _ReviewApi extends ApiClient {
+  _ReviewApi(this.filters) : super('http://review-fixture');
+  final Filters filters;
+  int dataVersion = 1;
+  int clusterCalls = 0, associationCalls = 0;
+  @override
+  Future<List<EventCount>> counts(String from, String to, {String? name,
+    String? platform, String? version, bool includeTest = false}) async =>
+      [EventCount(day: from, eventName: 'event', count: dataVersion)];
+  @override
+  Future<List<DayStat>> days() async => [
+    for (final day in daysBetween(filters.from, filters.to))
+      DayStat(day: day, rowCount: dataVersion, pulledAt: '2026-10-05T01:00:00Z'),
+  ];
+  @override
+  Future<ClusterResult> clusters(Filters f) async {
+    clusterCalls++;
+    return const ClusterResult(players: 0, k: 0, silhouette: null,
+      features: [], droppedFeatures: [], overall: {}, clusters: [], reason: 'too_few_players');
+  }
+  @override
+  Future<AssociationResult> associations(Filters f) async {
+    associationCalls++;
+    return const AssociationResult(players: 0, rules: [], reason: 'too_few_players');
+  }
+  @override
+  Future<ChurnResult> churn(Filters f) async => const ChurnResult(
+    players: 0, observable: 0, churned: 0, stayed: 0, excluded: 0,
+    churnRate: 0, drivers: [], rules: [], reason: 'too_few_players');
+  @override
+  Future<LevelResult> levels(Filters f) async => const LevelResult(
+    players: 0, observable: 0, levels: [], exitEvents: [], transitions: [],
+    medianHazard: 0, reason: 'too_few_players');
+  @override
+  Future<SurvivalResult> survival(Filters f, {String by = 'version'}) async =>
+    SurvivalResult(players: 0, by: by, curves: [], logRank: null, reason: 'too_few_players');
+  @override
+  Future<VersionImpactResult> versionImpact(Filters f, {String? version}) async =>
+    const VersionImpactResult(targetVersion: '', targetPlayers: 0, baselineVersion: '',
+      baselinePlayers: 0, metrics: [], availableVersions: [], reason: 'too_few_players');
+  @override
+  Future<AnomalyResult> anomalies(Filters f) async => const AnomalyResult(days: 0, alerts: [], reason: 'short_range');
+}

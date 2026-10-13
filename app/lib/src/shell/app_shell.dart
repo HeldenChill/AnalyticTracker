@@ -50,6 +50,20 @@ class _AppShellState extends ConsumerState<AppShell> {
   bool _refreshing = false;
   final Object _filterOptionsOwner = Object();
   ActiveRequestRegistry? _registry;
+  (AppPage, int?, String)? _lastFilterMapping;
+  bool _filterStaleQueued = false;
+
+  void _queueFilterStaleCheck() {
+    if (_filterStaleQueued) return;
+    _filterStaleQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _filterStaleQueued = false;
+      if (!mounted) return;
+      if (_lastFilterMapping != null) {
+        ref.read(activeRequestRegistryProvider).reloadOwnerIfStale(_filterOptionsOwner);
+      }
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -59,6 +73,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   void dispose() {
+    _lastFilterMapping = null;
     _registry?.remove(_filterOptionsOwner);
     super.dispose();
   }
@@ -252,11 +267,15 @@ class _AppShellState extends ConsumerState<AppShell> {
     final isDataHealth = currentPage == AppPage.dataHealth;
 
     final registry = ref.read(activeRequestRegistryProvider);
-    if (currentPage != AppPage.dataHealth && currentPage != AppPage.settings) {
+    final mapping = (currentPage != AppPage.dataHealth && currentPage != AppPage.settings)
+        ? (currentPage, currentPage == AppPage.analytic ? currentTab : null, baseUrl)
+        : null;
+    if (mapping != null) {
       registry.register(
         page: currentPage,
         owner: _filterOptionsOwner,
         queryKey: ('filter-options', baseUrl),
+        cacheKey: ('filter-options', baseUrl),
         analyticTab: currentPage == AppPage.analytic ? currentTab : null,
         reload: () async {
           try {
@@ -267,7 +286,12 @@ class _AppShellState extends ConsumerState<AppShell> {
           }
         },
       );
+      if (_lastFilterMapping != mapping) {
+        _lastFilterMapping = mapping;
+        _queueFilterStaleCheck();
+      }
     } else {
+      _lastFilterMapping = null;
       registry.remove(_filterOptionsOwner);
     }
 
