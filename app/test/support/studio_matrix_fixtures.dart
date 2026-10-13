@@ -11,6 +11,87 @@ class MatrixFilters extends FiltersNotifier {
   Filters build() => const Filters(from: '2026-10-01', to: '2026-10-04');
 }
 
+FunnelResult matrixFunnelResult(String label) => FunnelResult(
+      steps: [
+        FunnelStepResult(
+          index: 0,
+          event: label,
+          players: 10,
+          fromPrevious: null,
+          fromFirst: 1,
+          dropped: null,
+          medianSeconds: null,
+        ),
+        const FunnelStepResult(
+          index: 1,
+          event: 'finish',
+          players: 5,
+          fromPrevious: 0.5,
+          fromFirst: 0.5,
+          dropped: 5,
+          medianSeconds: 60,
+        ),
+      ],
+      totalConversion: 0.5,
+      biggestDropIndex: 1,
+      segments: [
+        FunnelSegmentResult(
+          value: label,
+          totalConversion: 0.5,
+          steps: const [
+            FunnelSegmentStepResult(
+              players: 6,
+              fromPrevious: null,
+              fromFirst: 1,
+              dropped: null,
+              medianSeconds: null,
+            ),
+            FunnelSegmentStepResult(
+              players: 3,
+              fromPrevious: 0.5,
+              fromFirst: 0.5,
+              dropped: 3,
+              medianSeconds: 60,
+            ),
+          ],
+        ),
+        const FunnelSegmentResult(
+          value: 'Other',
+          totalConversion: 0.5,
+          steps: [
+            FunnelSegmentStepResult(
+              players: 4,
+              fromPrevious: null,
+              fromFirst: 1,
+              dropped: null,
+              medianSeconds: null,
+            ),
+            FunnelSegmentStepResult(
+              players: 2,
+              fromPrevious: 0.5,
+              fromFirst: 0.5,
+              dropped: 2,
+              medianSeconds: 60,
+            ),
+          ],
+        ),
+      ],
+      trend: const [
+        FunnelTrendPoint(
+          start: '2026-09-28',
+          players: [6, 3],
+          totalConversion: 0.5,
+          incomplete: false,
+        ),
+        FunnelTrendPoint(
+          start: '2026-10-05',
+          players: [4, 2],
+          totalConversion: 0.5,
+          incomplete: true,
+        ),
+      ],
+    );
+
 List<Override> studioMatrixOverrides({bool withFunnels = false}) {
   final cluster = ClusterResult(
     players: 10,
@@ -108,7 +189,7 @@ List<Override> studioMatrixOverrides({bool withFunnels = false}) {
                   event: longIdentifier,
                   params: [ParamFilter('key', longIdentifier)],
                 ),
-                const FunnelStepDef(event: 'step_two'),
+                const FunnelStepDef(event: 'finish'),
               ],
               updatedAt: '2026-10-05T01:00:00Z',
             )
@@ -264,42 +345,27 @@ List<Override> studioMatrixOverrides({bool withFunnels = false}) {
 
   if (withFunnels) {
     overrides.addAll([
-      funnelResultProvider.overrideWith((ref, q) async => FunnelResult(
-            steps: [
-              FunnelStepResult(
-                index: 0,
-                event: longIdentifier,
-                params: [ParamFilter('key', longIdentifier)],
-                players: 10,
-                fromPrevious: null,
-                fromFirst: 1.0,
-                dropped: null,
-                medianSeconds: null,
-              ),
-              const FunnelStepResult(
-                index: 1,
-                event: 'step_two',
-                players: 5,
-                fromPrevious: 0.5,
-                fromFirst: 0.5,
-                dropped: 5,
-                medianSeconds: 60,
-              ),
-            ],
-            totalConversion: 0.5,
-            biggestDropIndex: 1,
-          )),
-      funnelPlayersProvider.overrideWith((ref, q) async => FunnelPlayersResult(
+      funnelResultProvider.overrideWith(
+          (ref, q) async => matrixFunnelResult(longIdentifier)),
+      funnelPlayersProvider.overrideWith((ref, q) async =>
+          const FunnelPlayersResult(
             total: 10,
             players: [
               FunnelPlayerItem(
-                uid: 'player_$longIdentifier',
-                entryTs: 1000,
+                uid: 'player_1234567890',
+                entryTs: 1000000,
                 reached: 1,
-                lastTs: 2000,
+                lastTs: 2000000,
               ),
             ],
           )),
+      playerEventsProvider.overrideWith((ref, q) async => [
+            PlayerTimelineEvent(
+              ts: 1500000,
+              event: longIdentifier,
+              params: {'key': longIdentifier},
+            ),
+          ]),
     ]);
   }
 

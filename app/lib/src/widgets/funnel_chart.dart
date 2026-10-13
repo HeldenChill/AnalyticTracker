@@ -157,7 +157,15 @@ class _GroupedFunnelChart extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Text(segments[i].value, style: theme.textTheme.labelMedium),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 240),
+                    child: Text(
+                      segments[i].value,
+                      style: theme.textTheme.labelMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
           ],

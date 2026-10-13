@@ -62,6 +62,7 @@ class ChartFrame extends StatelessWidget {
                   Theme(
                     data: theme.copyWith(dividerColor: Colors.transparent),
                     child: ExpansionTile(
+                      key: PageStorageKey('chart-frame-expansion-$title'),
                       tilePadding: EdgeInsets.zero,
                       title: const Text('View data'),
                       children: [

@@ -394,16 +394,19 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
 
             return LayoutBuilder(
               builder: (context, constraints) {
-                final drilldownCard = Card(
-                  clipBehavior: Clip.antiAlias,
-                  child: FunnelDrilldownPanel(
-                    def: widget.def,
-                    filters: filters,
-                    step: _drillDown!.step,
-                    initialOutcome: _drillDown!.outcome,
-                    breakdown: breakdown,
-                    segment: _drillDown!.segment,
-                    onClose: () => setState(() => _drillDown = null),
+                final drilldownCard = SizedBox(
+                  height: 640,
+                  child: Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: FunnelDrilldownPanel(
+                      def: widget.def,
+                      filters: filters,
+                      step: _drillDown!.step,
+                      initialOutcome: _drillDown!.outcome,
+                      breakdown: breakdown,
+                      segment: _drillDown!.segment,
+                      onClose: () => setState(() => _drillDown = null),
+                    ),
                   ),
                 );
 

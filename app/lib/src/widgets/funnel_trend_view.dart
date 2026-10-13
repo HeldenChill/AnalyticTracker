@@ -116,19 +116,28 @@ class _FunnelTrendViewState extends State<FunnelTrendView> {
               showSelectedIcon: false,
               onSelectionChanged: (s) => widget.onIntervalChanged(s.first),
             ),
-            DropdownButton<int>(
-              value: _selectedStepIndex.clamp(0, math.max(0, steps.length - 1)),
-              items: [
-                const DropdownMenuItem(value: 0, child: Text('Total conversion (all steps)')),
-                for (var k = 1; k < steps.length; k++)
-                  DropdownMenuItem(
-                    value: k,
-                    child: Text('Step 1 → ${k + 1}: ${steps[k].eventsLabel}'),
-                  ),
-              ],
-              onChanged: (v) {
-                if (v != null) setState(() => _selectedStepIndex = v);
-              },
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: DropdownButton<int>(
+                isExpanded: true,
+                value: _selectedStepIndex.clamp(0, math.max(0, steps.length - 1)),
+                selectedItemBuilder: (context) => [
+                  const Text('Total conversion (all steps)', overflow: TextOverflow.ellipsis),
+                  for (var k = 1; k < steps.length; k++)
+                    Text('Step 1 → ${k + 1}: ${steps[k].eventsLabel}', overflow: TextOverflow.ellipsis),
+                ],
+                items: [
+                  const DropdownMenuItem(value: 0, child: Text('Total conversion (all steps)', overflow: TextOverflow.ellipsis)),
+                  for (var k = 1; k < steps.length; k++)
+                    DropdownMenuItem(
+                      value: k,
+                      child: Text('Step 1 → ${k + 1}: ${steps[k].eventsLabel}', overflow: TextOverflow.ellipsis),
+                    ),
+                ],
+                onChanged: (v) {
+                  if (v != null) setState(() => _selectedStepIndex = v);
+                },
+              ),
             ),
             OutlinedButton.icon(
               onPressed: () => _copyCsv(context),
