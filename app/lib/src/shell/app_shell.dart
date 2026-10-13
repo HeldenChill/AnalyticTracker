@@ -48,6 +48,20 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   bool _refreshing = false;
+  final Object _filterOptionsOwner = Object();
+  ActiveRequestRegistry? _registry;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _registry = ref.read(activeRequestRegistryProvider);
+  }
+
+  @override
+  void dispose() {
+    _registry?.remove(_filterOptionsOwner);
+    super.dispose();
+  }
 
   void _openParameters(String event) {
     if (ref.read(parameterEventProvider) != event) {
@@ -63,19 +77,23 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (_refreshing || (isDataHealth && ref.read(daysProvider).isLoading)) return;
     final originUrl = ref.read(baseUrlProvider);
     final originPage = currentPage;
-    final currentTab = ref.read(analyticTabIndexProvider);
+    final originTab = ref.read(analyticTabIndexProvider);
+    final originFilters = ref.read(filtersProvider);
 
     setState(() => _refreshing = true);
     try {
       final result = await refreshActivePage(
         ref,
         originPage,
-        analyticTab: currentTab,
+        analyticTab: originTab,
       );
 
       if (!mounted ||
+          result.superseded ||
           ref.read(baseUrlProvider) != originUrl ||
-          ref.read(selectedPageProvider) != originPage) {
+          ref.read(selectedPageProvider) != originPage ||
+          ref.read(analyticTabIndexProvider) != originTab ||
+          ref.read(filtersProvider) != originFilters) {
         return;
       }
 
@@ -105,7 +123,9 @@ class _AppShellState extends ConsumerState<AppShell> {
     } catch (_) {
       if (mounted &&
           ref.read(selectedPageProvider) == originPage &&
-          ref.read(baseUrlProvider) == originUrl) {
+          ref.read(baseUrlProvider) == originUrl &&
+          ref.read(analyticTabIndexProvider) == originTab &&
+          ref.read(filtersProvider) == originFilters) {
         final pageName = _items.firstWhere((i) => i.page == originPage).label;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Could not refresh $pageName'),
@@ -227,7 +247,29 @@ class _AppShellState extends ConsumerState<AppShell> {
     final theme = Theme.of(context);
     final tokens = AnalyticsTokens.of(context);
     final currentPage = ref.watch(selectedPageProvider);
+    final currentTab = ref.watch(analyticTabIndexProvider);
+    final baseUrl = ref.watch(baseUrlProvider);
     final isDataHealth = currentPage == AppPage.dataHealth;
+
+    final registry = ref.read(activeRequestRegistryProvider);
+    if (currentPage != AppPage.dataHealth && currentPage != AppPage.settings) {
+      registry.register(
+        page: currentPage,
+        owner: _filterOptionsOwner,
+        queryKey: ('filter-options', baseUrl),
+        analyticTab: currentPage == AppPage.analytic ? currentTab : null,
+        reload: () async {
+          try {
+            await Future.wait([ref.refresh(filterOptionsProvider.future)]);
+            return const RefreshResult();
+          } catch (e) {
+            return RefreshResult(errors: [e]);
+          }
+        },
+      );
+    } else {
+      registry.remove(_filterOptionsOwner);
+    }
 
     return Scaffold(
       body: LayoutBuilder(

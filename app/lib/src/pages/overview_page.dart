@@ -27,7 +27,6 @@ class OverviewPage extends ConsumerWidget {
         try {
           await Future.wait([
             ref.refresh(overviewProvider(f).future),
-            ref.refresh(filterOptionsProvider.future),
           ]);
           return const RefreshResult();
         } catch (e) {

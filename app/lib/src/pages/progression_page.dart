@@ -25,7 +25,6 @@ class ProgressionPage extends ConsumerWidget {
         try {
           await Future.wait([
             ref.refresh(progressionProvider(f).future),
-            ref.refresh(filterOptionsProvider.future),
           ]);
           return const RefreshResult();
         } catch (e) {

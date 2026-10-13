@@ -25,7 +25,6 @@ class RetentionPage extends ConsumerWidget {
         try {
           await Future.wait([
             ref.refresh(retentionProvider(f).future),
-            ref.refresh(filterOptionsProvider.future),
           ]);
           return const RefreshResult();
         } catch (e) {

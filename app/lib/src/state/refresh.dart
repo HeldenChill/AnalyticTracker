@@ -1,7 +1,7 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers.dart';
 import 'navigation.dart';
 
 typedef RequestRegistration = ({
@@ -15,16 +15,37 @@ class RefreshResult {
   const RefreshResult({
     this.errors = const [],
     this.warnings = const [],
+    this.superseded = false,
   });
 
   final List<Object> errors;
   final List<String> warnings;
+  final bool superseded;
 
-  bool get succeeded => errors.isEmpty && warnings.isEmpty;
+  bool get succeeded => errors.isEmpty && warnings.isEmpty && !superseded;
+}
+
+class ReloadTicket {
+  ReloadTicket({
+    required this.queryKey,
+    required this.generation,
+    required this.future,
+  });
+  final Object queryKey;
+  final int generation;
+  final Future<RefreshResult> future;
+}
+
+class OwnerEntry {
+  OwnerEntry(this.registration, this.freshGeneration);
+  RequestRegistration registration;
+  int freshGeneration;
+  ReloadTicket? inFlight;
 }
 
 class ActiveRequestRegistry {
-  final Map<Object, RequestRegistration> _owners = {};
+  final Map<Object, OwnerEntry> _owners = {};
+  int _generation = 0;
 
   void register({
     required AppPage page,
@@ -33,43 +54,108 @@ class ActiveRequestRegistry {
     int? analyticTab,
     required Future<RefreshResult> Function() reload,
   }) {
-    _owners[owner] = (
+    final reg = (
       page: page,
       analyticTab: analyticTab,
       queryKey: queryKey,
       reload: reload,
     );
+    final existing = _owners[owner];
+    if (existing == null) {
+      _owners[owner] = OwnerEntry(reg, _generation);
+    } else {
+      existing.registration = reg;
+    }
   }
 
   void remove(Object owner) => _owners.remove(owner);
 
   void dispose() => _owners.clear();
 
-  Future<RefreshResult> reload(AppPage page, {required int analyticTab}) async {
-    final selected = _owners.values.where((r) {
-      if (r.page != page) return false;
-      if (page == AppPage.analytic && r.analyticTab != null && r.analyticTab != analyticTab) {
-        return false;
-      }
-      return true;
-    }).toList();
+  Future<RefreshResult> runOwner(
+    Object owner,
+    OwnerEntry entry,
+    RequestRegistration snapshot,
+    int requestedGeneration,
+  ) async {
+    final key = snapshot.queryKey;
+    final existing = entry.inFlight;
+    final ticket = existing != null &&
+            existing.queryKey == key &&
+            existing.generation == requestedGeneration
+        ? existing
+        : ReloadTicket(
+            queryKey: key,
+            generation: requestedGeneration,
+            future: Future<RefreshResult>.sync(snapshot.reload).catchError(
+              (Object e) => RefreshResult(errors: [e]),
+            ),
+          );
+    entry.inFlight = ticket;
+    final result = await ticket.future;
+    final current = identical(_owners[owner], entry) &&
+        entry.registration.queryKey == key;
+    if (current && result.errors.isEmpty && !result.superseded) {
+      entry.freshGeneration = math.max(entry.freshGeneration, requestedGeneration);
+    }
+    if (identical(entry.inFlight, ticket)) entry.inFlight = null;
+    return RefreshResult(
+      errors: result.errors,
+      warnings: result.warnings,
+      superseded: result.superseded || !current,
+    );
+  }
 
-    if (selected.isEmpty) {
+  Future<RefreshResult> reloadOwnerIfStale(Object owner) async {
+    final entry = _owners[owner];
+    if (entry == null) return const RefreshResult();
+    final currentGen = _generation;
+    if (entry.freshGeneration >= currentGen) {
+      return const RefreshResult();
+    }
+    final snapshot = entry.registration;
+    return await runOwner(owner, entry, snapshot, currentGen);
+  }
+
+  Future<RefreshResult> reload(AppPage page, {required int analyticTab}) async {
+    _generation++;
+    final currentGen = _generation;
+
+    final snapshots = <(Object, OwnerEntry, RequestRegistration)>[];
+    for (final entry in _owners.entries) {
+      final reg = entry.value.registration;
+      if (reg.page != page) continue;
+      if (page == AppPage.analytic &&
+          reg.analyticTab != null &&
+          reg.analyticTab != analyticTab) {
+        continue;
+      }
+      snapshots.add((entry.key, entry.value, reg));
+    }
+
+    if (snapshots.isEmpty) {
       return RefreshResult(
         errors: [StateError('No active data requests for ${page.name}')],
       );
     }
 
     final results = await Future.wait([
-      for (final request in selected)
-        Future<RefreshResult>.sync(request.reload).catchError(
-          (Object error) => RefreshResult(errors: [error]),
-        ),
+      for (final s in snapshots) runOwner(s.$1, s.$2, s.$3, currentGen),
     ]);
 
+    var superseded = false;
+    final errors = <Object>[];
+    final warnings = <String>[];
+    for (final r in results) {
+      if (r.superseded) superseded = true;
+      errors.addAll(r.errors);
+      warnings.addAll(r.warnings);
+    }
+
     return RefreshResult(
-      errors: [for (final result in results) ...result.errors],
-      warnings: [for (final result in results) ...result.warnings],
+      errors: errors,
+      warnings: warnings,
+      superseded: superseded,
     );
   }
 }
@@ -103,6 +189,28 @@ class ActiveRequestScope extends ConsumerStatefulWidget {
 
 class _ActiveRequestScopeState extends ConsumerState<ActiveRequestScope> {
   late ActiveRequestRegistry _registry;
+  bool? _wasActive;
+  bool _activationQueued = false;
+
+  bool _isActive(AppPage currentPage, int currentTab) {
+    if (widget.page != currentPage) return false;
+    if (widget.page == AppPage.analytic &&
+        widget.analyticTab != null &&
+        widget.analyticTab != currentTab) {
+      return false;
+    }
+    return true;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _registry = ref.read(activeRequestRegistryProvider);
+    final curPage = ref.read(selectedPageProvider);
+    final curTab = ref.read(analyticTabIndexProvider);
+    _wasActive = _isActive(curPage, curTab);
+    _register();
+  }
 
   @override
   void didChangeDependencies() {
@@ -111,29 +219,42 @@ class _ActiveRequestScopeState extends ConsumerState<ActiveRequestScope> {
   }
 
   @override
-  void initState() {
-    super.initState();
+  void didUpdateWidget(ActiveRequestScope oldWidget) {
+    super.didUpdateWidget(oldWidget);
     _register();
   }
 
-  @override
-  void didUpdateWidget(ActiveRequestScope oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.page != oldWidget.page ||
-        widget.analyticTab != oldWidget.analyticTab ||
-        widget.queryKey != oldWidget.queryKey) {
-      _register();
-    }
-  }
-
   void _register() {
-    ref.read(activeRequestRegistryProvider).register(
+    _registry.register(
       page: widget.page,
       owner: this,
       queryKey: widget.queryKey,
       analyticTab: widget.analyticTab,
-      reload: widget.reload,
+      reload: () => widget.reload(),
     );
+  }
+
+  void _checkActivationTransition(AppPage page, int tab) {
+    final nowActive = _isActive(page, tab);
+    final previouslyActive = _wasActive ?? nowActive;
+    _wasActive = nowActive;
+    if (!previouslyActive && nowActive) {
+      _queueActivation();
+    }
+  }
+
+  void _queueActivation() {
+    if (_activationQueued) return;
+    _activationQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _activationQueued = false;
+      if (!mounted) return;
+      final curPage = ref.read(selectedPageProvider);
+      final curTab = ref.read(analyticTabIndexProvider);
+      if (_isActive(curPage, curTab)) {
+        _registry.reloadOwnerIfStale(this);
+      }
+    });
   }
 
   @override
@@ -143,35 +264,23 @@ class _ActiveRequestScopeState extends ConsumerState<ActiveRequestScope> {
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    ref.listen<AppPage>(selectedPageProvider, (prev, next) {
+      _checkActivationTransition(next, ref.read(analyticTabIndexProvider));
+    });
+    ref.listen<int>(analyticTabIndexProvider, (prev, next) {
+      _checkActivationTransition(ref.read(selectedPageProvider), next);
+    });
+    return widget.child;
+  }
 }
 
-/// Invalidates all cached provider families and reloads only the active page.
+/// Reloads only the active page using [ActiveRequestRegistry].
 Future<RefreshResult> refreshActivePage(
   WidgetRef ref,
   AppPage page, {
   required int analyticTab,
 }) async {
-  // Invalidate provider families to prevent stale caches when navigating later
-  ref.invalidate(filterOptionsProvider);
-  ref.invalidate(overviewProvider);
-  ref.invalidate(retentionProvider);
-  ref.invalidate(progressionProvider);
-  ref.invalidate(savedFunnelsProvider);
-  ref.invalidate(funnelResultProvider);
-  ref.invalidate(clustersProvider);
-  ref.invalidate(churnProvider);
-  ref.invalidate(levelsProvider);
-  ref.invalidate(survivalProvider);
-  ref.invalidate(versionImpactProvider);
-  ref.invalidate(associationsProvider);
-  ref.invalidate(anomaliesProvider);
-  ref.invalidate(countsProvider);
-  ref.invalidate(eventNamesProvider);
-  ref.invalidate(paramProvider);
-  ref.invalidate(paramKeysProvider);
-  ref.invalidate(paramValuesProvider);
-
   if (page == AppPage.settings) {
     return const RefreshResult();
   }

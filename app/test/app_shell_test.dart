@@ -139,7 +139,7 @@ void main() {
     expect(find.text('Refreshed'), findsOneWidget);
   });
 
-  testWidgets('refresh reloads previously cached analysis results', (t) async {
+  testWidgets('refresh on Overview preserves inactive analysis caches until activation', (t) async {
     var revision = 1;
     final api = ApiClient('http://test', client: MockClient((request) async {
       final Object result = switch (request.url.path) {
@@ -197,7 +197,8 @@ void main() {
     revision = 2;
     await t.tap(find.byTooltip('Refresh'));
     await t.pumpAndSettle();
-    expect(await results(), [2, 2, 2, 2, 2]);
+    // Under BUG-0058 fix, refresh on Overview must NOT refetch inactive analysis caches
+    expect(await results(), [1, 1, 1, 1, 1]);
   });
 
   testWidgets('Data health refresh awaits one real request and disables duplicates', (t) async {
