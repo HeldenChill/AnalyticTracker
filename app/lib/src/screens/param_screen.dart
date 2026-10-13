@@ -6,8 +6,8 @@ import '../providers.dart';
 import '../state/navigation.dart';
 import '../state/refresh.dart';
 import '../widgets/bar_row.dart';
-import '../widgets/error_retry.dart';
 import '../widgets/event_picker.dart';
+import '../widgets/studio_async_panel.dart';
 
 class ParamScreen extends ConsumerStatefulWidget {
   const ParamScreen({super.key});
@@ -176,21 +176,23 @@ class _ParamScreenState extends ConsumerState<ParamScreen> {
     if (event == null || key.isEmpty) {
       return const Center(child: Text('Pick an event and enter a param key.'));
     }
+    final baseUrl = ref.watch(baseUrlProvider);
     final q = (filters: f, name: event, key: key);
-    return ref.watch(paramProvider(q)).when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(paramProvider(q))),
-          data: (buckets) {
-            if (buckets.isEmpty) return const Center(child: Text('No events in range.'));
-            final max = buckets.map((b) => b.count).reduce((a, b) => a > b ? a : b);
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                for (final b in buckets)
-                  BarRow(label: b.value, value: b.count, max: max, trailing: '${b.count}'),
-              ],
-            );
-          },
+    return StudioAsyncPanel<List<ParamBucket>>(
+      queryKey: (baseUrl, q),
+      value: ref.watch(paramProvider(q)),
+      onRetry: () => ref.invalidate(paramProvider(q)),
+      builder: (buckets) {
+        if (buckets.isEmpty) return const Center(child: Text('No events in range.'));
+        final max = buckets.map((b) => b.count).reduce((a, b) => a > b ? a : b);
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            for (final b in buckets)
+              BarRow(label: b.value, value: b.count, max: max, trailing: '${b.count}'),
+          ],
         );
+      },
+    );
   }
 }

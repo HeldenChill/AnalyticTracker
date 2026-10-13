@@ -1,10 +1,11 @@
+import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
 import '../widgets/bar_row.dart';
-import '../widgets/error_retry.dart';
 import '../widgets/stage_table.dart';
+import '../widgets/studio_async_panel.dart';
 
 import '../state/navigation.dart';
 import '../state/refresh.dart';
@@ -31,13 +32,11 @@ class ProgressionPage extends ConsumerWidget {
           return RefreshResult(errors: [e]);
         }
       },
-      child: ref.watch(progressionProvider(f)).when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => ErrorRetry(
-              error: e,
-              onRetry: () => ref.invalidate(progressionProvider(f)),
-            ),
-            data: (d) {
+      child: StudioAsyncPanel<ProgressionData>(
+        queryKey: (baseUrl, f),
+        value: ref.watch(progressionProvider(f)),
+        onRetry: () => ref.invalidate(progressionProvider(f)),
+        builder: (d) {
             if (d.stages.isEmpty) {
               return const Center(
                 child: Padding(

@@ -23,19 +23,16 @@ const emptyKpis = Kpis(
 
 void main() {
   late List<Filters> overviewCalls;
-  late int daysCalls;
 
   Future<void> pumpShell(WidgetTester t, {ApiClient? api, Future<List<DayStat>> Function()? daysLoader}) async {
     t.view.physicalSize = const Size(1400, 1000);
     t.view.devicePixelRatio = 1.0;
     addTearDown(t.view.reset);
     overviewCalls = [];
-    daysCalls = 0;
     await t.pumpWidget(ProviderScope(
       overrides: [
         if (api != null) apiClientProvider.overrideWithValue(api),
         daysProvider.overrideWith((ref) async {
-          daysCalls++;
           ref.watch(baseUrlProvider);
           if (daysLoader != null) {
             return daysLoader();

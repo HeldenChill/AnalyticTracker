@@ -19,7 +19,7 @@ class BarRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            Expanded(child: Text(label, overflow: TextOverflow.ellipsis)),
+            Expanded(child: Text(label, softWrap: true)),
             Text(trailing),
           ]),
           const SizedBox(height: 4),

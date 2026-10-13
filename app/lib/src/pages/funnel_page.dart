@@ -346,12 +346,9 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
 
             if (_drillDown == null) return mainCard;
 
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: mainCard),
-                const SizedBox(width: 16),
-                Card(
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final drilldownCard = Card(
                   clipBehavior: Clip.antiAlias,
                   child: FunnelDrilldownPanel(
                     def: widget.def,
@@ -362,8 +359,28 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
                     segment: _drillDown!.segment,
                     onClose: () => setState(() => _drillDown = null),
                   ),
-                ),
-              ],
+                );
+
+                if (constraints.maxWidth < 900) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      mainCard,
+                      const SizedBox(height: 16),
+                      drilldownCard,
+                    ],
+                  );
+                }
+
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: mainCard),
+                    const SizedBox(width: 16),
+                    drilldownCard,
+                  ],
+                );
+              },
             );
           },
         );

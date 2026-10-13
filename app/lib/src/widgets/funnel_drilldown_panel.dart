@@ -406,14 +406,12 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
                         ),
                         if (ev.params.isNotEmpty) ...[
                           const SizedBox(height: 4),
-                          Text(
+                          SelectableText(
                             jsonEncode(ev.params),
                             style: theme.textTheme.bodySmall?.copyWith(
                               fontFamily: 'monospace',
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ],

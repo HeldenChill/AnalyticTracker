@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
-import '../widgets/error_retry.dart';
 import '../widgets/format.dart';
 import '../widgets/kpi_card.dart';
 import '../widgets/metric_line_chart.dart';
+import '../widgets/studio_async_panel.dart';
 import '../widgets/studio_layout.dart';
 
 import '../state/navigation.dart';
@@ -34,14 +34,12 @@ class OverviewPage extends ConsumerWidget {
           return RefreshResult(errors: [e]);
         }
       },
-      child: ref.watch(overviewProvider(f)).when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => ErrorRetry(
-              error: e,
-              onRetry: () => ref.invalidate(overviewProvider(f)),
-            ),
-            data: (d) => _OverviewBody(data: d),
-          ),
+      child: StudioAsyncPanel<OverviewData>(
+        queryKey: (baseUrl, f),
+        value: ref.watch(overviewProvider(f)),
+        onRetry: () => ref.invalidate(overviewProvider(f)),
+        builder: (d) => _OverviewBody(data: d),
+      ),
     );
   }
 }

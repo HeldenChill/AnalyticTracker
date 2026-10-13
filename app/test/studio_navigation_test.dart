@@ -2,7 +2,9 @@ import 'package:analytic_app/src/api_client.dart';
 import 'package:analytic_app/src/pages/analytic/analytic_page.dart';
 import 'package:analytic_app/src/providers.dart';
 import 'package:analytic_app/src/shell/app_shell.dart';
+import 'package:analytic_app/src/state/events_explorer.dart';
 import 'package:analytic_app/src/state/navigation.dart';
+import 'package:analytic_app/src/widgets/bar_row.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -178,6 +180,96 @@ void main() {
       container.read(analyticTabIndexProvider.notifier).state = 10;
       await tester.pumpAndSettle();
       expect(tabController.index, 5);
+    });
+
+    testWidgets('BarRow primary label wraps instead of ellipsis', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 150,
+              child: BarRow(
+                label: 'very_long_event_name_that_should_wrap_on_multiple_lines',
+                value: 42,
+                max: 100,
+                trailing: '42',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final text = tester.widget<Text>(find.text('very_long_event_name_that_should_wrap_on_multiple_lines'));
+      expect(text.softWrap, isTrue);
+      expect(text.overflow, isNull);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('navigation retains Events search input across page switching and window resize', (tester) async {
+      tester.view.physicalSize = const Size(1400, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            apiClientProvider.overrideWithValue(_FakeApi()),
+            daysProvider.overrideWith((ref) async => const <DayStat>[]),
+            eventNamesProvider.overrideWith((ref) async => const <String>['battle_start', 'login']),
+            filterOptionsProvider.overrideWith((ref) async => const FilterOptions(
+                  platforms: ['ANDROID'],
+                  versions: ['1.0'],
+                )),
+            overviewProvider.overrideWith((ref, f) async => const OverviewData(
+                  kpis: Kpis(
+                    dau: 10,
+                    newUsers: 5,
+                    sessions: 20,
+                    sessionsPerDau: 2,
+                    playtimeMinPerDau: 15,
+                    uninstalls: 0,
+                  ),
+                  previous: null,
+                  daily: [],
+                )),
+            countsProvider.overrideWith((ref, q) async => const <EventCount>[]),
+            eventsExplorerProvider.overrideWith((ref, q) async => const EventsPayload(
+                  current: [EventCount(day: '2026-10-10', eventName: 'battle_start', count: 10)],
+                  days: [],
+                )),
+            savedFunnelsProvider.overrideWith((ref) async => const <SavedFunnel>[]),
+          ],
+          child: const MaterialApp(home: AppShell()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Navigate to Events
+      await tester.tap(find.text('Events'));
+      await tester.pumpAndSettle();
+
+      // Enter search query
+      final searchField = find.byType(TextField);
+      expect(searchField, findsOneWidget);
+      await tester.enterText(searchField, 'battle');
+      await tester.pumpAndSettle();
+      expect(find.text('battle'), findsOneWidget);
+
+      // Navigate to Analytic
+      await tester.tap(find.text('Analytic'));
+      await tester.pumpAndSettle();
+      expect(find.text('Clusters'), findsOneWidget);
+
+      // Navigate back to Events
+      await tester.tap(find.text('Events'));
+      await tester.pumpAndSettle();
+      expect(find.text('battle'), findsOneWidget);
+
+      // Resize window from 1400 to 720
+      tester.view.physicalSize = const Size(720, 1000);
+      await tester.pumpAndSettle();
+      expect(find.text('battle'), findsOneWidget);
     });
   });
 }

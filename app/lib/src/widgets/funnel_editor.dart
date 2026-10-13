@@ -95,38 +95,42 @@ class _FunnelEditorDialogState extends ConsumerState<FunnelEditorDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(children: [
-                Expanded(
-                  child: TextField(
-                    controller: _nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Funnel name'),
+              Wrap(
+                spacing: 16,
+                runSpacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 240, maxWidth: 420),
+                    child: TextField(
+                      controller: _nameCtrl,
+                      decoration: const InputDecoration(labelText: 'Funnel name'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                DropdownButton<int?>(
-                  value: _draft.windowMinutes,
-                  items: [
-                    for (final w in funnelWindowOptions)
-                      DropdownMenuItem<int?>(value: w, child: Text(funnelWindowLabel(w))),
-                  ],
-                  onChanged: (v) => _edit(() => _draft.windowMinutes = v),
-                ),
-                const SizedBox(width: 16),
-                SegmentedButton<FunnelOrder>(
-                  segments: [
-                    for (final o in FunnelOrder.values) ButtonSegment(value: o, label: Text(o.label)),
-                  ],
-                  selected: {_draft.order},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (s) {
-                    final hadExclusions = _draft.steps.any((st) => st.exclude.isNotEmpty);
-                    _edit(() => _draft.setOrder(s.first),
-                        notice: s.first == FunnelOrder.any && hadExclusions
-                            ? 'Exclusions removed: they need strict order'
-                            : null);
-                  },
-                ),
-              ]),
+                  DropdownButton<int?>(
+                    value: _draft.windowMinutes,
+                    items: [
+                      for (final w in funnelWindowOptions)
+                        DropdownMenuItem<int?>(value: w, child: Text(funnelWindowLabel(w))),
+                    ],
+                    onChanged: (v) => _edit(() => _draft.windowMinutes = v),
+                  ),
+                  SegmentedButton<FunnelOrder>(
+                    segments: [
+                      for (final o in FunnelOrder.values) ButtonSegment(value: o, label: Text(o.label)),
+                    ],
+                    selected: {_draft.order},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (s) {
+                      final hadExclusions = _draft.steps.any((st) => st.exclude.isNotEmpty);
+                      _edit(() => _draft.setOrder(s.first),
+                          notice: s.first == FunnelOrder.any && hadExclusions
+                              ? 'Exclusions removed: they need strict order'
+                              : null);
+                    },
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               Text(
                 _draft.order == FunnelOrder.strict
@@ -312,32 +316,37 @@ class _MatcherEditor extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [
-          SizedBox(width: 120, child: Text(lead)),
-          DropdownMenu<String>(
-            key: ValueKey('event-${m.event}'),
-            width: 260,
-            menuHeight: 320,
-            initialSelection: m.event.isEmpty ? null : m.event,
-            hintText: 'Event',
-            enableFilter: true,
-            requestFocusOnTap: true,
-            dropdownMenuEntries: [
-              for (final n in eventOptions) DropdownMenuEntry<String>(value: n, label: n),
-            ],
-            onSelected: (v) {
-              if (v == null || v == m.event) return;
-              edit(() => draft.setEvent(step, v, slot: slot),
-                  notice: m.params.isEmpty ? null : 'Conditions cleared: they belonged to ${m.event}');
-            },
-          ),
-          if (removeTooltip != null)
-            IconButton(
-              tooltip: removeTooltip,
-              icon: const Icon(Icons.close, size: 18),
-              onPressed: () => edit(() => draft.removeMatcher(step, slot)),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SizedBox(width: 120, child: Text(lead)),
+            DropdownMenu<String>(
+              key: ValueKey('event-${m.event}'),
+              width: 260,
+              menuHeight: 320,
+              initialSelection: m.event.isEmpty ? null : m.event,
+              hintText: 'Event',
+              enableFilter: true,
+              requestFocusOnTap: true,
+              dropdownMenuEntries: [
+                for (final n in eventOptions) DropdownMenuEntry<String>(value: n, label: n),
+              ],
+              onSelected: (v) {
+                if (v == null || v == m.event) return;
+                edit(() => draft.setEvent(step, v, slot: slot),
+                    notice: m.params.isEmpty ? null : 'Conditions cleared: they belonged to ${m.event}');
+              },
             ),
-        ]),
+            if (removeTooltip != null)
+              IconButton(
+                tooltip: removeTooltip,
+                icon: const Icon(Icons.close, size: 18),
+                onPressed: () => edit(() => draft.removeMatcher(step, slot)),
+              ),
+          ],
+        ),
         for (var p = 0; p < m.params.length; p++)
           Padding(
             padding: const EdgeInsets.only(left: 120, top: 4),
@@ -423,41 +432,44 @@ class _ConditionRow extends ConsumerWidget {
     final sorted = numeric ? ([for (final n in nums) n!]..sort()) : const <double>[];
     final ops = [for (final o in FilterOp.values) if (!o.numeric || numeric || o == filter.op) o];
 
-    return Row(children: [
-      SizedBox(width: 48, child: Text(lead)),
-      SizedBox(
-        width: 140,
-        child: DropdownButton<String>(
-          isExpanded: true,
-          value: key,
-          hint: const Text('Parameter'),
-          items: [
-            if (key != null && !keys.contains(key)) DropdownMenuItem(value: key, child: Text(key)),
-            for (final k in keys) DropdownMenuItem(value: k, child: Text(k)),
-          ],
-          onChanged: (k) {
-            if (k != null && k != key) onKey(k);
-          },
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        SizedBox(width: 48, child: Text(lead)),
+        SizedBox(
+          width: 140,
+          child: DropdownButton<String>(
+            isExpanded: true,
+            value: key,
+            hint: const Text('Parameter'),
+            items: [
+              if (key != null && !keys.contains(key)) DropdownMenuItem(value: key, child: Text(key)),
+              for (final k in keys) DropdownMenuItem(value: k, child: Text(k)),
+            ],
+            onChanged: (k) {
+              if (k != null && k != key) onKey(k);
+            },
+          ),
         ),
-      ),
-      const SizedBox(width: 8),
-      SizedBox(
-        width: 130,
-        child: DropdownButton<FilterOp>(
-          isExpanded: true,
-          value: filter.op,
-          items: [for (final o in ops) DropdownMenuItem(value: o, child: Text(o.label))],
-          onChanged: key == null
-              ? null
-              : (o) {
-                  if (o != null && o != filter.op) onOp(o, o.numeric && sorted.isNotEmpty ? _fmtNum(sorted[sorted.length ~/ 2]) : null);
-                },
+        SizedBox(
+          width: 130,
+          child: DropdownButton<FilterOp>(
+            isExpanded: true,
+            value: filter.op,
+            items: [for (final o in ops) DropdownMenuItem(value: o, child: Text(o.label))],
+            onChanged: key == null
+                ? null
+                : (o) {
+                    if (o != null && o != filter.op) onOp(o, o.numeric && sorted.isNotEmpty ? _fmtNum(sorted[sorted.length ~/ 2]) : null);
+                  },
+          ),
         ),
-      ),
-      const SizedBox(width: 8),
-      SizedBox(width: 240, child: _valueControl(context, key, buckets, sorted)),
-      IconButton(tooltip: 'Remove filter', icon: const Icon(Icons.remove_circle_outline, size: 18), onPressed: onRemove),
-    ]);
+        SizedBox(width: 240, child: _valueControl(context, key, buckets, sorted)),
+        IconButton(tooltip: 'Remove filter', icon: const Icon(Icons.remove_circle_outline, size: 18), onPressed: onRemove),
+      ],
+    );
   }
 
   Widget _valueControl(BuildContext context, String? key, List<ParamBucket> buckets, List<double> sorted) {

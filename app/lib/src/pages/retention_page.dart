@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
-import '../widgets/error_retry.dart';
 import '../widgets/format.dart';
 import '../widgets/retention_table.dart';
+import '../widgets/studio_async_panel.dart';
 
 import '../state/navigation.dart';
 import '../state/refresh.dart';
@@ -32,17 +32,15 @@ class RetentionPage extends ConsumerWidget {
           return RefreshResult(errors: [e]);
         }
       },
-      child: ref.watch(retentionProvider(f)).when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => ErrorRetry(
-              error: e,
-              onRetry: () => ref.invalidate(retentionProvider(f)),
-            ),
-            data: (d) {
-            if (d.cohorts.isEmpty) {
-              return const Center(child: Text('No installs (first_open) in this range'));
-            }
-            return ListView(
+      child: StudioAsyncPanel<RetentionData>(
+        queryKey: (baseUrl, f),
+        value: ref.watch(retentionProvider(f)),
+        onRetry: () => ref.invalidate(retentionProvider(f)),
+        builder: (d) {
+          if (d.cohorts.isEmpty) {
+            return const Center(child: Text('No installs (first_open) in this range'));
+          }
+          return ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 Text(_summary(d), style: Theme.of(context).textTheme.titleMedium),

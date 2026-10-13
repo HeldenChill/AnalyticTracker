@@ -100,8 +100,8 @@ class _StyleCard extends StatelessWidget {
     final tokens = AnalyticsTokens.of(context);
     final p = palettes[style]!;
     final radius = BorderRadius.circular(tokens.radius);
-    return SizedBox(
-      width: 250,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 200, maxWidth: 260),
       child: Card(
         shape: RoundedRectangleBorder(
           borderRadius: radius,
