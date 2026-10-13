@@ -8,7 +8,9 @@ import 'package:analytic_app/src/widgets/charts/time_series_chart.dart';
 import 'package:analytic_app/src/widgets/format.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:fl_chart/src/chart/bar_chart/bar_chart_renderer.dart';
+import 'package:fl_chart/src/chart/line_chart/line_chart_renderer.dart';
 import 'package:fl_chart/src/extensions/bar_chart_data_extension.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -828,5 +830,112 @@ void main() {
           child: TimeSeriesChart(series: series, unit: 'events', kind: TimeChartKind.bars))))));
       expect(t.takeException(), isNull);
     }
+  });
+
+  testWidgets('bar selection clears on measured data revision', (t) async {
+    Future<void> render(double n) => pumpRepairChart(t, TimeSeriesChart(
+      unit: 'events',
+      kind: TimeChartKind.bars,
+      series: [ChartSeries(id: 'primary', label: 'P', points: [ChartPoint(0, n, label: 'day')])],
+    ), reduced: true);
+    await render(10);
+    final leaf = t.widget<BarChartLeaf>(find.byType(BarChartLeaf));
+    final group = leaf.targetData.barGroups.first;
+    final rod = group.barRods.first;
+    expect(leaf.targetData.barTouchData.handleBuiltInTouches, isFalse);
+    expect(leaf.targetData.barTouchData.touchCallback, isNotNull);
+    leaf.targetData.barTouchData.touchCallback!(
+      FlTapDownEvent(TapDownDetails(localPosition: const Offset(100, 100))),
+      BarTouchResponse(
+        touchLocation: const Offset(100, 100),
+        touchChartCoordinate: const Offset(0, 10),
+        spot: BarTouchedSpot(group, 0, rod, 0, null, -1, const FlSpot(0, 10), const Offset(100, 100)),
+      ),
+    );
+    await t.pump();
+    expect(t.widget<BarChartLeaf>(find.byType(BarChartLeaf)).targetData.barGroups.first.showingTooltipIndicators, [0]);
+    await render(20);
+    expect(t.widget<BarChartLeaf>(find.byType(BarChartLeaf)).targetData.barGroups.first.showingTooltipIndicators, isEmpty);
+  });
+
+  testWidgets('line tooltip cannot anchor to previous measured y after refresh', (t) async {
+    Future<void> render(double n) => pumpRepairChart(t, TimeSeriesChart(
+      unit: 'events',
+      series: [ChartSeries(id: 'primary', label: 'P', points: [ChartPoint(0, n, label: 'day')])],
+    ), reduced: true);
+    await render(10);
+    final initial = t.widget<LineChartLeaf>(find.byType(LineChartLeaf));
+    final bar = initial.targetData.lineBarsData.first;
+    expect(initial.targetData.lineTouchData.handleBuiltInTouches, isFalse);
+    expect(initial.targetData.lineTouchData.touchCallback, isNotNull);
+    initial.targetData.lineTouchData.touchCallback!(
+      FlTapDownEvent(TapDownDetails(localPosition: const Offset(100, 100))),
+      LineTouchResponse(
+        touchLocation: const Offset(100, 100),
+        touchChartCoordinate: const Offset(0, 10),
+        lineBarSpots: [TouchLineBarSpot(bar, 0, bar.spots.first, 0)],
+      ),
+    );
+    await t.pump();
+    expect(t.widget<LineChartLeaf>(find.byType(LineChartLeaf)).targetData.showingTooltipIndicators, isNotEmpty);
+    await render(20);
+    final current = t.widget<LineChartLeaf>(find.byType(LineChartLeaf)).targetData;
+    expect(current.lineBarsData.first.spots.first.y, 20);
+    expect(current.showingTooltipIndicators, isEmpty);
+  });
+
+  testWidgets('pointer exit and tap cancel event clear bar and line selections', (t) async {
+    // Bar
+    await pumpRepairChart(t, const TimeSeriesChart(
+      unit: 'events',
+      kind: TimeChartKind.bars,
+      series: [ChartSeries(id: 'primary', label: 'P', points: [ChartPoint(0, 10, label: 'day')])],
+    ), reduced: true);
+    var barLeaf = t.widget<BarChartLeaf>(find.byType(BarChartLeaf));
+    var bGroup = barLeaf.targetData.barGroups.first;
+    var bRod = bGroup.barRods.first;
+    barLeaf.targetData.barTouchData.touchCallback!(
+      FlTapDownEvent(TapDownDetails(localPosition: const Offset(50, 50))),
+      BarTouchResponse(
+        touchLocation: const Offset(50, 50),
+        touchChartCoordinate: const Offset(0, 10),
+        spot: BarTouchedSpot(bGroup, 0, bRod, 0, null, -1, const FlSpot(0, 10), const Offset(50, 50)),
+      ),
+    );
+    await t.pump();
+    expect(t.widget<BarChartLeaf>(find.byType(BarChartLeaf)).targetData.barGroups.first.showingTooltipIndicators, [0]);
+    barLeaf = t.widget<BarChartLeaf>(find.byType(BarChartLeaf));
+    barLeaf.targetData.barTouchData.touchCallback!(
+      FlPointerExitEvent(PointerExitEvent()),
+      null,
+    );
+    await t.pump();
+    expect(t.widget<BarChartLeaf>(find.byType(BarChartLeaf)).targetData.barGroups.first.showingTooltipIndicators, isEmpty);
+
+    // Line
+    await pumpRepairChart(t, const TimeSeriesChart(
+      unit: 'events',
+      kind: TimeChartKind.line,
+      series: [ChartSeries(id: 'primary', label: 'P', points: [ChartPoint(0, 10, label: 'day')])],
+    ), reduced: true);
+    var lineLeaf = t.widget<LineChartLeaf>(find.byType(LineChartLeaf));
+    var lBar = lineLeaf.targetData.lineBarsData.first;
+    lineLeaf.targetData.lineTouchData.touchCallback!(
+      FlTapDownEvent(TapDownDetails(localPosition: const Offset(50, 50))),
+      LineTouchResponse(
+        touchLocation: const Offset(50, 50),
+        touchChartCoordinate: const Offset(0, 10),
+        lineBarSpots: [TouchLineBarSpot(lBar, 0, lBar.spots.first, 0)],
+      ),
+    );
+    await t.pump();
+    expect(t.widget<LineChartLeaf>(find.byType(LineChartLeaf)).targetData.showingTooltipIndicators, isNotEmpty);
+    lineLeaf = t.widget<LineChartLeaf>(find.byType(LineChartLeaf));
+    lineLeaf.targetData.lineTouchData.touchCallback!(
+      const FlTapCancelEvent(),
+      null,
+    );
+    await t.pump();
+    expect(t.widget<LineChartLeaf>(find.byType(LineChartLeaf)).targetData.showingTooltipIndicators, isEmpty);
   });
 }

@@ -38,17 +38,46 @@ class TimeSeriesChart extends StatefulWidget {
 
 class _TimeSeriesChartState extends State<TimeSeriesChart> {
   final SeriesStyleRegistry _registry = SeriesStyleRegistry();
+  (int, int)? _barSelection;
+  List<({String id, double x})> _lineSelection = const [];
+  late String _lastSignature;
+
+  static String _dataSignature(TimeSeriesChart chart) {
+    final sb = StringBuffer();
+    sb.write('${chart.kind.name};${chart.unit};${chart.percentage};');
+    final sorted = List<ChartSeries>.of(chart.series)..sort((a, b) => a.id.compareTo(b.id));
+    for (final s in sorted) {
+      sb.write('${s.id}:');
+      for (final p in s.points) {
+        final valStr = p.value == null
+            ? 'null'
+            : (p.value!.isNaN
+                ? 'NaN'
+                : (p.value!.isInfinite ? 'Inf' : p.value.toString()));
+        sb.write('(${p.x},$valStr,${p.label},${p.incomplete});');
+      }
+      sb.write('|');
+    }
+    return sb.toString();
+  }
 
   @override
   void initState() {
     super.initState();
     _registry.registerAll(widget.series.map((s) => s.id));
+    _lastSignature = _dataSignature(widget);
   }
 
   @override
   void didUpdateWidget(covariant TimeSeriesChart oldWidget) {
     super.didUpdateWidget(oldWidget);
     _registry.registerAll(widget.series.map((s) => s.id));
+    final newSig = _dataSignature(widget);
+    if (newSig != _lastSignature) {
+      _lastSignature = newSig;
+      _barSelection = null;
+      _lineSelection = const [];
+    }
   }
 
   String _formatValue(num v) {
@@ -264,7 +293,18 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                 );
               }
             }
-            barGroups.add(BarChartGroupData(x: ord, barRods: rods, barsSpace: 0));
+            final isSelectedGroup = _barSelection != null &&
+                _barSelection!.$1 == ord &&
+                _barSelection!.$2 >= 0 &&
+                _barSelection!.$2 < rods.length;
+            barGroups.add(
+              BarChartGroupData(
+                x: ord,
+                barRods: rods,
+                barsSpace: 0,
+                showingTooltipIndicators: isSelectedGroup ? [_barSelection!.$2] : const [],
+              ),
+            );
             groupWidths.add(rods.isEmpty ? 0.0 : rods.length * rodWidth);
           }
 
@@ -288,6 +328,42 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             maxY: bounds.maxY,
             barGroups: barGroups,
             barTouchData: BarTouchData(
+              enabled: !motion.running,
+              handleBuiltInTouches: false,
+              touchCallback: (event, response) {
+                if (!event.isInterestedForInteractions ||
+                    event is FlPointerExitEvent ||
+                    event is FlTapCancelEvent ||
+                    event is FlPanEndEvent ||
+                    event is FlLongPressEnd ||
+                    response == null ||
+                    response.spot == null) {
+                  if (_barSelection != null) {
+                    setState(() => _barSelection = null);
+                  }
+                  return;
+                }
+                final spot = response.spot!;
+                final gIndex = spot.touchedBarGroupIndex;
+                final rIndex = spot.touchedRodDataIndex;
+                if (gIndex < 0 || gIndex >= barGroups.length) {
+                  if (_barSelection != null) {
+                    setState(() => _barSelection = null);
+                  }
+                  return;
+                }
+                final rods = barGroups[gIndex].barRods;
+                if (rIndex < 0 || rIndex >= rods.length) {
+                  if (_barSelection != null) {
+                    setState(() => _barSelection = null);
+                  }
+                  return;
+                }
+                final next = (gIndex, rIndex);
+                if (_barSelection != next) {
+                  setState(() => _barSelection = next);
+                }
+              },
               touchTooltipData: BarTouchTooltipData(
                 fitInsideHorizontally: true,
                 fitInsideVertically: true,
@@ -535,13 +611,74 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             }
           }
 
+          final currentSpots = <TouchLineBarSpot>[];
+          if (_lineSelection.isNotEmpty) {
+            for (final sel in _lineSelection) {
+              var found = false;
+              for (var bIdx = 0; bIdx < lineBarsData.length && !found; bIdx++) {
+                if (renderedSeriesIdByBarIndex[bIdx] == sel.id) {
+                  final bar = lineBarsData[bIdx];
+                  for (var sIdx = 0; sIdx < bar.spots.length; sIdx++) {
+                    final spot = bar.spots[sIdx];
+                    if (spot != FlSpot.nullSpot && spot.x == sel.x) {
+                      currentSpots.add(TouchLineBarSpot(bar, bIdx, spot, sIdx.toDouble()));
+                      found = true;
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          }
+
           final lineData = LineChartData(
             minX: bounds.minX,
             maxX: bounds.maxX,
             minY: bounds.minY,
             maxY: bounds.maxY,
             lineBarsData: lineBarsData,
+            showingTooltipIndicators: currentSpots.isEmpty
+                ? const []
+                : [ShowingTooltipIndicators(currentSpots)],
             lineTouchData: LineTouchData(
+              enabled: !motion.running,
+              handleBuiltInTouches: false,
+              touchCallback: (event, response) {
+                if (!event.isInterestedForInteractions ||
+                    event is FlPointerExitEvent ||
+                    event is FlTapCancelEvent ||
+                    event is FlPanEndEvent ||
+                    event is FlLongPressEnd ||
+                    response == null ||
+                    response.lineBarSpots == null ||
+                    response.lineBarSpots!.isEmpty) {
+                  if (_lineSelection.isNotEmpty) {
+                    setState(() => _lineSelection = const []);
+                  }
+                  return;
+                }
+                final touchedSpots = response.lineBarSpots!;
+                final seen = <(String, double)>{};
+                final next = <({String id, double x})>[];
+                for (final s in touchedSpots) {
+                  final seriesId = renderedSeriesIdByBarIndex[s.barIndex];
+                  if (seriesId != null && seen.add((seriesId, s.x))) {
+                    next.add((id: seriesId, x: s.x));
+                  }
+                }
+                var unchanged = next.length == _lineSelection.length;
+                if (unchanged) {
+                  for (var i = 0; i < next.length; i++) {
+                    if (next[i].id != _lineSelection[i].id || next[i].x != _lineSelection[i].x) {
+                      unchanged = false;
+                      break;
+                    }
+                  }
+                }
+                if (!unchanged) {
+                  setState(() => _lineSelection = next);
+                }
+              },
               touchTooltipData: LineTouchTooltipData(
                 fitInsideHorizontally: true,
                 fitInsideVertically: true,
