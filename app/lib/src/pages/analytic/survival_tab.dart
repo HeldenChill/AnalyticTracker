@@ -8,6 +8,7 @@ import '../../state/navigation.dart';
 import '../../state/refresh.dart';
 import '../../theme/analytics_tokens.dart';
 import '../../widgets/charts/chart_frame.dart';
+import '../../widgets/charts/chart_models.dart';
 import '../../widgets/charts/chart_motion.dart';
 import '../../widgets/charts/series_visual_style.dart';
 import '../../widgets/format.dart';
@@ -147,10 +148,17 @@ class SurvivalTab extends ConsumerWidget {
   }
 }
 
-class _SurvivalChart extends StatelessWidget {
+class _SurvivalChart extends StatefulWidget {
   const _SurvivalChart({required this.curves, required this.by});
   final List<SurvivalCurve> curves;
   final String by;
+
+  @override
+  State<_SurvivalChart> createState() => _SurvivalChartState();
+}
+
+class _SurvivalChartState extends State<_SurvivalChart> {
+  final _registry = SeriesStyleRegistry();
 
   @override
   Widget build(BuildContext context) {
@@ -158,27 +166,26 @@ class _SurvivalChart extends StatelessWidget {
     final tokens = AnalyticsTokens.of(context);
 
     var maxDay = 0;
-    for (final c in curves) {
+    for (final c in widget.curves) {
       for (final p in c.points) {
         if (p.day > maxDay) maxDay = p.day;
       }
     }
     if (maxDay == 0) maxDay = 7;
 
-    // Stable group slot assignment
-    final sortedGroups = [for (final c in curves) c.group]..sort();
+    _registry.registerAll(widget.curves.map((c) => c.group));
 
     final styles = {
-      for (final c in curves)
+      for (final c in widget.curves)
         c.group: resolveSeriesVisualStyle(
           palette: tokens.chart,
-          slot: sortedGroups.indexOf(c.group),
+          slot: _registry.slotFor(c.group),
           seriesId: c.group,
           outline: theme.colorScheme.outline,
         ),
     };
 
-    final revision = curves
+    final revision = widget.curves
         .map((c) => '${c.group}:${c.players}:${c.points.map((p) => '${p.day}:${p.survival}').join(',')}')
         .join(';');
 
@@ -189,7 +196,7 @@ class _SurvivalChart extends StatelessWidget {
         subtitle: 'Kaplan-Meier survival curves S(t) with Greenwood 95% confidence intervals.',
         unit: '%',
         legend: [
-          for (final c in curves)
+          for (final c in widget.curves)
             Builder(
               builder: (ctx) {
                 final style = styles[c.group]!;
@@ -233,7 +240,7 @@ class _SurvivalChart extends StatelessWidget {
                           ? null
                           : () {
                               final curveIndex = spot.barIndex ~/ 3;
-                              final curve = curves[curveIndex];
+                              final curve = widget.curves[curveIndex];
                               final p = curve.points.firstWhere(
                                 (pt) => pt.day.toDouble() == spot.x,
                                 orElse: () => SurvivalPoint(
@@ -280,15 +287,16 @@ class _SurvivalChart extends StatelessWidget {
                 ),
               ),
               lineBarsData: [
-                for (var i = 0; i < curves.length; i++) ...[
+                for (var i = 0; i < widget.curves.length; i++) ...[
                   () {
-                    final style = styles[curves[i].group]!;
+                    final style = styles[widget.curves[i].group]!;
                     return LineChartBarData(
                       spots: [
-                        for (final p in curves[i].points)
+                        for (final p in widget.curves[i].points)
                           FlSpot(p.day.toDouble(), p.survival),
                       ],
                       color: style.color,
+                      dashArray: style.lineDash,
                       isStepLineChart: true,
                       barWidth: 2.5,
                       dotData: const FlDotData(show: false),
@@ -296,10 +304,10 @@ class _SurvivalChart extends StatelessWidget {
                   }(),
                   for (final upper in [false, true]) ...[
                     () {
-                      final style = styles[curves[i].group]!;
+                      final style = styles[widget.curves[i].group]!;
                       return LineChartBarData(
                         spots: [
-                          for (final p in curves[i].points)
+                          for (final p in widget.curves[i].points)
                             FlSpot(p.day.toDouble(), upper ? p.ciUpper : p.ciLower),
                         ],
                         color: style.color.withValues(alpha: 0.35),
@@ -312,11 +320,11 @@ class _SurvivalChart extends StatelessWidget {
                 ],
               ],
               betweenBarsData: [
-                for (var i = 0; i < curves.length; i++)
+                for (var i = 0; i < widget.curves.length; i++)
                   BetweenBarsData(
                     fromIndex: i * 3 + 1,
                     toIndex: i * 3 + 2,
-                    color: styles[curves[i].group]!.color.withValues(alpha: 0.12),
+                    color: styles[widget.curves[i].group]!.color.withValues(alpha: 0.12),
                   ),
               ],
             ),

@@ -3,6 +3,8 @@ import 'package:analytic_app/src/pages/analytic/survival_tab.dart';
 import 'package:analytic_app/src/providers.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/studio_test_host.dart';
@@ -246,5 +248,84 @@ void main() {
     expect(find.text('Day 1 survival'), findsNothing);
     expect(find.text('Day 7 survival'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('survival curve style identity is stable across curve reorder and removal', (tester) async {
+    SurvivalCurve makeCurve(String group) => SurvivalCurve(
+      group: group,
+      players: 10,
+      events: 2,
+      censored: 8,
+      medianDays: 14.0,
+      points: const [
+        SurvivalPoint(day: 0, survival: 1.0, ciLower: 1.0, ciUpper: 1.0, atRisk: 10, events: 0, censored: 0),
+        SurvivalPoint(day: 1, survival: 0.8, ciLower: 0.6, ciUpper: 1.0, atRisk: 10, events: 2, censored: 0),
+      ],
+    );
+
+    var currentCurves = [
+      makeCurve('groupA'),
+      makeCurve('groupB'),
+      makeCurve('groupC'),
+      makeCurve('groupD'),
+      makeCurve('groupE'),
+    ];
+
+    final container = ProviderContainer(
+      overrides: [
+        survivalProvider.overrideWith((ref, q) async => SurvivalResult(
+          players: 50,
+          by: 'version',
+          curves: currentCurves,
+          logRank: null,
+          reason: null,
+        )),
+        versionImpactProvider.overrideWith((ref, q) async => const VersionImpactResult(
+          targetVersion: '', targetPlayers: 0, baselineVersion: '', baselinePlayers: 0,
+          metrics: [], availableVersions: [], reason: 'too_few_players')),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(
+        home: Scaffold(body: SurvivalTab()),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    var chart = tester.widget<LineChart>(find.byType(LineChart));
+    // 5 curves -> indices 0, 3, 6, 9, 12
+    final groupEBarFirst = chart.data.lineBarsData[12];
+    final colorE = groupEBarFirst.color;
+    final dashE = groupEBarFirst.dashArray;
+
+    // Reorder and remove some curves: keep groupE and groupB, reordered
+    currentCurves = [
+      makeCurve('groupE'),
+      makeCurve('groupB'),
+    ];
+    container.invalidate(survivalProvider);
+    await tester.pumpAndSettle();
+
+    chart = tester.widget<LineChart>(find.byType(LineChart));
+    // Now groupE is curve 0 -> bar index 0
+    final groupEBarSecond = chart.data.lineBarsData[0];
+    expect(groupEBarSecond.color, colorE);
+    expect(groupEBarSecond.dashArray, dashE);
+
+    // Add a new curve groupF -> receives new unused slot
+    currentCurves = [
+      makeCurve('groupE'),
+      makeCurve('groupF'),
+    ];
+    container.invalidate(survivalProvider);
+    await tester.pumpAndSettle();
+
+    chart = tester.widget<LineChart>(find.byType(LineChart));
+    final groupEBarThird = chart.data.lineBarsData[0];
+    expect(groupEBarThird.color, colorE);
+    expect(groupEBarThird.dashArray, dashE);
   });
 }
