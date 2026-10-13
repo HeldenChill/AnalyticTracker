@@ -14,6 +14,7 @@ import '../screens/settings_screen.dart';
 import '../state/navigation.dart';
 import '../theme/analytics_tokens.dart';
 import '../widgets/filter_bar.dart';
+import 'page_stage.dart';
 
 class _NavItem {
   const _NavItem(this.label, this.icon, this.page);
@@ -108,6 +109,111 @@ class _AppShellState extends ConsumerState<AppShell> {
     }
   }
 
+  Widget _buildSidebar(
+    BuildContext context,
+    bool isCompact,
+    AppPage currentPage,
+    AnalyticsTokens tokens,
+    ThemeData theme,
+  ) {
+    if (isCompact) {
+      return SizedBox(
+        width: 72,
+        child: Material(
+          color: tokens.sidebar,
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [
+              const SizedBox(height: 8),
+              for (var i = 0; i < _items.length; i++) ...[
+                if (i == _footerStart)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Divider(),
+                  ),
+                Tooltip(
+                  message: _items[i].label,
+                  child: IconButton(
+                    icon: Icon(_items[i].icon),
+                    isSelected: _items[i].page == currentPage,
+                    color: _items[i].page == currentPage ? tokens.activeNavFg : tokens.sidebarFg,
+                    style: _items[i].page == currentPage
+                        ? IconButton.styleFrom(backgroundColor: tokens.activeNav)
+                        : null,
+                    onPressed: () {
+                      ref.read(selectedPageProvider.notifier).state = _items[i].page;
+                    },
+                  ),
+                ),
+                const SizedBox(height: 4),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: 220,
+      child: Material(
+        color: tokens.sidebar,
+        child: ListView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
+              child: Text(
+                'PVM Analytics',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ),
+            for (var i = 0; i < _items.length; i++) ...[
+              if (i == _exploreStart)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 16, 4),
+                  child: Text(
+                    'EXPLORE',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      letterSpacing: 1.2,
+                      color: tokens.sidebarFg.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+              if (i == _footerStart)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Divider(),
+                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                child: ListTile(
+                  dense: true,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(
+                      tokens.radius > 6 ? tokens.radius - 4 : tokens.radius,
+                    ),
+                  ),
+                  leading: Icon(_items[i].icon, size: 20),
+                  title: Text(_items[i].label),
+                  selected: _items[i].page == currentPage,
+                  selectedTileColor: tokens.activeNav,
+                  selectedColor: tokens.activeNavFg,
+                  iconColor: tokens.sidebarFg,
+                  textColor: tokens.sidebarFg,
+                  onTap: () {
+                    ref.read(selectedPageProvider.notifier).state = _items[i].page;
+                  },
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -116,102 +222,50 @@ class _AppShellState extends ConsumerState<AppShell> {
     final isDataHealth = currentPage == AppPage.dataHealth;
 
     return Scaffold(
-      body: Row(
-        children: [
-          SizedBox(
-            width: 220,
-            child: Material(
-              color: tokens.sidebar,
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
-                    child: Text(
-                      'PVM Analytics',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.onSurface,
-                      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 800;
+
+          return Row(
+            children: [
+              _buildSidebar(context, isCompact, currentPage, tokens, theme),
+              const VerticalDivider(width: 1),
+              Expanded(
+                child: Column(
+                  children: [
+                    FilterBar(
+                      onRefresh: _refresh,
+                      storageScope: isDataHealth,
+                      refreshing: isDataHealth
+                          ? _refreshing || ref.watch(daysProvider).isLoading
+                          : _refreshing,
                     ),
-                  ),
-                  for (var i = 0; i < _items.length; i++) ...[
-                    if (i == _exploreStart)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(18, 16, 16, 4),
-                        child: Text(
-                          'EXPLORE',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            letterSpacing: 1.2,
-                            color: tokens.sidebarFg.withValues(alpha: 0.7),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: PageStage(
+                        index: currentPage.index,
+                        pages: [
+                          const OverviewPage(key: PageStorageKey('page-overview')),
+                          const RetentionPage(key: PageStorageKey('page-retention')),
+                          const ProgressionPage(key: PageStorageKey('page-progression')),
+                          const FunnelPage(key: PageStorageKey('page-funnels')),
+                          const AnalyticPage(key: PageStorageKey('page-analytic')),
+                          CountsScreen(
+                            key: const PageStorageKey('page-events'),
+                            onExploreParameters: _openParameters,
                           ),
-                        ),
-                      ),
-                    if (i == _footerStart)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Divider(),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                      child: ListTile(
-                        dense: true,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            tokens.radius > 6 ? tokens.radius - 4 : tokens.radius,
-                          ),
-                        ),
-                        leading: Icon(_items[i].icon, size: 20),
-                        title: Text(_items[i].label),
-                        selected: _items[i].page == currentPage,
-                        selectedTileColor: tokens.activeNav,
-                        selectedColor: tokens.activeNavFg,
-                        iconColor: tokens.sidebarFg,
-                        textColor: tokens.sidebarFg,
-                        onTap: () {
-                          ref.read(selectedPageProvider.notifier).state = _items[i].page;
-                        },
+                          const ParamScreen(key: PageStorageKey('page-parameters')),
+                          const DaysScreen(key: PageStorageKey('page-data-health')),
+                          const SettingsScreen(key: PageStorageKey('page-settings')),
+                        ],
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
-          ),
-          const VerticalDivider(width: 1),
-          Expanded(
-            child: Column(
-              children: [
-                FilterBar(
-                  onRefresh: _refresh,
-                  storageScope: isDataHealth,
-                  refreshing: isDataHealth
-                      ? _refreshing || ref.watch(daysProvider).isLoading
-                      : _refreshing,
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: IndexedStack(
-                    index: currentPage.index,
-                    children: [
-                      const OverviewPage(key: PageStorageKey('page-overview')),
-                      const RetentionPage(key: PageStorageKey('page-retention')),
-                      const ProgressionPage(key: PageStorageKey('page-progression')),
-                      const FunnelPage(key: PageStorageKey('page-funnels')),
-                      const AnalyticPage(key: PageStorageKey('page-analytic')),
-                      CountsScreen(
-                        key: const PageStorageKey('page-events'),
-                        onExploreParameters: _openParameters,
-                      ),
-                      const ParamScreen(key: PageStorageKey('page-parameters')),
-                      const DaysScreen(key: PageStorageKey('page-data-health')),
-                      const SettingsScreen(key: PageStorageKey('page-settings')),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
