@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
 import '../theme/analytics_tokens.dart';
+import 'filter_trigger.dart';
 
 /// Global filters: date presets, platform, version, refresh.
 class FilterBar extends ConsumerWidget {
@@ -48,6 +49,7 @@ class FilterBar extends ConsumerWidget {
                   child: PopupMenuButton<int>(
                     key: const ValueKey('filter-date-range'),
                     tooltip: 'Date range',
+                    borderRadius: borderRadius,
                     onSelected: (days) async {
                       if (days > 0) {
                         notifier.applyPreset(days);
@@ -75,19 +77,9 @@ class FilterBar extends ConsumerWidget {
                         PopupMenuItem(value: d, child: Text('Last $d days')),
                       const PopupMenuItem(value: 0, child: Text('Custom…')),
                     ],
-                    child: Container(
-                      constraints: BoxConstraints(
-                        minWidth: 160,
-                        maxWidth: maxW,
-                        minHeight: 44,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        border:
-                            Border.all(color: theme.colorScheme.outlineVariant),
-                        borderRadius: borderRadius,
-                      ),
+                    child: FilterTrigger(
+                      borderRadius: borderRadius,
+                      maxWidth: maxW,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -110,10 +102,11 @@ class FilterBar extends ConsumerWidget {
                   label: 'Platform',
                   child: _OptionDropdown(
                     dropdownKey: const ValueKey('filter-platform'),
-                    label: 'Platform',
+                    allLabel: 'All platforms',
                     value: f.platform,
                     options: options.platforms,
                     onChanged: storageScope ? null : notifier.setPlatform,
+                    borderRadius: borderRadius,
                     maxWidth: maxW,
                   ),
                 ),
@@ -121,10 +114,11 @@ class FilterBar extends ConsumerWidget {
                   label: 'Version',
                   child: _OptionDropdown(
                     dropdownKey: const ValueKey('filter-version'),
-                    label: 'Version',
+                    allLabel: 'All versions',
                     value: f.version,
                     options: options.versions,
                     onChanged: storageScope ? null : notifier.setVersion,
+                    borderRadius: borderRadius,
                     maxWidth: maxW,
                   ),
                 ),
@@ -207,96 +201,81 @@ class _FilterField extends StatelessWidget {
       );
 }
 
+/// Non-null wrapper so popup dismissal (which yields null from onSelected) is
+/// never confused with the user explicitly choosing "All" (null value).
+class _OptionChoice {
+  const _OptionChoice(this.value);
+  final String? value;
+}
+
 class _OptionDropdown extends StatelessWidget {
   const _OptionDropdown({
     this.dropdownKey,
-    required this.label,
+    required this.allLabel,
     required this.value,
     required this.options,
     required this.onChanged,
+    required this.borderRadius,
     required this.maxWidth,
   });
 
   final Key? dropdownKey;
-  final String label;
+  final String allLabel;
   final String? value;
   final List<String> options;
   final ValueChanged<String?>? onChanged;
+  final BorderRadius borderRadius;
   final double maxWidth;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final tokens = AnalyticsTokens.of(context);
-    final borderRadius =
-        BorderRadius.circular((tokens.radius - 4).clamp(4.0, 24.0));
-
-    final values = <String?>[
-      null,
-      if (value != null && !options.contains(value)) value,
-      ...options.toSet(),
-    ];
-    String optionLabel(String? option) =>
-        option ?? (label == 'Platform' ? 'All platforms' : 'All versions');
-    final items = [
-      for (final option in values)
-        DropdownMenuItem<String?>(
-          value: option,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(optionLabel(option), softWrap: true),
-          ),
-        ),
-    ];
-
     final width = maxWidth < 240 ? maxWidth : 160.0;
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        minWidth: 120,
+    final choices = <_OptionChoice>[
+      const _OptionChoice(null),
+      if (value != null && !options.contains(value)) _OptionChoice(value),
+      for (final v in options.toSet()) _OptionChoice(v),
+    ];
+
+    final displayLabel = value ?? allLabel;
+
+    return PopupMenuButton<_OptionChoice>(
+      key: dropdownKey,
+      enabled: onChanged != null,
+      borderRadius: borderRadius,
+      tooltip: displayLabel,
+      onSelected: (choice) => onChanged?.call(choice.value),
+      itemBuilder: (_) => [
+        for (final choice in choices)
+          PopupMenuItem<_OptionChoice>(
+            value: choice,
+            child: Text(
+              choice.value ?? allLabel,
+              softWrap: true,
+            ),
+          ),
+      ],
+      child: FilterTrigger(
+        borderRadius: borderRadius,
         maxWidth: width,
-        minHeight: 44,
-      ),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          isDense: true,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          border: OutlineInputBorder(
-            borderRadius: borderRadius,
-            borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: borderRadius,
-            borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
-          ),
-          disabledBorder: OutlineInputBorder(
-            borderRadius: borderRadius,
-            borderSide: BorderSide(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-          ),
-        ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<String?>(
-            key: dropdownKey,
-            value: value,
-            isExpanded: true,
-            isDense: true,
-            itemHeight: null,
-            selectedItemBuilder: (context) => [
-              for (final option in values)
-                Tooltip(
-                  message: optionLabel(option),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(optionLabel(option),
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ),
-                ),
-            ],
-            items: items,
-            onChanged: onChanged,
-          ),
+        minWidth: 120,
+        // No tooltip here: PopupMenuButton.tooltip already creates one at this
+        // location. A second Tooltip widget would cause find.byTooltip() to
+        // match two widgets and break tests that assert findsOneWidget.
+        enabled: onChanged != null,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                displayLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.arrow_drop_down, size: 18),
+          ],
         ),
       ),
     );

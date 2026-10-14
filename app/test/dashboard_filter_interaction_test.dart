@@ -76,6 +76,69 @@ Future<ProviderContainer> _pump(WidgetTester t,
 }
 
 void main() {
+  testWidgets('All platform and version choices really clear values', (t) async {
+    final c = await _pump(t);
+    await t.tap(find.byKey(const ValueKey('filter-platform')));
+    await t.pumpAndSettle();
+    await t.tap(find.text('All platforms').last);
+    await t.pumpAndSettle();
+    expect(c.read(filtersProvider).platform, isNull);
+    await t.tap(find.byKey(const ValueKey('filter-version')));
+    await t.pumpAndSettle();
+    await t.tap(find.text('All versions').last);
+    await t.pumpAndSettle();
+    expect(c.read(filtersProvider).version, isNull);
+  });
+
+  testWidgets('Escape closes version menu without changing value', (t) async {
+    final c = await _pump(t);
+    expect(c.read(filtersProvider).version, '2.0');
+    await t.tap(find.byKey(const ValueKey('filter-version')));
+    await t.pumpAndSettle();
+    await t.sendKeyEvent(LogicalKeyboardKey.escape);
+    await t.pumpAndSettle();
+    expect(c.read(filtersProvider).version, '2.0');
+  });
+
+  testWidgets('storageScope: option menu taps and Enter do not change values',
+      (t) async {
+    t.view.physicalSize = const Size(720, 1000);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    final c = ProviderContainer(overrides: [
+      filtersProvider.overrideWith(_Filters.new),
+      filterOptionsProvider.overrideWith((ref) async => const FilterOptions(
+            platforms: ['IOS', 'ANDROID'],
+            versions: ['2.0', '2.1'],
+          )),
+    ]);
+    addTearDown(c.dispose);
+    await t.pumpWidget(UncontrolledProviderScope(
+        container: c,
+        child: MaterialApp(
+            home: MediaQuery(
+          data: const MediaQueryData(size: Size(720, 1000)),
+          child: Scaffold(
+              body: Align(
+                  alignment: Alignment.topLeft,
+                  child: FilterBar(onRefresh: () {}, storageScope: true))),
+        ))));
+    await t.pumpAndSettle();
+    final beforePlatform = c.read(filtersProvider).platform;
+    final beforeVersion = c.read(filtersProvider).version;
+    // Taps on disabled controls must not open menus or change state.
+    await t.tap(find.byKey(const ValueKey('filter-platform')));
+    await t.pumpAndSettle();
+    expect(find.text('ANDROID'), findsNothing,
+        reason: 'storageScope platform menu must not open');
+    await t.tap(find.byKey(const ValueKey('filter-version')));
+    await t.pumpAndSettle();
+    expect(find.text('2.1'), findsNothing,
+        reason: 'storageScope version menu must not open');
+    expect(c.read(filtersProvider).platform, beforePlatform);
+    expect(c.read(filtersProvider).version, beforeVersion);
+  });
+
   testWidgets('narrow date control displays both selected dates completely',
       (t) async {
     await _pump(t, width: 320);
@@ -195,8 +258,9 @@ void main() {
     expect(_focusedWithin(t, 'filter-platform'), isTrue);
     await t.sendKeyEvent(LogicalKeyboardKey.enter);
     await t.pumpAndSettle();
-    await t.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-    await t.sendKeyEvent(LogicalKeyboardKey.enter);
+    // PopupMenuButton: select via visible choice text (not arrowDown+Enter as
+    // DropdownButton did; PopupMenu keyboard model is different).
+    await t.tap(find.text('ANDROID').last);
     await t.pumpAndSettle();
     expect(c.read(filtersProvider).platform, 'ANDROID');
     for (var i = 0; i < 12; i++) {

@@ -9,17 +9,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('preset preserves selected platform version and test state', (t) async {
+  testWidgets('preset preserves selected platform version and test state',
+      (t) async {
     final c = ProviderContainer(overrides: [
       filterOptionsProvider.overrideWith((ref) async => const FilterOptions(
-        platforms: ['IOS', 'ANDROID'], versions: ['2.0.0'])),
+          platforms: ['IOS', 'ANDROID'], versions: ['2.0.0'])),
     ]);
     addTearDown(c.dispose);
     c.read(filtersProvider.notifier).setPlatform('IOS');
     c.read(filtersProvider.notifier).setVersion('2.0.0');
     c.read(filtersProvider.notifier).setIncludeTest(true);
-    await t.pumpWidget(UncontrolledProviderScope(container: c,
-      child: MaterialApp(home: Scaffold(body: FilterBar(onRefresh: () {})))));
+    await t.pumpWidget(UncontrolledProviderScope(
+        container: c,
+        child:
+            MaterialApp(home: Scaffold(body: FilterBar(onRefresh: () {})))));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('filter-date-range')));
     await t.pumpAndSettle();
@@ -32,10 +35,12 @@ void main() {
     expect(DateTime.parse(f.to).difference(DateTime.parse(f.from)).inDays, 6);
   });
 
-  testWidgets('toolbar displays stable keys, visible labels and default options', (t) async {
+  testWidgets(
+      'toolbar displays stable keys, visible labels and default options',
+      (t) async {
     final c = ProviderContainer(overrides: [
       filterOptionsProvider.overrideWith((ref) async => const FilterOptions(
-        platforms: ['IOS', 'ANDROID'], versions: ['1.0.0', '2.0.0'])),
+          platforms: ['IOS', 'ANDROID'], versions: ['1.0.0', '2.0.0'])),
     ]);
     addTearDown(c.dispose);
 
@@ -62,9 +67,12 @@ void main() {
     expect(find.text('Test devices'), findsOneWidget);
   });
 
-  testWidgets('bounded controls reflow cleanly at 320px width and text scale 1.5 with active filters while options loading', (t) async {
+  testWidgets(
+      'bounded controls reflow cleanly at 320px width and text scale 1.5 with active filters while options loading',
+      (t) async {
     final c = ProviderContainer(overrides: [
-      filterOptionsProvider.overrideWith((ref) => Completer<FilterOptions>().future),
+      filterOptionsProvider
+          .overrideWith((ref) => Completer<FilterOptions>().future),
     ]);
     addTearDown(c.dispose);
     c.read(filtersProvider.notifier).setPlatform('IOS');
@@ -100,10 +108,12 @@ void main() {
     expect(t.takeException(), isNull);
   });
 
-  testWidgets('storageScope disables platform, version, test controls but retains values and allows date range/refresh', (t) async {
+  testWidgets(
+      'storageScope disables platform, version, test controls but retains values and allows date range/refresh',
+      (t) async {
     final c = ProviderContainer(overrides: [
       filterOptionsProvider.overrideWith((ref) async => const FilterOptions(
-        platforms: ['IOS', 'ANDROID'], versions: ['1.0.0', '2.0.0'])),
+          platforms: ['IOS', 'ANDROID'], versions: ['1.0.0', '2.0.0'])),
     ]);
     addTearDown(c.dispose);
     c.read(filtersProvider.notifier).setPlatform('IOS');
@@ -114,7 +124,8 @@ void main() {
       container: c,
       child: MaterialApp(
         theme: buildTheme(AppStyle.midnight),
-        home: Scaffold(body: FilterBar(onRefresh: () {}, storageScope: true)),
+        home: Scaffold(
+            body: FilterBar(onRefresh: () {}, storageScope: true)),
       ),
     ));
     await t.pumpAndSettle();
@@ -123,25 +134,32 @@ void main() {
     expect(find.text('2.0.0'), findsOneWidget);
     expect(find.textContaining('Storage scope:'), findsOneWidget);
 
-    final dropdowns = t.widgetList<DropdownButton<String?>>(find.byType(DropdownButton<String?>)).toList();
-    for (final d in dropdowns) {
-      expect(d.onChanged, isNull);
-    }
+    // Platform and version are now PopupMenuButton with enabled=false.
+    final platformBtn = t.widget<PopupMenuButton>(
+        find.byKey(const ValueKey('filter-platform')));
+    expect(platformBtn.enabled, isFalse);
+    final versionBtn = t.widget<PopupMenuButton>(
+        find.byKey(const ValueKey('filter-version')));
+    expect(versionBtn.enabled, isFalse);
 
     final chip = t.widget<FilterChip>(find.byType(FilterChip));
     expect(chip.onSelected, isNull);
     expect(chip.selected, isTrue);
 
-    // Refresh and date range remain enabled
-    final btn = t.widget<OutlinedButton>(find.byKey(const ValueKey('refresh-button')));
+    // Refresh and date range remain enabled.
+    final btn = t.widget<OutlinedButton>(
+        find.byKey(const ValueKey('refresh-button')));
     expect(btn.onPressed, isNotNull);
   });
 
-  testWidgets('refreshing disables refresh button, shows spinner and semantic label', (t) async {
+  testWidgets(
+      'refreshing disables refresh button, shows spinner and semantic label',
+      (t) async {
     final semantics = t.ensureSemantics();
     var refreshed = 0;
     final c = ProviderContainer(overrides: [
-      filterOptionsProvider.overrideWith((ref) async => const FilterOptions(platforms: [], versions: [])),
+      filterOptionsProvider.overrideWith(
+          (ref) async => const FilterOptions(platforms: [], versions: [])),
     ]);
     addTearDown(c.dispose);
 
@@ -158,7 +176,8 @@ void main() {
     ));
     await t.pump();
 
-    final btn = t.widget<OutlinedButton>(find.byKey(const ValueKey('refresh-button')));
+    final btn = t.widget<OutlinedButton>(
+        find.byKey(const ValueKey('refresh-button')));
     expect(btn.onPressed, isNull);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(find.bySemanticsLabel('Refreshing data'), findsOneWidget);
