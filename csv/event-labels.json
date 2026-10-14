@@ -1,0 +1,861 @@
+{
+  "schemaVersion": 1,
+  "events": {
+    "open_app": {
+      "label": "App opened",
+      "description": "An app cold start after the first launch; returning from background does not count."
+    },
+    "stg_start": {
+      "label": "Stage started",
+      "description": "A player starts a stage."
+    },
+    "pet_buy": {
+      "label": "Pet purchased",
+      "description": "A player purchases a pet during a stage."
+    },
+    "sup_buy": {
+      "label": "Support item purchased",
+      "description": "A player purchases a support item during a stage."
+    },
+    "skl_pick": {
+      "label": "Skill selected",
+      "description": "A player selects a skill card during a stage."
+    },
+    "trn_use": {
+      "label": "Terrain used",
+      "description": "A pet first enters a terrain area in an attempt; each terrain is tracked once per attempt."
+    },
+    "cp": {
+      "label": "Interrupted stage checkpoint",
+      "description": "The next cold start reports the stage and wave left unfinished when the app exited."
+    },
+    "stg_cmp": {
+      "label": "Stage completed",
+      "description": "A player wins a stage. Play time accumulates foreground minutes across attempts up to the first win."
+    },
+    "stg_fail": {
+      "label": "Stage failed",
+      "description": "A player fails a stage at the tracked wave."
+    },
+    "login_day": {
+      "label": "Login day reached",
+      "description": "A player reaches the tracked login day."
+    },
+    "pet_asc": {
+      "label": "Pet ascended",
+      "description": "A player ascends a pet to the tracked target."
+    },
+    "x2_speed_on": {
+      "label": "Double speed enabled",
+      "description": "A player enables double battle speed."
+    },
+    "rr_trd": {
+      "label": "Trader pets rerolled",
+      "description": "A player rerolls the pet offers at the trader during a stage."
+    },
+    "ms_claim": {
+      "label": "Milestone reward claimed",
+      "description": "A player claims a milestone reward."
+    },
+    "cst_fail": {
+      "label": "Consecutive failures",
+      "description": "A player reaches a tracked consecutive failure count."
+    },
+    "cst_fail_wa": {
+      "label": "Consecutive wave failures",
+      "description": "A player reaches a tracked consecutive failure count at a wave."
+    },
+    "cst_fail_heat": {
+      "label": "Failure streak intensity",
+      "description": "A failure streak is grouped by its tracked intensity and time gap."
+    },
+    "gacha": {
+      "label": "Gacha draw",
+      "description": "A player makes a gacha draw, with pool, quantity and cost recorded."
+    },
+    "gacha_feeling": {
+      "label": "Post-gacha behavior category",
+      "description": "The first qualifying action after a draw classifies behavior as positive, normal or negative; this is not a self-reported feeling."
+    },
+    "cst_win": {
+      "label": "Consecutive wins",
+      "description": "A player reaches a tracked consecutive win count."
+    },
+    "dg_rwd": {
+      "label": "Daily gift reward claimed",
+      "description": "A player claims a daily gift reward."
+    },
+    "ds_rwd": {
+      "label": "Daily shop reward claimed",
+      "description": "A player claims a daily shop reward."
+    },
+    "ds_buy": {
+      "label": "Daily shop item purchased",
+      "description": "A player purchases an item in the daily shop."
+    },
+    "ds_rr": {
+      "label": "Daily shop rerolled",
+      "description": "A player rerolls the daily shop."
+    },
+    "pet_upg": {
+      "label": "Pet upgraded",
+      "description": "A player upgrades the tracked pet."
+    },
+    "hero_upg": {
+      "label": "Hero upgraded",
+      "description": "A player upgrades the tracked hero."
+    },
+    "item_upg": {
+      "label": "Item upgraded",
+      "description": "A player upgrades the tracked item."
+    },
+    "trd_use": {
+      "label": "Board occupancy category",
+      "description": "At wave start, occupied pet/support tiles are grouped as full at 90% or more, normal at 40% to under 90%, or least below 40%."
+    },
+    "ftu_open_app": {
+      "label": "First app open",
+      "description": "The first cold start after installation."
+    },
+    "ftu_stg_start": {
+      "label": "Stage started in first play session",
+      "description": "A player starts a stage. Tracked during the first play session only."
+    },
+    "ftu_pet_buy": {
+      "label": "Pet purchased in first play session",
+      "description": "A player purchases a pet during a stage. Tracked during the first play session only."
+    },
+    "ftu_sup_buy": {
+      "label": "Support item purchased in first play session",
+      "description": "A player purchases a support item during a stage. Tracked during the first play session only."
+    },
+    "ftu_skl_pick": {
+      "label": "Skill selected in first play session",
+      "description": "A player selects a skill card during a stage. Tracked during the first play session only."
+    },
+    "ftu_trn_use": {
+      "label": "Terrain used in first play session",
+      "description": "A pet first enters a terrain area in an attempt; each terrain is tracked once per attempt. Tracked during the first play session only."
+    },
+    "ftu_cp": {
+      "label": "Interrupted stage checkpoint in first play session",
+      "description": "The next cold start reports the stage and wave left unfinished when the app exited. Tracked during the first play session only."
+    },
+    "ftu_stg_cmp": {
+      "label": "Stage completed in first play session",
+      "description": "A player wins a stage. Play time accumulates foreground minutes across attempts up to the first win. Tracked during the first play session only."
+    },
+    "ftu_stg_fail": {
+      "label": "Stage failed in first play session",
+      "description": "A player fails a stage at the tracked wave. Tracked during the first play session only."
+    },
+    "ftu_tp": {
+      "label": "Play time milestone in first play session",
+      "description": "Foreground play reaches 5, 10, 15 or 30 minutes during the first play session."
+    },
+    "ftu_pet_asc": {
+      "label": "Pet ascended in first play session",
+      "description": "A player ascends a pet to the tracked target. Tracked during the first play session only."
+    },
+    "ftu_lock": {
+      "label": "Trader offer locked in first play session",
+      "description": "A player locks a trader offer during the first play session."
+    },
+    "ftu_x2_speed_on": {
+      "label": "Double speed enabled in first play session",
+      "description": "A player enables double battle speed. Tracked during the first play session only."
+    },
+    "ftu_rr_trd": {
+      "label": "Trader pets rerolled in first play session",
+      "description": "A player rerolls the pet offers at the trader during a stage. Tracked during the first play session only."
+    },
+    "ftu_ms_claim": {
+      "label": "Milestone reward claimed in first play session",
+      "description": "A player claims a milestone reward. Tracked during the first play session only."
+    },
+    "ftu_cst_win": {
+      "label": "Consecutive wins in first play session",
+      "description": "A player reaches a tracked consecutive win count. Tracked during the first play session only."
+    },
+    "ftu_cst_fail": {
+      "label": "Consecutive failures in first play session",
+      "description": "A player reaches a tracked consecutive failure count. Tracked during the first play session only."
+    },
+    "ftu_cst_fail_wa": {
+      "label": "Consecutive wave failures in first play session",
+      "description": "A player reaches a tracked consecutive failure count at a wave. Tracked during the first play session only."
+    },
+    "ftu_cst_fail_heat": {
+      "label": "Failure streak intensity in first play session",
+      "description": "A failure streak is grouped by its tracked intensity and time gap. Tracked during the first play session only."
+    },
+    "ftu_gacha": {
+      "label": "Gacha draw in first play session",
+      "description": "A player makes a gacha draw, with pool, quantity and cost recorded. Tracked during the first play session only."
+    },
+    "ftu_gacha_feeling": {
+      "label": "Post-gacha behavior category in first play session",
+      "description": "The first qualifying action after a draw classifies behavior as positive, normal or negative; this is not a self-reported feeling. Tracked during the first play session only."
+    },
+    "ftu_dg_rwd": {
+      "label": "Daily gift reward claimed in first play session",
+      "description": "A player claims a daily gift reward. Tracked during the first play session only."
+    },
+    "ftu_ds_rwd": {
+      "label": "Daily shop reward claimed in first play session",
+      "description": "A player claims a daily shop reward. Tracked during the first play session only."
+    },
+    "ftu_ds_buy": {
+      "label": "Daily shop item purchased in first play session",
+      "description": "A player purchases an item in the daily shop. Tracked during the first play session only."
+    },
+    "ftu_ds_rr": {
+      "label": "Daily shop rerolled in first play session",
+      "description": "A player rerolls the daily shop. Tracked during the first play session only."
+    },
+    "ftu_pet_upg": {
+      "label": "Pet upgraded in first play session",
+      "description": "A player upgrades the tracked pet. Tracked during the first play session only."
+    },
+    "ftu_hero_upg": {
+      "label": "Hero upgraded in first play session",
+      "description": "A player upgrades the tracked hero. Tracked during the first play session only."
+    },
+    "ftu_item_upg": {
+      "label": "Item upgraded in first play session",
+      "description": "A player upgrades the tracked item. Tracked during the first play session only."
+    },
+    "ftu_trd_use": {
+      "label": "Board occupancy category in first play session",
+      "description": "At wave start, occupied pet/support tiles are grouped as full at 90% or more, normal at 40% to under 90%, or least below 40%. Tracked during the first play session only."
+    },
+    "ftu_trd_bonus": {
+      "label": "Trader bonus category in first play session",
+      "description": "Trader bonus is grouped as fast at 70% or more, normal at 30% to under 70%, or slow below 30% during the first play session."
+    },
+    "ftu_trd_spend": {
+      "label": "Food spending category in first play session",
+      "description": "Wave food spending is grouped as all in at 80% or more, normal at 50% to under 80%, or saving below 50% during the first play session."
+    },
+    "tut": {
+      "label": "Tutorial",
+      "description": "A tutorial starts, ends or is aborted; the tutorial ID identifies its instructions."
+    }
+  },
+  "parameterLabels": {
+    "stg_cmp": {
+      "time_min": "Play time in minutes",
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped"
+    },
+    "ftu_stg_cmp": {
+      "time_min": "Play time in minutes",
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped"
+    },
+    "open_app": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "stg_start": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "pet_buy": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "sup_buy": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "skl_pick": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "trn_use": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "cp": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "stg_fail": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "login_day": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "pet_asc": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "x2_speed_on": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "rr_trd": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ms_claim": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "cst_fail": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "cst_fail_wa": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "cst_fail_heat": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "gacha": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "gacha_feeling": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "cst_win": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "dg_rwd": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ds_rwd": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ds_buy": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ds_rr": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "pet_upg": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "hero_upg": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "item_upg": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "trd_use": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_open_app": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_stg_start": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_pet_buy": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_sup_buy": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_skl_pick": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_trn_use": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_cp": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_stg_fail": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_tp": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_pet_asc": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_lock": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_x2_speed_on": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_rr_trd": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_ms_claim": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_cst_win": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_cst_fail": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_cst_fail_wa": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_cst_fail_heat": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_gacha": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_gacha_feeling": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_dg_rwd": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_ds_rwd": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_ds_buy": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_ds_rr": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_pet_upg": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_hero_upg": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_item_upg": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_trd_use": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_trd_bonus": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "ftu_trd_spend": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    },
+    "tut": {
+      "stg": "Stage",
+      "wa": "Wave",
+      "replay": "Replay",
+      "ftu": "First play session",
+      "step": "Step",
+      "skipped": "Skipped",
+      "time_min": "Play time in minutes"
+    }
+  },
+  "tutorials": {
+    "Tut_1": {
+      "label": "Buy and place a Puppy"
+    },
+    "Tut_2": {
+      "label": "Buy and merge Puppies"
+    },
+    "Tut_3": {
+      "label": "Start the battle"
+    },
+    "Tut_4": {
+      "label": "Place Sushi beside a Puppy"
+    },
+    "Tut_5": {
+      "label": "Claim the first milestone reward"
+    },
+    "Tut_6": {
+      "label": "Continue to Stage 2"
+    },
+    "Tut_7": {
+      "label": "Use the Gate"
+    },
+    "Tut_8": {
+      "label": "Inspect a tile buff"
+    },
+    "Tut_9": {
+      "label": "Draw a gacha item"
+    },
+    "Tut_10": {
+      "label": "Open the Hero tab"
+    },
+    "Tut_11": {
+      "label": "Equip the drawn item"
+    },
+    "Tut_12": {
+      "label": "Continue to Stage 4"
+    },
+    "Tut_13": {
+      "label": "Upgrade Seal to Level 2"
+    },
+    "Tut_14": {
+      "label": "Continue to Chapter 2"
+    },
+    "Tut_15": {
+      "label": "Draw a gacha pet"
+    },
+    "Tut_16": {
+      "label": "Equip a pet beside Dog"
+    },
+    "Tut_opt_1": {
+      "label": "Open the skill tree"
+    },
+    "Tut_opt_2": {
+      "label": "Inspect pet ascension"
+    },
+    "Tut_opt_3": {
+      "label": "Move pets and cancel placement"
+    },
+    "Tut_17": {
+      "label": "Tut_17"
+    },
+    "Tut_18": {
+      "label": "Tut_18"
+    },
+    "Tut_19": {
+      "label": "Tut_19"
+    },
+    "Tut_20": {
+      "label": "Tut_20"
+    },
+    "Tut_opt_4": {
+      "label": "Tut_opt_4"
+    }
+  }
+}

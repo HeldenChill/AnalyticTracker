@@ -1,0 +1,285 @@
+Một tutorial sẽ luôn có 2 step cần tracking đó là start và end,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+No.,Event,Parameter,Content,Status,Trigger Logic (description),Abbreviated Event,Abbreviated Parameters,Parameter Abbreviation Map,Optional Mode B Template,Mode B Remaining Payload
+1,tutorial,"id: Tut_1
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)","- Khi người chơi mở game thì sẽ bắt đầu luôn ở stage 1 - Chapter 1
+- Spawn ra chính xác  2 Puppy và 1 Chick
+- Hoãn bộ đếm time
+- Force mua Puppy và đặt vào vị trí cho sẵn 
+- Visual thể hiện sẽ có hình ngón tay di chuyển và highlight ở các điểm quan trọng",New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+2,tutorial,"id: Tut_2
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)",Force user mua và merge Puppy,New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+3,tutorial,"id: Tut_3
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)","- Highlight nút start battle 
+- Có ngón tay chỉ 
+- Bắt đầu bật bộ đếm giờ
+- Không Force ",New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+4,tutorial,"id: Tut_4
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)","Trước đó đảm bảo không spawn ra support item chỉ spawn ra Pet 
+Tại đầu wave 3 tại đây lần đầu spawn ra 1 support item là Sushi 
+Hướng dẫn người chơi đặt Sushi vào 1 ô cạnh Puppy
+
+",New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+5,tutorial,"id: Tut_5
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)","- Sau khi người chơi hoàn thành stage 1 - chapter 1 và load về home
+- Force nhận phần thưởng milestone 
+",New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+6,tutorial,"id: Tut_6
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)","- Đổi từ popup của stage 1 sang stage 2
+- Hiện highlight chơi tiếp stage 2  ( ko force)",New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+7,tutorial,"id: Tut_7
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)",Sau khi người chơi load vào stage 2 - Chapter 1 - Wave 7 force user bấm vào Gate,New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+8,tutorial,"id: Tut_8
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)","Sau khi người chơi load vào stage 3 - Chapter 1, Làm vfx hightlight họ bấm vào xem thông tin của tile buff
+  ",New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+9,tutorial,"id: Tut_9
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)",Sau khi người chơi hoàn thành được stage 3 - Chapter 1 force bấm vào shop - hệ thống đưa thẳng đến màn gatcha sau đó hướng dẫn gatcha item,New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+10,tutorial,"id: Tut_10
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)",Ngay sau khi người chơi confirm nhận item - force  người chơi ấn vào tab Hero,New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+11,tutorial,"id: Tut_11
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)",Hướng dẫn người chơi ấn vào item và equip item vừa gatcha ra được,New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+12,tutorial,"id: Tut_12
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)",Nếu người chơi về Home thì highlight vào nút chơi stage 4,New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+13,tutorial,"id: Tut_13
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)","Sau khi người chơi hoàn thành stage 4 Chapter 1 sau khi hiện popup mở khóa Seal thì force users bấm vào Pet, chọn Seal sau đó nâng cấp nó lên level 2",New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+14,tutorial,"id: Tut_14
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)",Nếu người chơi về Home thì highlight vào nút chơi tiếp chapter 2,New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+15,tutorial,"id: Tut_15
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)","Force user bấm vào shop, sau đó hướng dẫn gatcha lần đầu ( gatcha Pet)",New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+16,tutorial,"id: Tut_16
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)",Force users bấm vào tab pet và hướng dẫn họ equip vào slot có Dog,New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+17,tutorial,"id: Tut_opt_1
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)",Khi người chơi bấm vào tab skill tree,New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+18,tutorial,"id: Tut_opt_2
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)","Hướng dẫn user bấm vào Pet đó để hiện ra bảng thông tin
+Dùng ngón tay highlight nút ascension",New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+19,tutorial,"id: Tut_opt_3
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)","- Video này phải thể hiện được rõ việc người chơi có thể drag hoặc tap để đổi vị trí Pet
+- Thể hiện rõ được cách hủy lệnh",New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+20,tutorial,"id: Tut_17
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)",Có trong game nhưng chưa có trong sheet - cần bổ sung nội dung.,New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+21,tutorial,"id: Tut_18
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)",Có trong game nhưng chưa có trong sheet - cần bổ sung nội dung.,New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+22,tutorial,"id: Tut_19
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)",Có trong game nhưng chưa có trong sheet - cần bổ sung nội dung.,New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+23,tutorial,"id: Tut_20
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)",Có trong game nhưng chưa có trong sheet - cần bổ sung nội dung.,New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"
+24,tutorial,"id: Tut_opt_4
+step: start / end / abort
+ftu: 1 / 0
+skipped: 1 (chỉ khi end bằng skip)",Có trong game nhưng chưa có trong sheet - cần bổ sung nội dung.,New request,Tự động theo vòng đời tutorial (xem ghi chú đầu tab).,tut,"id
+step
+ftu
+skipped","id -> id
+step -> step
+ftu -> ftu
+skipped -> skipped",tut_{id}_{step},"ftu
+skipped"

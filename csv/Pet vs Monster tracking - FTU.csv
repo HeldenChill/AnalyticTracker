@@ -1,0 +1,237 @@
+"Lưu ý chỉ bắn những event của kịch bản này ở session chơi đầu tiên kể từ lúc user mở game lần đầu. Nếu user kill app hoặc quit game rồi vào lại thì sẽ bắn event ở kịch bản tracking user và tutorial
+Tất cả những tracking tại tab này là để giúp vẽ ra hành vi lần đầu tiên chơi game từ đầu dến cuối.",,,,,,,,,,,
+,,,,,,,,,,,
+No.,Event,Parameter,Content,Status,Trigger Logic (description),Note,Abbreviated Event,Abbreviated Parameters,Parameter Abbreviation Map,Optional Mode B Template,Mode B Remaining Payload
+,ftu_open_app,,,New request,Bắn 1 lần ở cold start đầu tiên (lần mở app đầu tiên sau khi cài).,,ftu_open_app,,,Not supported; Mode A,None
+,ftu_stg_start,"stg
+replay","stg: 1-n (index toàn cục)
+replay: 0 / 1 (1 = stg đã từng hoàn thành)",New request,Bắn khi người chơi bắt đầu stg.,Dùng để lọc điểm drop dựa trên số lần thực hiện một hành động cụ thể trong stg đó,ftu_stg_start,"stg
+replay","stage -> stg
+replay -> replay",ftu_stg_{stage}_start,replay
+,ftu_pet_buy,"stg
+wa
+replay","stg: 1-n (index toàn cục)
+wa 1-n 
+replay: 0 / 1 (1 = stg đã từng hoàn thành)",New request,Bắn mỗi lần người chơi mua Pet trong stg.,track xem với 1 wa thuộc 1 stg cụ thể thì hành vi mua bán của Pet hoặc support của người chơi như thế nào,ftu_pet_buy,"stg
+wa
+replay","stage -> stg
+wave -> wa
+replay -> replay",ftu_pet_buy_stg_{stage},"wa
+replay"
+,ftu_support_buy,"stg
+wa
+replay","stg: 1-n (index toàn cục)
+wa 1-n
+replay: 0 / 1 (1 = stg đã từng hoàn thành)",New request,Bắn mỗi lần người chơi mua Support item trong stg.,track xem với 1 wa thuộc 1 stg cụ thể thì hành vi mua bán của Pet hoặc support của người chơi như thế nào,ftu_sup_buy,"stg
+wa
+replay","stage -> stg
+wave -> wa
+replay -> replay",ftu_sup_buy_stg_{stage},"wa
+replay"
+,ftu_skill_pick,"stg
+skill_id
+replay","stg: 1-n (index toàn cục)
+skill_id: id của skill card
+replay: 0 / 1 (1 = stg đã từng hoàn thành)",New request,Bắn mỗi lần người chơi chọn (pick) 1 skill card trong stg.,,ftu_skl_pick,"stg
+id
+replay","stage -> stg
+skill_id -> id
+replay -> replay",ftu_skl_pick_stg_{stage},"id
+replay"
+,ftu_terrain_use,"stg
+terrain_id
+pet_id","stg: 1-n (index toàn cục)
+terrain_id: TerrainDefinition.Id
+pet_id: Pet được đặt vào",New request,Bắn lần đầu tiên trong mỗi lượt chơi (attempt) khi 1 Pet được đặt vào vùng của terrain. Mỗi terrain_id chỉ bắn 1 lần / attempt.,,ftu_trn_use,"stg
+id
+pet_id","stage -> stg
+terrain_id -> id
+pet_id -> pet_id",ftu_trn_use_stg_{stage}_{terrain_id},pet_id
+,ftu_checkpoint,"stg
+wa","stg: 1-n (index toàn cục)
+wa: 1-n",New request,"Khi bắt đầu stg và mỗi wa: lưu {stg, wa}. Khi stg kết thúc: xoá. Nếu lần cold start thứ 2 vẫn còn bản ghi (lần trước bị kill / thoát giữa stg) thì bắn checkpoint với stg/wa đã lưu rồi xoá. Background rồi quay lại chơi tiếp: không bắn. Event bắn ở lần mở app thứ 2 nhưng vẫn mang tên ftu_checkpoint vì sự việc xảy ra trong FTU.","Trạng thái checkpoint được kích hoạt khi user thoát game, kill app giữa chừng khi đang chơi game và tại stg nào và ở đâu. 
+Kiểm tra hành vi reset map trước khi bị tiêu diệt, tính toán số wa vừa phải.",ftu_cp,"stg
+wa","stage -> stg
+wave -> wa",ftu_cp_stg_{stage}_wa_{wave},None
+,ftu_stg_complete,"stg
+time
+replay","stg: 1-n (index toàn cục)
+time: số phút (nguyên)
+replay: 0 / 1 (1 = stg đã từng hoàn thành)",New request,"Bắn khi thắng stg. time = tổng thời gian chơi stg đó cộng dồn qua mọi lượt chơi, từ lần đầu tiên bắt đầu stg đến lần thắng đầu tiên. Chỉ tính lúc app ở foreground (có tính lúc mở pause menu). Đơn vị: phút nguyên.",Kiểm tra độ khó thực tế: mất bao lâu để vượt qua stg. (Đổi đơn vị từ giờ sang phút - X9),ftu_stg_cmp,"stg
+time_min
+replay","stage -> stg
+time -> time_min
+replay -> replay",ftu_stg_{stage}_cmp,"time_min
+replay"
+,ftu_stg_fail,"stg
+wa
+replay","stg: 1-n (index toàn cục)
+wa: 1-n
+replay: 0 / 1 (1 = stg đã từng hoàn thành)",New request,"Bắn khi người chơi thua stg, kèm wa lúc thua. Thay thế event cũ level_{n}_fail.",,ftu_stg_fail,"stg
+wa
+replay","stage -> stg
+wave -> wa
+replay -> replay",ftu_stg_{stage}_fail_wa_{wave},replay
+,ftu_timeplay,min,min: 5 / 10 / 15 / 30,New request,Bắn khi tổng thời gian chơi (foreground) trong FTU vượt mốc 5 / 10 / 15 / 30 phút. Nhóm 0-5 phút = số user có ftu_open_app trừ số user có ftu_timeplay min=5.,Lọc những user thích game ở giai đoạn đầu và có vượt qua wa đâu tiên hay không,ftu_tp,min,min -> min,ftu_tp_{min},None
+,ftu_pet_ascend,"stg
+pet_id
+ascend_id
+replay","stg: 1-n (index toàn cục)
+pet_id: Pet gốc
+ascend_id: dạng sau ascend
+replay: 0 / 1 (1 = stg đã từng hoàn thành)",New request,Bắn khi ascend Pet thành công trong stg.,,ftu_pet_asc,"stg
+id
+target_id
+replay","stage -> stg
+pet_id -> id
+ascend_id -> target_id
+replay -> replay",ftu_pet_asc_stg_{stage},"id
+target_id
+replay"
+,ftu_lock,"stg
+wa","stg: 1-n (index toàn cục)
+wa: 1-n",New request,Bắn khi người chơi dùng lock (khoá offer ở trader) trong FTU.,"Kiểm tra xem tần xuất người chơi sử dụng cơ chế này có cao không, nếu sau này muốn đặt điểm monet thì có hiệu quả không",ftu_lock,"stg
+wa","stage -> stg
+wave -> wa",ftu_lock_stg_{stage}_wa_{wave},None
+,ftu_x2_speed_on,"stg
+wa","stg: 1-n (index toàn cục)
+wa: 1-n",New request,"Bắn mỗi lần người chơi bật x2 speed (chỉ lúc bật, không bắn lúc tắt).",,ftu_x2_speed_on,"stg
+wa","stage -> stg
+wave -> wa",ftu_x2_speed_on_stg_{stage},wa
+,ftu_reroll_trader,"stg
+replay","stg: 1-n (index toàn cục)
+replay: 0 / 1 (1 = stg đã từng hoàn thành)",New request,Bắn mỗi lần người chơi dùng reroll pet ở trader trong stg.,Kiểm tra xem tỷ lệ reroll thay đổi ra sao khi mở thêm Pet và Support item,ftu_rr_trd,"stg
+replay","stage -> stg
+replay -> replay",ftu_rr_trd_stg_{stage},replay
+,ftu_milestone_claim,"stg
+current_stg","stg: stg gắn với rương milestone
+current_stg: stg hiện tại của người chơi",New request,Bắn mỗi lần người chơi nhận rương milestone (ở Home). So sánh stg với current_stg để thấy nhận trễ.,Đem so sánh với số người complete stg,ftu_ms_claim,"stg
+current_stg","stage -> stg
+current_stage -> current_stg",ftu_ms_claim_stg_{stage},current_stg
+,(bỏ) uninstall,,,New request,"Client không bắn được (app đã bị xoá). Thay bằng user property current_stg + ftu, phân tích qua event tự động app_remove của Firebase (chỉ Android).",,,,,,
+,ftu_consecutive_win,"stg
+n
+type","stg: 1-n (index toàn cục)
+n: số trận thắng liên tiếp
+type: normal (n=2-4), strong (n>=5)",New request,"Chuỗi thắng tính trên mọi stg, reset khi thua bất kỳ stg nào. Bắn mỗi lần thắng khi n>=2. Ngưỡng để trong config.",Check năng lực của người chơi,ftu_cst_win,"stg
+count
+type","stage -> stg
+n -> count
+type -> type",ftu_cst_win_{type},"stg
+count"
+,ftu_consecutive_fail,"stg
+n
+type","stg: 1-n (index toàn cục)
+n: số lần thua liên tiếp
+type: normal (n=2), rage (n=3), frustrated (n>=4)",New request,"Mỗi stg có 1 bộ đếm thua (lưu qua các session), chỉ reset khi thắng chính stg đó. Bắn ở mỗi lần thua khi n>=2. Ngưỡng type để trong config.","Validate lại độ khó thực tế của các stg với users
+Giúp phân loại benefit giành riêng cho tệp thua nhiều nếu có thể ",ftu_cst_fail,"stg
+count
+type","stage -> stg
+n -> count
+type -> type",ftu_cst_fail_stg_{stage}_{type},count
+,ftu_consecutive_fail_wa,"stg
+wa
+n","stg: 1-n (index toàn cục)
+wa: 1-n
+n: số lần thua liên tiếp ở cùng wa",New request,"Đếm số lần thua liên tiếp ở cùng 1 stg và cùng 1 wa. Thua ở wa khác thì đếm lại từ 1, thắng thì reset. Bắn mỗi lần thua khi n>=2.",Kiểm tra các wa bất thường,ftu_cst_fail_wa,"stg
+wa
+count","stage -> stg
+wave -> wa
+n -> count",ftu_cst_fail_stg_{stage}_wa_{wave},count
+,ftu_consecutive_fail_heat,"stg
+n
+heat
+gap_min","stg: 1-n (index toàn cục)
+n: chuỗi thua hiện tại
+heat: burn (<=2 phút), hot (2-10], chill (10-60], cold (>60)
+gap_min: số phút",New request,"Khi người chơi bắt đầu lại đúng stg vừa thua (chuỗi thua n>=1): đo thời gian thực (wall-clock) từ lần thua đến lúc bắt đầu lại, phân loại heat, bắn lúc bắt đầu lại. Ngưỡng để trong config.",Kiểm tra mức độ muốn phục thù và độ nguội lạnh của gameplay sau thất bại,ftu_cst_fail_heat,"stg
+count
+heat
+gap_min","stage -> stg
+n -> count
+heat -> heat
+gap_min -> gap_min",ftu_cst_fail_stg_{stage}_heat_{heat},"count
+gap_min"
+,ftu_gacha,"pool
+count
+type
+cost_type
+cost_amount","pool: item / pet
+count: số lượt mở (x1, xN)
+type: first, rush (<=1 phút), normal (1-5 phút), shy (>=5 phút)
+cost_type: gem / ad / free / ticket",New request,"Bắn mỗi lần gacha. Gộp 2 dòng item + pet thành 1 event, phân biệt bằng pool. type = khoảng cách thời gian thực từ lần gacha trước của CÙNG pool; lần gacha đầu tiên của pool = first.",Kiểm tra tần xuất gatcha và mong muốn tiêu mỗi lần của người chơi,ftu_gacha,"pool
+count
+type
+cost_type
+cost","pool -> pool
+count -> count
+type -> type
+cost_type -> cost_type
+cost_amount -> cost",ftu_gacha_{pool}_{type},"count
+cost_type
+cost"
+,"(gộp vào gacha, pool = pet)",,,New request,Xem dòng gacha.,Kiểm tra tần xuất gatcha và mong muốn tiêu mỗi lần của người chơi,,,,,
+,ftu_gacha_feeling,"pool
+count
+type",type: positive / normal / negative,New request,"Sau mỗi lần gacha, hành động đủ điều kiện ĐẦU TIÊN quyết định type: IAP hoặc xem ads R = positive; bắt đầu stg / nâng cấp Pet / gacha tiếp = normal; rời app (background) > 30 phút = negative. Nếu app bị kill khi chưa có kết quả: lưu lại, lần mở app sau nếu cách > 30 phút thì bắn negative.",Kiểm tra hành động sau mỗi lần gacha của player,ftu_gacha_feeling,"pool
+count
+type","pool -> pool
+count -> count
+type -> type",ftu_gacha_feeling_{type},"pool
+count"
+,ftu_DailyGiftR(id)_type_(n),"R(id) 
+type (n) loại","R(id) : Phần thưởng thuộc id ngày số mấy
+type (n) loại : daily nào normal hay streak",New request,"Khi người chơi nhận phần quà daily trong session đầu tiên 
+nhận day nào và loại gì ",,ftu_dg_rwd,"day
+type","reward_id -> day
+type -> type",ftu_dg_rwd_{reward_id}_{type},None
+,ftu_DailyShopR_itemid(x),"item(id) 
+",item(id) : Id phần thưởng free mỗi ngày trong daily shop,New request,Khi người chơi nhận phần quà free trong shop daily trong session đầu tiên,,ftu_ds_rwd,id,item_id -> id,ftu_ds_rwd_{item_id},None
+,ftu_DailyShop.purchase_itemid(x),"item(id) 
+",item(id) : Id phần thưởng mua trong daily shop,New request,Khi người chơi một item trong daily shop và item đó có id là gì,,ftu_ds_buy,id,item_id -> id,ftu_ds_buy_{item_id},None
+,ftu_DailyShop.reroll,"
+",,New request,Khi người chơi dùng tính năng reroll trong daily shop,,ftu_ds_rr,,,ftu_ds_rr,None
+,ftu_Petupgrade_Petid(x),"Pet(id) 
+",,New request,Khi người chơi nâng cấp Pet id cụ thể tại session chơi đầu tiên,,ftu_pet_upg,id,pet_id -> id,ftu_pet_upg_{pet_id},None
+,ftu_Heroupgrade_Heroid(x),"Hero(id) 
+",,New request,Khi người chơi nâng cấp Hero id cụ thể tại session chơi đầu tiên,,ftu_hero_upg,id,hero_id -> id,ftu_hero_upg_{hero_id},None
+,ftu_Itemupgrade_Itemid(x),"Item(id) 
+",Item(id) ở đây là id của những item trang bị trên hero,New request,Khi người chơi nâng cấp item id cụ thể tại session chơi đầu tiên,,ftu_item_upg,id,item_id -> id,ftu_item_upg_{item_id},None
+,ftu_trader_stg(x)_wa(y)_R(z),"stg(x)
+wa(y)
+R(z)","ratio(z) được chia ra làm 3 loại
+full
+normal
+least",New request,"Bắn khi bắt đầu mỗi wave trong FTU. R = số ô cho phép đặt Pet/Support đang có Pet/Support chia cho tổng số ô cho phép đặt Pet/Support. Một ô chỉ tính một lần.
+full : R >= 90%
+normal : 40% <= R < 90%
+least : R < 40%",,ftu_trd_use,"stg
+wa
+type","stage -> stg
+wave -> wa
+ratio_type -> type",ftu_trd_use_stg_{stage}_wa_{wave}_r_{ratio_type},None
+,ftu_trader_stg(x)_wa(y)_B(z),"stg(x)
+wa(y)
+B(z)","Bonus hay b : Là các mốc phần thưởng bonus mà người chơi nhận được sau mỗi phase trader
+fast
+normal
+slow",New request,"B >= 70% tổng phần thưởng bonus (fast)
+70%>B>=30% (normal)
+30%>B (slow)","Phân chia các tập người chơi dựa trên tốc độ suy nghĩ của họ ở phase trader
+Có thể đem kết quả này kết hợp với tỷ lệ thắng và thua, tỷ lệ spend mỗi wave của người chơi để đoán xem đòi hỏi tư duy chiến thuật có đang quá cao hay không ?",ftu_trd_bonus,"stg
+wa
+type","stage -> stg
+wave -> wa
+ratio_type -> type",ftu_trd_reward_stg_{stage}_wa_{wave}_b_{ratio_type},None
+,ftu_trader_stg(x)_wa(y)_S(z),"stg(x)
+wa(y)
+S(z)","Spend hay s : Là tỷ lệ spend food trong từng wave 
+all in 
+saving 
+normal",New request,"S >= 80% All in
+80%>S>=50% normal
+50%>S saving",Kiểm tra hành vi spend food ở mỗi wave,ftu_trd_spend,"stg
+wa
+type","stage -> stg
+wave -> wa
+ratio_type  -> type",ftu_trd_reward_stg_{stage}_wa_{wave}_s_{ratio_type},None

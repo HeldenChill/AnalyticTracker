@@ -1,0 +1,194 @@
+No.,Event,Parameter,Content,Status,Trigger Logic (description),Note,Abbreviated Event,Abbreviated Parameters,Parameter Abbreviation Map,Optional Mode B Template,Mode B Remaining Payload
+,open_app,,,New request,"Bắn mỗi lần cold start (mở app từ trạng thái tắt hẳn), từ lần mở app thứ 2 trở đi. Lần đầu dùng ftu_open_app. Background rồi quay lại: không bắn.",,open_app,,,Not supported; Mode A,None
+,stage_start,"stage
+replay","stage: 1-n (index toàn cục)
+replay: 0 / 1 (1 = stage đã từng hoàn thành)",New request,Bắn khi người chơi bắt đầu stage.,,stg_start,"stg
+replay","stage -> stg
+replay -> replay",stg_{stage}_start,replay
+,pet_buy,"stage
+replay","stage: 1-n (index toàn cục)
+replay: 0 / 1 (1 = stage đã từng hoàn thành)",New request,Bắn mỗi lần người chơi mua Pet trong stage.,,pet_buy,"stg
+replay","stage -> stg
+replay -> replay",pet_buy_stg_{stage},replay
+,support_buy,"stage
+replay","stage: 1-n (index toàn cục)
+replay: 0 / 1 (1 = stage đã từng hoàn thành)",New request,Bắn mỗi lần người chơi mua Support item trong stage.,,sup_buy,"stg
+replay","stage -> stg
+replay -> replay",sup_buy_stg_{stage},replay
+,skill_pick,"stage
+skill_id
+replay","stage: 1-n (index toàn cục)
+skill_id: id của skill card
+replay: 0 / 1 (1 = stage đã từng hoàn thành)",New request,Bắn mỗi lần người chơi chọn (pick) 1 skill card trong stage.,,skl_pick,"stg
+id
+replay","stage -> stg
+skill_id -> id
+replay -> replay",skl_pick_stg_{stage},"id
+replay"
+,terrain_use,"stage
+terrain_id
+pet_id","stage: 1-n (index toàn cục)
+terrain_id: TerrainDefinition.Id
+pet_id: Pet được đặt vào",New request,Bắn lần đầu tiên trong mỗi lượt chơi (attempt) khi 1 Pet được đặt vào vùng của terrain. Mỗi terrain_id chỉ bắn 1 lần / attempt.,kiểm tra xem user có hiểu cách hoạt động của terrain hay không ?,trn_use,"stg
+id
+pet_id","stage -> stg
+terrain_id -> id
+pet_id -> pet_id",trn_use_stg_{stage}_{terrain_id},pet_id
+,checkpoint,"stage
+wave","stage: 1-n (index toàn cục)
+wave: 1-n",New request,"Khi bắt đầu stage và mỗi wave: lưu {stage, wave}. Khi stage kết thúc: xoá. Nếu lần cold start tiếp theo vẫn còn bản ghi (lần trước bị kill / thoát giữa stage) thì bắn checkpoint với stage/wave đã lưu rồi xoá. Background rồi quay lại chơi tiếp: không bắn.","Trạng thái checkpoint được kích hoạt khi user thoát game, kill app giữa chừng khi đang chơi game và tại stage nào và ở đâu. 
+Kiểm tra hành vi reset map trước khi bị tiêu diệt, tính toán số wave vừa phải.",cp,"stg
+wa","stage -> stg
+wave -> wa",cp_stg_{stage}_wa_{wave},None
+,stage_complete,"stage
+time
+replay","stage: 1-n (index toàn cục)
+time: số phút (nguyên)
+replay: 0 / 1 (1 = stage đã từng hoàn thành)",New request,"Bắn khi thắng stage. time = tổng thời gian chơi stage đó cộng dồn qua mọi lượt chơi, từ lần đầu tiên bắt đầu stage đến lần thắng đầu tiên. Chỉ tính lúc app ở foreground (có tính lúc mở pause menu). Đơn vị: phút nguyên.",Kiểm tra độ khó thực tế: mất bao lâu để vượt qua stage. (Đổi đơn vị từ giờ sang phút - X9),stg_cmp,"stg
+time_min
+replay","stage -> stg
+time -> time_min
+replay -> replay",stg_{stage}_cmp,"time_min
+replay"
+,stage_fail,"stage
+wave
+replay","stage: 1-n (index toàn cục)
+wave: 1-n
+replay: 0 / 1 (1 = stage đã từng hoàn thành)",New request,"Bắn khi người chơi thua stage, kèm wave lúc thua. Thay thế event cũ level_{n}_fail.",,stg_fail,"stg
+wa
+replay","stage -> stg
+wave -> wa
+replay -> replay",stg_{stage}_fail_wa_{wave},replay
+,login_day,n,"n: 1-30 (sau ngày 30 gộp nhóm, chưa chốt)",New request,"n = số ngày theo lịch (giờ local) kể từ ngày cài, ngày cài = 1. Bắn 1 lần / ngày ở lần cold start đầu tiên của ngày đó. Ngày nào không mở app thì không bắn (vd: day 2 rồi day 4). Đồng thời set user property days_since_install.",Lọc user theo mốc thời gian để dễ tối ưu kịch bản cho user ở lại lâu hơn,login_day,day,n -> day,Not supported; Mode A,day
+,pet_ascend,"stage
+pet_id
+ascend_id
+replay","stage: 1-n (index toàn cục)
+pet_id: Pet gốc
+ascend_id: dạng sau ascend
+replay: 0 / 1 (1 = stage đã từng hoàn thành)",New request,Bắn khi ascend Pet thành công trong stage.,,pet_asc,"stg
+id
+target_id
+replay","stage -> stg
+pet_id -> id
+ascend_id -> target_id
+replay -> replay",pet_asc_stg_{stage},"id
+target_id
+replay"
+,x2_speed_on,"stage
+wave","stage: 1-n (index toàn cục)
+wave: 1-n",New request,"Bắn mỗi lần người chơi bật x2 speed (chỉ lúc bật, không bắn lúc tắt).",,x2_speed_on,"stg
+wa","stage -> stg
+wave -> wa",x2_speed_on_stg_{stage},wa
+,reroll_trader,"stage
+replay","stage: 1-n (index toàn cục)
+replay: 0 / 1 (1 = stage đã từng hoàn thành)",New request,Bắn mỗi lần người chơi dùng reroll pet ở trader trong stage.,Kiểm tra xem tỷ lệ reroll thay đổi ra sao khi mở thêm Pet và Support item,rr_trd,"stg
+replay","stage -> stg
+replay -> replay",rr_trd_stg_{stage},replay
+,milestone_claim,"stage
+current_stage","stage: stage gắn với rương milestone
+current_stage: stage hiện tại của người chơi",New request,Bắn mỗi lần người chơi nhận rương milestone (ở Home). So sánh stage với current_stage để thấy nhận trễ.,Đem so sánh với số người complete stage,ms_claim,"stg
+current_stg","stage -> stg
+current_stage -> current_stg",ms_claim_stg_{stage},current_stg
+,(bỏ) uninstall,,,New request,"Client không bắn được (app đã bị xoá). Thay bằng user property current_stage + ftu, phân tích qua event tự động app_remove của Firebase (chỉ Android).",,,,,,
+,consecutive_fail,"stage
+n
+type","stage: 1-n (index toàn cục)
+n: số lần thua liên tiếp
+type: normal (n=2), rage (n=3), frustrated (n>=4)",New request,"Mỗi stage có 1 bộ đếm thua (lưu qua các session), chỉ reset khi thắng chính stage đó. Bắn ở mỗi lần thua khi n>=2. Ngưỡng type để trong config.","Validate lại độ khó thực tế của các stage với users
+Giúp phân loại benefit giành riêng cho tệp thua nhiều nếu có thể ",cst_fail,"stg
+count
+type","stage -> stg
+n -> count
+type -> type",cst_fail_stg_{stage}_{type},count
+,consecutive_fail_wave,"stage
+wave
+n","stage: 1-n (index toàn cục)
+wave: 1-n
+n: số lần thua liên tiếp ở cùng wave",New request,"Đếm số lần thua liên tiếp ở cùng 1 stage và cùng 1 wave. Thua ở wave khác thì đếm lại từ 1, thắng thì reset. Bắn mỗi lần thua khi n>=2.",Kiểm tra các wave bất thường,cst_fail_wa,"stg
+wa
+count","stage -> stg
+wave -> wa
+n -> count",cst_fail_stg_{stage}_wa_{wave},count
+,consecutive_fail_heat,"stage
+n
+heat
+gap_min","stage: 1-n (index toàn cục)
+n: chuỗi thua hiện tại
+heat: burn (<=2 phút), hot (2-10], chill (10-60], cold (>60)
+gap_min: số phút",New request,"Khi người chơi bắt đầu lại đúng stage vừa thua (chuỗi thua n>=1): đo thời gian thực (wall-clock) từ lần thua đến lúc bắt đầu lại, phân loại heat, bắn lúc bắt đầu lại. Ngưỡng để trong config.",Kiểm tra mức độ muốn phục thù và độ nguội lạnh của gameplay sau thất bại,cst_fail_heat,"stg
+count
+heat
+gap_min","stage -> stg
+n -> count
+heat -> heat
+gap_min -> gap_min",cst_fail_stg_{stage}_heat_{heat},"count
+gap_min"
+,gacha,"pool
+count
+type
+cost_type
+cost_amount","pool: item / pet
+count: số lượt mở (x1, xN)
+type: first, rush (<=1 phút), normal (1-5 phút), shy (>=5 phút)
+cost_type: gem / ad / free / ticket",New request,"Bắn mỗi lần gacha. Gộp 2 dòng item + pet thành 1 event, phân biệt bằng pool. type = khoảng cách thời gian thực từ lần gacha trước của CÙNG pool; lần gacha đầu tiên của pool = first.",Kiểm tra tần xuất gatcha và mong muốn tiêu mỗi lần của người chơi,gacha,"pool
+count
+type
+cost_type
+cost","pool -> pool
+count -> count
+type -> type
+cost_type -> cost_type
+cost_amount -> cost",gacha_{pool}_{type},"count
+cost_type
+cost"
+,"(gộp vào gacha, pool = pet)",,,New request,Xem dòng gacha.,Kiểm tra tần xuất gatcha và mong muốn tiêu mỗi lần của người chơi,,,,,
+,gacha_feeling,"pool
+count
+type",type: positive / normal / negative,New request,"Sau mỗi lần gacha, hành động đủ điều kiện ĐẦU TIÊN quyết định type: IAP hoặc xem ads reward = positive; bắt đầu stage / nâng cấp Pet / gacha tiếp = normal; rời app (background) > 30 phút = negative. Nếu app bị kill khi chưa có kết quả: lưu lại, lần mở app sau nếu cách > 30 phút thì bắn negative.",Kiểm tra hành động sau mỗi lần gacha của player,gacha_feeling,"pool
+count
+type","pool -> pool
+count -> count
+type -> type",gacha_feeling_{type},"pool
+count"
+,consecutive_win,"stage
+n
+type","stage: 1-n (index toàn cục)
+n: số trận thắng liên tiếp
+type: normal (n=2-4), strong (n>=5)",New request,"Chuỗi thắng tính trên mọi stage, reset khi thua bất kỳ stage nào. Bắn mỗi lần thắng khi n>=2. Ngưỡng để trong config.",Check năng lực của người chơi,cst_win,"stg
+count
+type","stage -> stg
+n -> count
+type -> type",cst_win_{type},"stg
+count"
+,DailyGift_reward(id)_type_(n),"reward(id) 
+type (n) loại","reward(id) : Phần thưởng thuộc id ngày số mấy
+type (n) loại : daily nào normal hay streak",New request,"Khi người chơi nhận phần quà daily trong session đầu tiên 
+nhận day nào và loại gì ",,dg_rwd,"day
+type","reward_id -> day
+type -> type",dg_rwd_{reward_id}_{type},None
+,DailyShop.reward_itemid(x),"item(id) 
+",item(id) : Id phần thưởng free mỗi ngày trong daily shop,New request,Khi người chơi nhận phần quà free trong shop daily trong session đầu tiên,,ds_rwd,id,item_id -> id,ds_rwd_{item_id},None
+,DailyShop.purchase_itemid(x),"item(id) 
+",item(id) : Id phần thưởng mua trong daily shop,New request,Khi người chơi một item trong daily shop và item đó có id là gì,,ds_buy,id,item_id -> id,ds_buy_{item_id},None
+,DailyShop.reroll,"
+",,New request,Khi người chơi dùng tính năng reroll trong daily shop,,ds_rr,,,ds_rr,None
+,Petupgrade_Petid(x),"Pet(id) 
+",,New request,Khi người chơi nâng cấp Pet id cụ thể ,,pet_upg,id,pet_id -> id,pet_upg_{pet_id},None
+,Heroupgrade_Heroid(x),"Hero(id) 
+",,New request,Khi người chơi nâng cấp Hero id cụ thể ,,hero_upg,id,hero_id -> id,hero_upg_{hero_id},None
+,Itemupgrade_Itemid(x),"Item(id) 
+",Item(id) ở đây là id của những item trang bị trên hero,New request,Khi người chơi nâng cấp item id cụ thể ,,item_upg,id,item_id -> id,item_upg_{item_id},None
+,Usage_stage(x)_wave(y)_R(z),"stage(x)
+wave(y)
+R(z)","ratio(z) được chia ra làm 3 loại
+full
+normal
+least",New request,"Bắn khi bắt đầu mỗi wave. R = số ô cho phép đặt Pet/Support đang có Pet/Support chia cho tổng số ô cho phép đặt Pet/Support. Một ô chỉ tính một lần.
+full : R >= 90%
+normal : 40% <= R < 90%
+least : R < 40%",,trd_use,"stg
+wa
+type","stage -> stg
+wave -> wa
+ratio_type -> type",trd_use_stg_{stage}_wa_{wave}_r_{ratio_type},None
