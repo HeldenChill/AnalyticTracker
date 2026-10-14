@@ -83,19 +83,20 @@ Teammate on another PC (after an API token exists — spec §7): same `.mcp.json
 
 ## 8. Complete 24 MCP Tools Registry
 
-The `analytic-tracker` MCP server exposes 24 tools across four functional groups:
+The `analytic-tracker` MCP server exposes 24 tools across five functional groups:
+
 - **Core Metrics (6):** `data_health`, `filter_options`, `list_events`, `overview`, `retention`, `progression`
-- **Exploration & Events (5):** `event_counts`, `param_keys`, `user_prop_keys`, `param_values`, `player_timeline`
-- **Funnels (6):** `list_funnels`, `get_funnel`, `save_funnel`, `delete_funnel`, `run_funnel`, `funnel_players`
-- **Advanced Analytics & Data (7):** `clusters`, `churn_tree`, `level_difficulty`, `survival_curve`, `version_impact`, `event_associations`, `anomaly_alerts`
+- **Exploration & Events (5):** `event_counts`, `param_keys`, `user_prop_keys`, `param_values`, `player_events`
+- **Funnels (5):** `list_funnels`, `save_funnel`, `delete_funnel`, `run_funnel`, `funnel_players`
+- **Advanced Analytics (7):** `analysis_clusters`, `analysis_churn`, `analysis_levels`, `analysis_survival`, `analysis_version_impact`, `analysis_associations`, `analysis_anomalies`
 - **Data Maintenance (1):** `import_export`
 
 ## 9. Platform Readiness Matrix & Prerequisites
 
 | Platform | Build Status | Runtime Status | Prerequisites & Verification |
 |---|---|---|---|
-| **Windows** | READY | VERIFIED | Visual Studio C++ Build Tools 2022, Developer Mode enabled. Release binary at `app\build\windows\x64\runner\Release\analytic_app.exe` (90 KB runner + 8.2 MB `data\app.so`). Verified with Impeller rendering backend on localhost:8080. |
-| **Web** | READY | READY | Chrome / Web SDK. Release bundle at `app\build\web`. Verified with `flutter build web --release` (36.5s build). |
+| **Windows** | BUILD REPORTED | ACCEPTANCE PENDING | Gemini recorded release build and localhost launch on 2026-10-14. Release binary at `app\build\windows\x64\runner\Release\analytic_app.exe`; payload `data\app.so`. All 15 interactive walkthroughs remain PENDING in `.cursor/plans/analytics-studio-waves0-6-fix-verification.md`. Build/launch does not establish visual acceptance. |
+| **Web** | BUILD REPORTED | ACCEPTANCE PENDING | Gemini recorded `flutter build web --release` (36.5s). Bundle: `app\build\web`. Browser interaction and authenticated CORS runtime have not been verified. |
 | **Android** | PENDING | PENDING | Android SDK version 36.1.0 installed. Prerequisite: install `cmdline-tools` via Android Studio SDK Manager and run `flutter doctor --android-licenses`. Release: `flutter build apk --release`. |
 | **iOS** | PENDING | PENDING | Windows host environment cannot compile iOS binaries. Prerequisite: macOS host, Xcode 15+, CocoaPods, and Apple Developer team signing. Release: `flutter build ipa`. |
 

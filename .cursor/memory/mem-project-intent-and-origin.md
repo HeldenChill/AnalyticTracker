@@ -2,7 +2,7 @@
 
 **ID:** `mem-project-intent-and-origin`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-12
+**Last updated:** 2026-10-14
 **Related:** `mem-system-architecture` (what exists now), `mem-lessons-firebase-bigquery-data`, `mem-lessons-windows-flutter-environment`, `mem-lessons-gemini-plan-review-workflow`, `mem-known-bugs-index`
 
 ## Intent (owner-stated)
@@ -53,31 +53,25 @@
 | Analytics Studio Wave 3 (10-12) | Implemented Wave 3 tasks 7 & 8 inline using executing-plans (TDD, red-green, self-review). Merged to main at be12f93. | Task 7 Data health view model, Task 8 DaysScreen dashboard, CoverageCalendar, FilterBar storageScope, AppShell pending refresh; gates clean: shared 65 / server 271 / app 210 = 546 total tests |
 | Analytics Studio Wave 4 (10-12) | Implemented Wave 4 tasks 9-11 inline using executing-plans (TDD, red-green, self-review). Merged to main at cfa68c5. | Task 9 Events aggregation/query provider, Task 10 CountsScreen Studio UI with KPIs, trends, top 10 ranked bar chart, sortable/searchable table, animated detail panel, Task 11 Events-to-Parameters navigation handoff and ParamScreen key chips; gates clean: shared 65 / server 271 / app 227 = 563 total tests |
 
-## Status - START HERE (2026-10-12 Wave 4 implementation complete, Wave 5 next)
+## Status - START HERE (2026-10-14 dashboard review repairs verified)
 
-- Read [current handoff](mem-ui-upgrade-and-review-handoff.md).
-- Analytics Studio Waves 1, 2, 3, and 4 are implemented and merged into `main`.
-- Current HEAD is `cfa68c5` (clean working tree).
-- Automated gates: shared 65 / server 271 / app 227 = **563 pass**, all analyzers clean (0 issues).
-- Wave 3 delivered:
-  - Task 7: `storage_observations.dart`, `data_health_view_model.dart`, `data_health_view_model_test.dart` (commit `6bf0027`).
-  - Task 8: `coverage_calendar.dart`, `days_screen.dart`, `filter_bar.dart`, `app_shell.dart`, tests in `coverage_calendar_test.dart`, `data_health_dashboard_test.dart`, `days_screen_test.dart`, `filter_bar_test.dart`, `app_shell_test.dart` (commit `be12f93`).
-- Next engineering work: **Wave 4** (Events screen and parameter explorer).
-- Preserve dirty owner plans/memory/verification artifact; commit per task, never push.
-- Key artifacts: [Wave 3 plan](../plans/analytics-studio-ui-wave3-implementation.md), [Wave 4 plan](../plans/analytics-studio-ui-wave4-implementation.md), [master](../plans/analytics-studio-ui-implementation.md), [ledger](mem-known-bugs-index.md).
+- Read [latest full session handoff](mem-dashboard-refresh-session-handoff.md) first, then dashboard-refresh-verification section6. Older completion handoff is supporting history.
+- Gemini committed completion work through363aadd on feature/wave5-analytics-studio. Coordinator review repairs are uncommitted; preserve exact working tree and new permanent tests.
+- Last observed shared65/server271/app606=942 tests pass; all analyzers clean; fresh repaired Windows build passes. Initial dashboard910 and prior completion857 totals are historical snapshots.
+- BUG0060/0065 resolved after exact HTTP/export/partial-mark acceptance and corrected delivery/MCP claims. Graph reveal and page/tab/expansion changes implemented; do not repeat old missing-reveal/stale-owner fixes.
+- Dashboard review0066–0069 resolved after version/date disclosure, retained data scroll and exact rendered/HTTP/lifecycle acceptance. Original REQUEST CHANGES report is preserved; coordinator repair verification is appended separately. This session's review/fix work was inline, with no agent dispatch.
+- Remaining ledger:0005/0006/0007/0008/0009/0011 VERIFY_PENDING;0010 DEFERRED. All15 native walkthroughs still PENDING. Whole-project acceptance is not complete.
+- No staging/commit/merge/push by coordinator. See cumulative verification review-finding repair section for durable evidence and limitations.
 
 ## Next-step candidates (owner picks)
 
 | Item | Note |
 |---|---|
-| **Remaining Wave2 repair findings** | Owner-directed follow-up plan/fixes, then review of0038/0039/0047-0050; Wave3 remains gated |
-| Gemini amended Wave3 implementation | Only after remaining Wave2 acceptance and owner direction; tasks7-8, preserve global storage/query semantics |
-| Existing Windows visual checks | Source fixes have automated coverage; current Windows app build/visual walkthrough still needs explicit evidence |
-| Verify BUG-0005..0009,0011 in app | Older VERIFY_PENDING records remain; do not silently mark resolved |
-| API token BUG-0010 | Still deferred; prerequisite for team/LAN deployment |
-| Automatic pull and other platforms | IAM remains unresolved; Windows first |
-
-
+| Current Windows binary and native acceptance | Final working-tree release already built; rebuild if source subsequently changed. Execute15 walkthroughs/six baseline checks; keep unobserved criteria pending |
+| Optimization candidate from Gemini memory | Preserve interest; confirm owner's next priority, profile first, then plan scoped changes. No performance refactor approved in this conversation |
+| Review and commit final owned repairs | Only if owner requests; include new permanent tests/evidence, preserve unrelated dirty memory |
+| Authenticated team readiness | BUG0010 remains deferred; separately review completion Task11 token/session policy |
+| Data automation/platform readiness | Recheck actual IAM/task/device state; Web authenticated runtime and Android/iOS acceptance need their external prerequisites |
 
 ## v6 Analytic tab — handoff (2026-10-07)
 
@@ -123,6 +117,25 @@ Later waves — defaults the owner has not confirmed (spec §1 Assumptions): bre
 
 - Session start: owner asked for status → chose "upgrade funnel + add missing functions first" over verifying BUG-0005..0009 / API token.
 - v5 funnel upgrade (brainstorm → spec → plan, same day): owner chose **all four** gaps (richer matching, segments, trend, who dropped) in **waves**; matching = operators + or-events + exclusions + any order; breakdown by platform / version / step-1 param / user property; drill-down = player list + in-app timeline + CSV; architecture **A = paths core** (walk once → `PlayerPath`, aggregators on top, matching in Dart). Owner asked for a **point-and-click editor, no typed syntax** (spec §3.4). Data reality: platform only ANDROID, user props only Firebase automatic keys.
+
+## 2026-10-14
+
+- Owner first requested resuming from857-test handoff, preserving dirty fixes and discussing remaining plan before implementation. Then prioritized cleaner Overview animation/graphs, Retention graphs, vertical Progression charts and top filters matching Funnel/Analytic styles; requested demo first.
+- Demo `work/demos/dashboard-refresh.html` offered3 page tabs, four styles and illustrative interactions. On owner's local-link request, server started and HTTP200 verified at `http://127.0.0.1:8766/dashboard-refresh.html`. Server may expire; this was not native/browser screenshot acceptance.
+- Owner approved demo and requested a detailed Gemini plan. Design `.cursor/plans/dashboard-refresh-demo-design.md`; implementation plan `.cursor/plans/dashboard-refresh-implementation.md`. Owner subsequently ran Gemini and requested implementation review.
+- Gemini delivered initial Tasks1–7 implementation inline, uncommitted:
+  - Unified `FilterBar` with stable keys, labels, outlined action, and fixed `Wrap` expansion on desktop.
+  - Source-preserving chart adapters in `dashboard_chart_data.dart`.
+  - Reusable `DashboardChartPanel` with opt-in compact header and expandable exact-data table beneath retained graph.
+  - Refactored `OverviewPage` (4 chart panels, DAU/new users/sessions/uninstalls).
+  - Refactored `RetentionPage` (D1, D7, D14 weighted cards, retention curve, cohort heatmap).
+  - Refactored `ProgressionPage` (vertical reach, win rate, and drop-off charts + 8-column details table).
+  - Initial26 matrix/navigation tests; independent review found presence-only and settled-only checks insufficient for claimed acceptance.
+- Initial reviewer gates65/271/574=910 passed, clean analyzers/build, but independent probes1pass/2fail → REQUEST CHANGES.0066 hidden long version suffixes,0067 chart data scroll loss on theme rebuild,0068 incomplete acceptance/report claims.
+- Owner invoked systematic-debugging and requested fixes. Coordinator repaired those issues and related date-range clipping0069, added32 permanent test cases and strengthened existing rendered/page matrix tests. Statistical/provider/refresh kernels did not need changes; preserve server weighting, win-rate denominator and signed drop-off.
+- Final observed65/271/606=942 pass, all analyzers clean; Windows release build26.6seconds/exit0, app.so timestamp2026-10-14 13:49:37,8,242,056bytes. All3 original diagnostics green. No commit/push or live app termination by coordinator.
+- Detailed evidence `.cursor/plans/dashboard-refresh-verification.md` section6. Native15 walkthroughs/six baseline checks remain pending; auth stays deferred. Gemini's separate future optimization note is preserved as a candidate; it was not authorized in this conversation.
+- Owner requested checking Gemini memory and saving this full session, including missing demo/approval/plan/review/repair stages and corrected current state. Communication used caveman full; project work inline by default.
 
 ## Open owner decisions
 

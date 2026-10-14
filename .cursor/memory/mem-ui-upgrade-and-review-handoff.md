@@ -2,12 +2,19 @@
 
 **ID:** `mem-ui-upgrade-and-review-handoff`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-12
+**Last updated:** 2026-10-14
 **Related:** `mem-project-intent-and-origin`, `mem-system-architecture`, `mem-known-bugs-index`, `mem-lessons-gemini-plan-review-workflow`
 
 ## Continue here
 
-**Current owner request:** Wave 4 implemented and verified. Ready to continue with Wave 5 in next session.
+Read [latest dashboard session handoff](mem-dashboard-refresh-session-handoff.md) first. Completion handoff and October13 instructions are supporting history; current dashboard repair evidence is dashboard-refresh-verification section6.
+
+- Current anchor363aadd plus uncommitted coordinator repairs; Gemini graph reveal/cache/page interruption changes implemented.
+- Last observed942 tests pass (65/271/606), all analyzers clean;0066–0069 dashboard review repairs resolved. Earlier857-test independent follow-up remains evidence for its prior0060/0065 scope, not a fresh independent dashboard review.
+- All15 Windows walkthroughs and six baseline native criteria remain PENDING; auth0010 DEFERRED. Repaired current source release was built, including inherited partial-bucket repair; rebuild if source changes before native acceptance.
+- Preserve production/test/docs/memory dirty artifacts. No coordinator commit/merge/push performed.
+
+**Historical Wave4 snapshot below (superseded current-status wording):**
 
 - **Latest implemented product:** Waves 1, 2, 3, and 4 (Tasks 9-11: Events explorer aggregation, ranking & search table, animated detail panel, navigation handoff to Parameters) are fully implemented and merged to `main` at commit `cfa68c5`.
 - **Fresh automated evidence:** All analyzers clean (0 issues); shared 65 / server 271 / app 227 = **563 tests passed**.
@@ -241,17 +248,17 @@ The session URL/key is in that companion's local `state/server-info`, not stored
 ```text
 Read AGENTS.md, .cursor/memory/mem-project-index.md,
 .cursor/memory/mem-project-intent-and-origin.md and
-.cursor/memory/mem-ui-upgrade-and-review-handoff.md.
+.cursor/memory/mem-studio-waves0-6-session-handoff.md.
 
 Inspect current git status/HEAD; do not rely on older unimplemented-wave notes.
-Latest reviewed repair baseline is8ea1e77, not a guarantee of current checkout.
-Read docs/reviews/2026-10-12-gemini-wave2-repair-review.md and its probes.
+Latest reviewed cumulative repair HEAD is3bd2787, not a guarantee of checkout.
+Read docs/reviews/2026-10-13-completed-repair-review.md and its probe/control.
 
-Wave2 still needs BUG-0038/0039/0047-0050 addressed and re-reviewed.
-Wave3 plan is amended, but implementation stays gated on Wave2 acceptance.
+BUG-0053 stale owner reconstruction and BUG-0060 acceptance remain CONFIRMED.
+Consolidated plan T12 runtime/T13 evidence also remain unfinished.
 Determine the requested work from the owner's new prompt: a follow-up plan,
 authorized fixes, or review of newly completed Gemini changes.
-Do not automatically repeat tasks4-6/W2R1-W2R7 or begin Wave3.
+Do not automatically repeat implemented Waves3-6 or obsolete repair tasks.
 
 Preserve owner dirty source/plans/memory. No reset/stash/implicit staging/push.
 Keep prototype, automated production and Windows runtime evidence separate.

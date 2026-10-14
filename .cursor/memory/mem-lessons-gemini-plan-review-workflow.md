@@ -2,8 +2,8 @@
 
 **ID:** `mem-lessons-gemini-plan-review-workflow`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-12
-**Used for:** v1-v6 Gemini planning/review; Analytics Studio Wave1, Wave2 implementation/repair reviews and Wave3 plan audit. Latest product status and evidence live in mem-ui-upgrade-and-review-handoff.md; this file stores reusable workflow lessons.
+**Last updated:** 2026-10-13
+**Used for:** v1-v6 Gemini planning/review; Analytics Studio Waves0–6 cumulative repairs and completed implementation review. Latest product status and evidence live in mem-studio-waves0-6-session-handoff.md; this file stores reusable workflow lessons.
 
 ## Loop
 
@@ -131,6 +131,16 @@
 - **WidgetTester viewport height:** Complex Studio dashboard pages with KPI cards, multi-type charts, tables, and detail panels easily exceed default test viewports (1200px). Set `height: 3200` to `4000` in `studio_test_host.dart` for end-to-end screen tests so lower elements (e.g. table rows, detail panel action buttons) are hit-testable without fragile manual `scrollUntilVisible` calls.
 - **Post-frame selection cleanup:** When query filters change and a currently selected entity (e.g. `selectedEventProvider`) is absent from new results, deselect via `WidgetsBinding.instance.addPostFrameCallback((_) => ...)` to avoid modifying Riverpod providers during active build / layout phases.
 - **Bounded header actions:** In `StudioHeading`, actions share row space with the page title and subtitle. On standard 1200px viewports with a 240px sidebar, the actions container has ~366px. Keep action labels concise (e.g. `Text('Compare')`) to prevent `RenderFlex` overflow.
+
+## Cumulative repair review lessons — 2026-10-13
+
+- A cache-freshness identity must outlive the widget owner when its provider cache does. Separate request endpoint/query identity from owner registration and completion guards. Test remounting a stale request after an unrelated refresh; recreating an already fresh request cannot prove this contract.
+- Endpoint collisions need endpoint tags. Adding owner identity as a generic disambiguator can hide collisions while reintroducing stale remounts and retaining disposed owners in metadata.
+- Initial successful player/timeline loads do not prove visible detail refresh ownership. Hold the refreshed response, verify pending completion, inject error, and assert exact body/query/hidden-owner call counts and shell feedback.
+- Test names/comments are not evidence: exact CSV requires literal full bytes; partial marker requires its actual rendered indication; comparison requires both periods/change and scope, not only a current count or label.
+- Report process existence separately from progress. A alive runner with tiny CPU and unchanged output may be waiting; without step markers or a stack, do not present a specific stalled await/root cause as confirmed. Keep a focused bounded run/log, stop only positively identified authorized test processes, and recheck before calling the current code stuck.
+- File handoffs are not direct agent messages. If UI/connector access cannot address Gemini's chat, say so and save the actual instruction/results for the owner; never claim successful delivery merely because the file exists.
+- Completion needs task/evidence log and runtime criteria, not only final commits and a green suite. Preserve old report history, append current evidence, and keep baseline Windows observations pending when not observed.
 
 ## Gemini habits observed
 

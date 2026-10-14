@@ -1,9 +1,9 @@
-# Memory: AnalyticTracker — system architecture (as built, v6; UI upgrade planned)
+# Memory: AnalyticTracker — system architecture (v6, Studio and dashboard refresh built)
 
 **ID:** `mem-system-architecture`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-09
-**Source of truth for definitions:** specs in `.cursor/plans/` (v1 `flutter-local-server-stack.md`, v2 `gameanalytics-dashboard-design.md` §5 metrics, v3 `funnels-and-styles-design.md` §3 funnel (amended 10-07) + §6 style tokens, v4 `mcp-server-design.md`, **v5 `funnel-upgrade-design.md` — waves 1-4 built; v6 Analytic Waves 1-5 built and reviewed; Analytics Studio UI approved but not implemented**). Verify against code before edits.
+**Last updated:** 2026-10-14
+**Source of truth for definitions:** specs in `.cursor/plans/` (v1 `flutter-local-server-stack.md`, v2 `gameanalytics-dashboard-design.md` §5 metrics, v3 `funnels-and-styles-design.md` §3 funnel + §6 style tokens, v4 `mcp-server-design.md`, v5 `funnel-upgrade-design.md`, Studio plans and `dashboard-refresh-demo-design.md`). v5 funnels/v6 Analytic/Studio and dashboard refresh are implemented; current automated evidence is dashboard-refresh-verification section6. Native acceptance remains pending. Verify against code before edits.
 
 ## Shape
 
@@ -73,18 +73,20 @@ Pull re-fetches last **3** days (late events) and fills missing days **oldest fi
 - Level data truth: real PVM levels are `level_N_start/complete/fail` event names (`stg_*` nearly empty → Progression page shows little); v6 Levels tab parses names.
 
 
-## Reviewed state and Analytics Studio UI (Waves 1-4 built, Wave 5 next)
+## Reviewed state and Analytics Studio UI
 
 - Review/fix evidence: `docs/reviews/2026-10-09-gemini-analytics-review.md`; BUG-0012 through BUG-0020 resolved.
 - Storage availability comes from `pulled_days`; a recorded zero day is an observation, an unpulled day is unavailable.
 - Existing server/API/MCP and JSON contracts remain the basis of the UI upgrade. No new service/package or data migration needed.
-- Analytics Studio UI built state:
+- Earlier Wave1–4 architecture breakdown (retained historical detail):
   - **Wave 1 (Tasks 1-3):** Responsive Studio layout, sidebar breakpoint, `StudioTable`, `StudioHeading`, `MetricCard`.
   - **Wave 2 (Tasks 4-6 + repairs):** Studio charts (lines, bars, donut), motion orchestration, axes and tooltip layout.
   - **Wave 3 (Tasks 7-8):** `storage_observations.dart`, `data_health_view_model.dart`, `CoverageCalendar` (7-weekday columns, partial month alignment, keyboard focus/tooltips), `DaysScreen` Data health dashboard, `FilterBar` `storageScope`, `AppShell` real pending refresh.
   - **Wave 4 (Tasks 9-11):** `events_view_model.dart` (coverage-aware `eventChange`, pure `buildEventSummary`, NaN/infinite guards), `events_explorer.dart` (`eventsExplorerProvider`, `selectedEventProvider`), `CountsScreen` Studio UI (KPIs, daily trend, top 10 ranked events bar chart, searchable and sortable table, animated `EventDetailPanel`), `navigation.dart` (`AppPage`, `selectedPageProvider`, `parameterEventProvider`, `parameterKeyProvider`, `analyticTabIndexProvider`), `AppShell` navigation routing and `CountsScreen.onExploreParameters` handoff, `ParamScreen` parameter key chips and hidden test-device hint.
-- Next: Wave 5 (`analytics-studio-ui-wave5-implementation.md`): Funnel editor and visualization upgrade.
-- Retain all four palettes/fonts and saved preference keys; see `mem-ui-upgrade-and-review-handoff.md` for owner decisions and next step.
+- Later Studio Funnel/Analytic, page/tab interruption and geometry-reveal work is implemented. Do not repeat old Wave5-next or missing-reveal work. Current state: `mem-dashboard-refresh-session-handoff.md`; old `mem-ui-upgrade-and-review-handoff.md` retains supporting history.
+- Dashboard refresh keeps existing providers, active-request ownership, shared rendering/motion and statistical contracts. Overview retains six KPIs with DAU/sessions area and new-user/uninstall columns; Retention has server-weighted summaries/numeric elapsed-day curve/cohort heatmap; Progression has ordered reach/rate graphs and exact8-column details. Date/platform/version/test controls use a unified themed toolbar with real notifier/refresh behavior.
+- Exact data expands beneath retained graphs; compact headers opt in and shared data scroll remains isolated/retained. Preview Replay/theme/density controls are not new product settings. Existing Settings handles the four palettes/fonts/preferences.
+- Native Windows walkthroughs and authenticated team/cross-platform operation remain separate gates; no new backend endpoint/model/data migration/auth policy accompanies dashboard presentation.
 
 ## App styling
 

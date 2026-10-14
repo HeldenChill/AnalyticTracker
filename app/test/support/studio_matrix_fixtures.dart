@@ -92,7 +92,8 @@ FunnelResult matrixFunnelResult(String label) => FunnelResult(
       ],
     );
 
-List<Override> studioMatrixOverrides({bool withFunnels = false}) {
+List<Override> studioMatrixOverrides(
+    {bool withFunnels = false, void Function(AppPage)? onDashboardRequest}) {
   final cluster = ClusterResult(
     players: 10,
     k: 2,
@@ -142,42 +143,51 @@ List<Override> studioMatrixOverrides({bool withFunnels = false}) {
     eventNamesProvider.overrideWith((ref) async => [longIdentifier]),
     filterOptionsProvider.overrideWith((ref) async =>
         const FilterOptions(platforms: ['ANDROID'], versions: ['1.0', '2.0'])),
-    overviewProvider.overrideWith((ref, f) async => OverviewData(
-          kpis: kpis,
-          previous: kpis,
-          daily: [
-            for (final d in daysBetween(f.from, f.to))
-              DailyMetrics(
-                day: d,
-                dau: 10,
-                newUsers: 2,
-                sessions: 20,
-                uninstalls: 0,
-              ),
-          ],
-        )),
-    retentionProvider.overrideWith((ref, f) async => const RetentionData(
-          offsets: [1, 3, 7],
-          lastDataDay: '2026-10-04',
-          cohorts: [
-            RetentionCohort(day: '2026-10-01', size: 10, retained: [5, 3, null])
-          ],
-          average: [0.5, 0.3, null],
-        )),
-    progressionProvider.overrideWith((ref, f) async => const ProgressionData(
-          stages: [
-            StageRow(
-              stage: 1,
-              players: 10,
-              starts: 20,
-              completes: 10,
-              fails: 10,
-              winRate: 0.5,
-              attemptsPerClear: 2,
-              dropOff: null,
-            )
-          ],
-        )),
+    overviewProvider.overrideWith((ref, f) async {
+      onDashboardRequest?.call(AppPage.overview);
+      return OverviewData(
+        kpis: kpis,
+        previous: kpis,
+        daily: [
+          for (final d in daysBetween(f.from, f.to))
+            DailyMetrics(
+              day: d,
+              dau: 10,
+              newUsers: 2,
+              sessions: 20,
+              uninstalls: 0,
+            ),
+        ],
+      );
+    }),
+    retentionProvider.overrideWith((ref, f) async {
+      onDashboardRequest?.call(AppPage.retention);
+      return const RetentionData(
+        offsets: [1, 3, 7],
+        lastDataDay: '2026-10-04',
+        cohorts: [
+          RetentionCohort(day: '2026-10-01', size: 10, retained: [5, 3, null])
+        ],
+        average: [0.5, 0.3, null],
+      );
+    }),
+    progressionProvider.overrideWith((ref, f) async {
+      onDashboardRequest?.call(AppPage.progression);
+      return const ProgressionData(
+        stages: [
+          StageRow(
+            stage: 1,
+            players: 10,
+            starts: 20,
+            completes: 10,
+            fails: 10,
+            winRate: 0.5,
+            attemptsPerClear: 2,
+            dropOff: null,
+          )
+        ],
+      );
+    }),
     savedFunnelsProvider.overrideWith((ref) async => withFunnels
         ? [
             SavedFunnel(
@@ -204,8 +214,8 @@ List<Override> studioMatrixOverrides({bool withFunnels = false}) {
     parameterEventProvider.overrideWith((ref) => longIdentifier),
     parameterKeyProvider.overrideWith((ref) => 'id'),
     paramKeysProvider.overrideWith((ref, q) async => ['id']),
-    paramProvider.overrideWith((ref, q) async =>
-        [ParamBucket(value: longIdentifier, count: 12)]),
+    paramProvider.overrideWith(
+        (ref, q) async => [ParamBucket(value: longIdentifier, count: 12)]),
     clustersProvider.overrideWith((ref, f) async => cluster),
     churnProvider.overrideWith((ref, f) async => ChurnResult(
           players: 10,
@@ -345,20 +355,20 @@ List<Override> studioMatrixOverrides({bool withFunnels = false}) {
 
   if (withFunnels) {
     overrides.addAll([
-      funnelResultProvider.overrideWith(
-          (ref, q) async => matrixFunnelResult(longIdentifier)),
-      funnelPlayersProvider.overrideWith((ref, q) async =>
-          const FunnelPlayersResult(
-            total: 10,
-            players: [
-              FunnelPlayerItem(
-                uid: 'player_1234567890',
-                entryTs: 1000000,
-                reached: 1,
-                lastTs: 2000000,
-              ),
-            ],
-          )),
+      funnelResultProvider
+          .overrideWith((ref, q) async => matrixFunnelResult(longIdentifier)),
+      funnelPlayersProvider
+          .overrideWith((ref, q) async => const FunnelPlayersResult(
+                total: 10,
+                players: [
+                  FunnelPlayerItem(
+                    uid: 'player_1234567890',
+                    entryTs: 1000000,
+                    reached: 1,
+                    lastTs: 2000000,
+                  ),
+                ],
+              )),
       playerEventsProvider.overrideWith((ref, q) async => [
             PlayerTimelineEvent(
               ts: 1500000,

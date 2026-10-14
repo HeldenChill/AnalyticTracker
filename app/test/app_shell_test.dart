@@ -123,7 +123,7 @@ void main() {
 
   testWidgets('platform filter refetches with platform', (t) async {
     await pumpShell(t);
-    await t.tap(find.text('Platform: All'));
+    await t.tap(find.byKey(const ValueKey('filter-platform')));
     await t.pumpAndSettle();
     await t.tap(find.text('IOS').last);
     await t.pumpAndSettle();
@@ -212,13 +212,13 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('refresh-button')));
     await t.pump();
-    expect(t.widget<IconButton>(find.byKey(const ValueKey('refresh-button'))).onPressed, isNull);
+    expect(t.widget<OutlinedButton>(find.byKey(const ValueKey('refresh-button'))).onPressed, isNull);
     expect(find.text('Refreshed Data health'), findsNothing);
     expect(requests, 2);
     pending.complete(const []);
     await t.pumpAndSettle();
     expect(find.text('Refreshed Data health'), findsOneWidget);
-    expect(t.widget<IconButton>(find.byKey(const ValueKey('refresh-button'))).onPressed, isNotNull);
+    expect(t.widget<OutlinedButton>(find.byKey(const ValueKey('refresh-button'))).onPressed, isNotNull);
   });
 
   testWidgets('Analytic refresh handles slow and failing requests', (t) async {
@@ -272,7 +272,7 @@ void main() {
     await t.pump();
 
     expect(find.textContaining('Refreshed'), findsNothing);
-    expect(t.widget<IconButton>(find.byKey(const ValueKey('refresh-button'))).onPressed, isNull);
+    expect(t.widget<OutlinedButton>(find.byKey(const ValueKey('refresh-button'))).onPressed, isNull);
 
     pending.complete(http.Response('Server failed', 500));
     await t.pumpAndSettle();

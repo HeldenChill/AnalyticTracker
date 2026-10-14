@@ -71,7 +71,12 @@ void main() {
             average: [0.25, 0.25, 0.0, null, null],
           )),
     ], const RetentionPage());
-    expect(find.text('D1 25% · D7 0%'), findsOneWidget);
+    expect(find.byKey(const ValueKey('retention-d1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('retention-d7')), findsOneWidget);
+    expect(find.byKey(const ValueKey('retention-d14')), findsOneWidget);
+    expect(find.text('25.0%'), findsOneWidget);
+    expect(find.text('0.0%'), findsOneWidget);
+    expect(find.text('—'), findsOneWidget);
   });
 
   testWidgets('Progression empty state', (t) async {
@@ -89,7 +94,7 @@ void main() {
           ])),
     ], const ProgressionPage());
     expect(find.text('Players reaching each stage'), findsOneWidget);
-    expect(find.text('Stage 1'), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('progression-reach-chart')), matching: find.text('Stage 1')), findsOneWidget);
     expect(find.text('67%'), findsOneWidget);
   });
 }

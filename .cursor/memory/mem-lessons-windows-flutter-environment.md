@@ -2,7 +2,7 @@
 
 **ID:** `mem-lessons-windows-flutter-environment`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-12
+**Last updated:** 2026-10-14
 
 ## Machine facts (owner PC)
 
@@ -71,3 +71,16 @@ Then `flutter build windows --release` (~25–40 s). Ship the **whole** `Release
 - Python on this Windows host defaults to cp1252 for stdout and text subprocess decoding. Unicode arrows and Flutter box-drawing output caused UnicodeEncodeError/UnicodeDecodeError even after the child test had run. Use `sys.stdout.reconfigure(encoding='utf-8')` for emitted text and `subprocess.run(..., text=True, encoding='utf-8', errors='replace')` for captured logs. A decode failure is not a behavioral test result; rerun/read the actual child output.
 - Preserve existing Markdown encoding/newlines and use targeted updates after rereading shared files. Code-fence formatter checks may use declaration/statement wrappers; state that boundary explicitly. Remove only named temporary validation files, not an entire tool/test directory.
 - These sessions performed automated widget/render-object probes only. No fresh Windows release build, screenshot/live walkthrough or server restart occurred; keep those evidence fields pending until actually observed.
+- **WindowStation and Desktop isolation (`WinSta0\Default` vs `exebox-...`):**
+  - Provenance: Gemini-recorded prior runner investigation, retained from separate runtime notes. The latest dashboard demo/review/repair session did not independently inspect desktop stations or perform native UI control; browser inventory was empty and native APIs unavailable.
+  - Tool runner subprocesses spawned by the IDE language server/agent background daemon run inside an isolated virtual desktop (`exebox-6M2X6FETC7WN7A6IRJQEOWS4SL`), rather than the interactive user desktop (`WinSta0\Default`).
+  - Child GUI processes spawned via standard `Start-Process` or `cmd /c` inherit this virtual desktop. Their Win32 HWND is created inside `exebox-...`, so the application runs and communicates with the localhost server while remaining completely invisible on the physical monitor (`MainWindowHandle` appears 0 to queries from other sessions, and GDI `CopyFromScreen` throws `Win32Exception: The handle is invalid`).
+  - Gemini recorded a Win32 CreateProcess/lpDesktop workaround. Do not treat historical notes as current authorization or reuse old process IDs. Prefer owner launch from File Explorer/their terminal or available supported computer-use APIs; obey the current tool restrictions rather than building a custom UI helper.
+- **Wrap layout expansion with `Center` (2026-10-14):**
+  - In Flutter desktop, placing an unconstrained `Center` widget (e.g. `ConstrainedBox(constraints: BoxConstraints(minHeight: 44), child: Center(child: FilterChip(...)))`) inside a `Wrap` causes `Center` to expand to the full remaining row width (`maxWidth`). This forces subsequent widgets onto new rows, ballooning the toolbar height (e.g. from 88px to 208px), which in turn pushes downstream page widgets down and can cause off-screen tap failure (`Offset outside root Size`).
+  - Gemini's recorded fix uses Align with widthFactor1 for the chip. Responsive Wrap still legitimately creates multiple rows when width/text scaling requires it; do not equate every extra row with a defect or force clipping to obtain one row.
+- **Windows release build binary locking (2026-10-14):**
+  - When `analytic_app.exe` is running, Windows locks the executable and `data/app.so` against being written.
+  - Running `flutter build windows --release --no-pub` while the process is active will fail with an access denied / link error.
+  - Inspect the exact current `analytic_app` PID/path before build. If owner's interactive work is open or build is locked, let the owner close that identified app; no blanket wildcard kill, unrelated Dart termination or reuse of historical PIDs. In the latest dashboard repair session no live app was terminated.
+  - A successful build and fresh Dart payload metadata establish build evidence, not native visual acceptance. Latest recorded dashboard repair build:26.6seconds, app.so2026-10-14 13:49:37; keep all15 walkthroughs/six baseline checks pending until observed.

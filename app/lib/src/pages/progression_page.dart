@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
-import '../widgets/bar_row.dart';
+import '../widgets/charts/time_series_chart.dart';
+import '../widgets/dashboard_chart_data.dart';
+import '../widgets/dashboard_chart_panel.dart';
 import '../widgets/stage_table.dart';
 import '../widgets/studio_async_panel.dart';
+import '../widgets/studio_layout.dart';
 
 import '../state/navigation.dart';
 import '../state/refresh.dart';
@@ -36,30 +39,96 @@ class ProgressionPage extends ConsumerWidget {
         value: ref.watch(progressionProvider(f)),
         onRetry: () => ref.invalidate(progressionProvider(f)),
         builder: (d) {
-            if (d.stages.isEmpty) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    'No stage events yet — builds using stg_start/stg_cmp/stg_fail will appear here.',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              );
-            }
-            final maxPlayers = d.stages.map((s) => s.players).reduce((a, b) => a > b ? a : b);
+          if (d.stages.isEmpty) {
             return ListView(
               padding: const EdgeInsets.all(16),
-              children: [
-                Card(child: StageTable(stages: d.stages)),
-                const SizedBox(height: 16),
-                Text('Players reaching each stage', style: Theme.of(context).textTheme.titleMedium),
-                for (final s in d.stages)
-                  BarRow(label: 'Stage ${s.stage}', value: s.players, max: maxPlayers, trailing: '${s.players}'),
+              children: const [
+                StudioHeading(
+                  title: 'Progression',
+                  subtitle: 'Player reach and difficulty, stage by stage',
+                ),
+                SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(
+                      child: Text(
+                        'No stage events yet — builds using stg_start/stg_cmp/stg_fail will appear here.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             );
-          },
-        ),
-      );
+          }
+          final theme = Theme.of(context);
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              const StudioHeading(
+                title: 'Progression',
+                subtitle: 'Player reach and difficulty, stage by stage',
+              ),
+              const SizedBox(height: 16),
+              DashboardChartPanel(
+                key: const ValueKey('progression-reach-chart'),
+                title: 'Players reaching each stage',
+                subtitle: 'Unique players · stage order preserved',
+                unit: 'players',
+                kind: TimeChartKind.bars,
+                series: progressionChartSeries(d.stages, ProgressionMetric.players),
+              ),
+              const SizedBox(height: 16),
+              StudioGrid(
+                minChildWidth: 360,
+                maxColumns: 2,
+                children: [
+                  DashboardChartPanel(
+                    key: const ValueKey('progression-win-rate-chart'),
+                    title: 'Win rate',
+                    subtitle: 'Completes ÷ (completes + fails)',
+                    unit: 'win rate (%)',
+                    percentage: true,
+                    valueFormatter: formatDashboardRate,
+                    series: progressionChartSeries(d.stages, ProgressionMetric.winRate),
+                  ),
+                  DashboardChartPanel(
+                    key: const ValueKey('progression-drop-off-chart'),
+                    title: 'Stage drop-off',
+                    subtitle: 'Versus the next numbered stage',
+                    unit: 'drop-off (%)',
+                    kind: TimeChartKind.bars,
+                    percentage: false,
+                    valueFormatter: formatDashboardRate,
+                    series: progressionChartSeries(d.stages, ProgressionMetric.dropOff),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Card(
+                key: const ValueKey('progression-stage-details'),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Stage details',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      StageTable(stages: orderedStages(d.stages)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 }

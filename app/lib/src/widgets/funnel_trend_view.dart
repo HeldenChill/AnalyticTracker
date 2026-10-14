@@ -162,6 +162,22 @@ class _FunnelTrendViewState extends State<FunnelTrendView> {
         const SizedBox(height: 16),
         // Entered players bar row
         Text('Entered players per bucket', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+        if (incompleteIndices.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(children: [
+              Container(
+                key: const ValueKey('partial-trend-sample'),
+                width: 12, height: 12,
+                decoration: BoxDecoration(
+                  color: tokens.chart.first.withValues(alpha: .4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Flexible(child: Text('Partial bucket — may be incomplete')),
+            ]),
+          ),
         const SizedBox(height: 8),
         SizedBox(
           height: 80,
@@ -173,7 +189,7 @@ class _FunnelTrendViewState extends State<FunnelTrendView> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 2),
                     child: Tooltip(
-                      message: '${bucketStarts[i]}: ${fmtCount(enteredCounts[i])} entered',
+                      message: '${bucketStarts[i]}: ${fmtCount(enteredCounts[i])} entered${trend[i].incomplete ? ' (partial)' : ''}',
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -184,6 +200,7 @@ class _FunnelTrendViewState extends State<FunnelTrendView> {
                             ),
                           const SizedBox(height: 2),
                           Container(
+                            key: ValueKey('entered-bar-${bucketStarts[i]}'),
                             height: maxEntered == 0 ? 2 : math.max(2.0, 50.0 * (enteredCounts[i] / maxEntered)),
                             decoration: BoxDecoration(
                               color: tokens.chart.first.withValues(alpha: trend[i].incomplete ? 0.4 : 0.85),

@@ -7,6 +7,8 @@
 
 ## Continue here
 
+**Superseded 2026-10-14:** Read [latest full completion handoff](mem-project-completion-session-handoff.md) first. BUG0053 and graph reveal were implemented; coordinator resolved0060/0065 with857 passing tests. The following October13 snapshot is historical. Current fixes are uncommitted at363aadd; native checks remain pending.
+
 Tasks 1–8 of `.cursor/plans/project-completion-implementation.md` are complete and committed:
 - **Task 1:** `445eaf4` (reconcile repairs against current behavior; BUG-0039, BUG-0047, BUG-0048, BUG-0049 resolved)
 - **Task 2:** `4b62c42` (stable request identity across owner recreation; BUG-0053 and BUG-0064 resolved)

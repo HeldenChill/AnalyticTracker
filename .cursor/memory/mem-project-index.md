@@ -4,14 +4,16 @@
 
 ## Project
 
-Cross-platform team dashboard for PetVsMonster: Windows-first Flutter app, Dart shelf server, SQLite raw events, BigQuery daily pull/manual import, Overview/Retention/Progression/Funnels and six-tab Analytic page. Analytics Studio A retains all four themes and 24 MCP tools. Studio Waves 0–6 and complete repairs are implemented through Tasks 1–8 of .cursor/plans/project-completion-implementation.md. Fresh test suite: shared 65 + server 271 + app 501 = 837 tests pass; all analyzers clean. Windows release build verified with Impeller rendering backend; server analysis routes verified; ledger reconciled. Task 10 data automation and Task 11 authenticated team operation remain platform/readiness gates.
+Cross-platform team dashboard for PetVsMonster: Windows-first Flutter app, Dart shelf server, SQLite raw events, BigQuery pull/manual import and six-tab Analytic page. Latest Dashboard Refresh demo approved; Gemini implementation reviewed and coordinator repairs0066–0069 resolved. Last observed shared65/server271/app606=942 pass, all analyzers clean, fresh Windows build; working tree remains uncommitted on363aadd. All15 native walkthroughs/six baseline checks PENDING; auth0010 DEFERRED, IAM/platform/device gates separate. Read mem-dashboard-refresh-session-handoff.md first, then final dashboard verification section6. Optimization is a Gemini-recorded candidate, not an approved refactor in this session.
 
 ## Memory index
 
 | Topic | File |
 |---|---|
+| Latest whole-session Dashboard Refresh demo approval detailed Gemini plan inline review REQUEST CHANGES fixes0066-0069 resolved942 tests606 app uncommitted fresh build native pending optimization candidate | `mem-dashboard-refresh-session-handoff.md` |
 | Bug ledger — BUG-NNNN ids, status lifecycle, review findings | `mem-known-bugs-index.md` |
-| Latest session handoff 2026-10-13, Studio Waves0-6 cumulative Gemini repairs final review3bd2787, BUG0053 owner recreation stale cached data BUG0060 HTTP matrix CSV acceptance,733 tests, test stalls, next implementation T11C T12 T13 | `mem-studio-waves0-6-session-handoff.md` |
+| Project completion plan Gemini 363aadd review coordinator fixes BUG0060/0065 resolved 857 tests uncommitted graph/page animation native pending next steps | `mem-project-completion-session-handoff.md` |
+| Historical session handoff superseded by2026-10-14 completion handoff: 2026-10-13, Studio Waves0-6 cumulative Gemini repairs final review3bd2787, BUG0053 owner recreation stale cached data BUG0060 HTTP matrix CSV acceptance,733 tests, test stalls, next implementation T11C T12 T13 | `mem-studio-waves0-6-session-handoff.md` |
 | Project intent, owner decisions timeline, roles (Claude plans/reviews, Gemini implements), status, next steps, open decisions, session handoff, v5 funnel upgrade waves segments trend drill-down, wave 1 plan review, v6 Analytic tab AI data science clusters kmeans churn survival level difficulty weekly insights research | `mem-project-intent-and-origin.md` |
 | System architecture as built — packages, SQLite tables, API routes, import route, MCP server tools, test devices filter, metric/funnel rules, styles, theme tokens, planned v5 funnel engine paths operators, planned v6 analysis module routes | `mem-system-architecture.md` |
 | Firebase BigQuery data playbook — sandbox 60 days, service account 403 IAM roles, manual export import query, real PVM data shape, tut, debug_event, platforms versions user properties | `mem-lessons-firebase-bigquery-data.md` |

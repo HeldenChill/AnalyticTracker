@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
+import '../widgets/charts/time_series_chart.dart';
+import '../widgets/dashboard_chart_data.dart';
+import '../widgets/dashboard_chart_panel.dart';
 import '../widgets/format.dart';
 import '../widgets/kpi_card.dart';
-import '../widgets/metric_line_chart.dart';
 import '../widgets/studio_async_panel.dart';
 import '../widgets/studio_layout.dart';
 
@@ -51,7 +53,6 @@ class _OverviewBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = data.kpis;
     final p = data.previous;
-    final days = [for (final d in data.daily) d.day];
     final empty = data.daily.every((d) => d.dau == 0 && d.newUsers == 0 && d.sessions == 0 && d.uninstalls == 0);
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -111,29 +112,37 @@ class _OverviewBody extends StatelessWidget {
           minChildWidth: 360,
           maxColumns: 2,
           children: [
-            MetricLineChart(
-              title: 'DAU',
+            DashboardChartPanel(
+              key: const ValueKey('overview-dau-chart'),
+              title: 'Daily active players',
+              subtitle: 'Daily unique players',
               unit: 'players',
-              days: days,
-              values: [for (final d in data.daily) d.dau],
+              kind: TimeChartKind.area,
+              series: overviewChartSeries(data.daily, OverviewMetric.dau),
             ),
-            MetricLineChart(
+            DashboardChartPanel(
+              key: const ValueKey('overview-new-users-chart'),
               title: 'New users',
+              subtitle: 'Daily first installs',
               unit: 'players',
-              days: days,
-              values: [for (final d in data.daily) d.newUsers],
+              kind: TimeChartKind.bars,
+              series: overviewChartSeries(data.daily, OverviewMetric.newUsers),
             ),
-            MetricLineChart(
+            DashboardChartPanel(
+              key: const ValueKey('overview-sessions-chart'),
               title: 'Sessions',
+              subtitle: 'Daily session starts',
               unit: 'sessions',
-              days: days,
-              values: [for (final d in data.daily) d.sessions],
+              kind: TimeChartKind.area,
+              series: overviewChartSeries(data.daily, OverviewMetric.sessions),
             ),
-            MetricLineChart(
+            DashboardChartPanel(
+              key: const ValueKey('overview-uninstalls-chart'),
               title: 'Uninstalls',
+              subtitle: 'Daily recorded removals',
               unit: 'removals',
-              days: days,
-              values: [for (final d in data.daily) d.uninstalls],
+              kind: TimeChartKind.bars,
+              series: overviewChartSeries(data.daily, OverviewMetric.uninstalls),
             ),
           ],
         ),

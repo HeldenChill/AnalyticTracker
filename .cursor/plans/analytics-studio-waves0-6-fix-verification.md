@@ -77,3 +77,38 @@
 - **BUG-0008 (Editor two AND parameters):** Covered by `test/studio_http_acceptance_test.dart` and funnel engine tests. Runtime check: PENDING interactive visual inspection.
 - **BUG-0007 (Debug on/off numeric difference):** Filter parameter `test=1` vs `test=0` verified across API and client queries. Runtime check: PENDING interactive visual inspection.
 - **BUG-0011 (Chosen event with no params):** Parameters view empty state reason verified in widget tests. Runtime check: PENDING interactive visual inspection.
+
+## Review Finding Repairs — 2026-10-14
+
+**Anchor:** HEAD `363aadd`; fixes remain uncommitted. Owner requested fixing the completion-review findings with systematic debugging. Existing owner memory/review changes were preserved.
+
+### Root cause and changes
+
+- BUG-0060: previous tests checked initial loads and export substrings, so green suites did not prove visible-request refresh/error/ownership or exact exports. Production refresh behavior passed the new precise tests at the start; no refresh implementation change was needed.
+- Actual partial Funnel bucket lacked explanatory legend/hover context. Added matching opacity sample and wrapping explanation, partial hover suffix, and stable observation keys. Initial dedicated export test failed on absent partial observation; final test verifies actual bar geometry/color, matching legend, tooltip and literal clipboard bytes.
+- BUG-0065: hand-copied MCP names/counts did not match registrations; build/launch evidence was overstated as runtime readiness. Documentation now lists all24 exact tools in five groups and keeps Windows/Web acceptance PENDING.
+
+### Permanent acceptance
+
+| File | Observed coverage |
+|---|---|
+|`app/test/visible_refresh_contract_test.dart`|18 cases: canceled queued activation by removal/page reversal; real cached comparison A/B/A; missing-day scope and comparison warning; superseded manual URL/filter refresh success/error; visible players/timeline held success/error and close while held; Weekly Trend literal body/completion/supersession; segmented players literal body|
+|`app/test/funnel_export_contract_test.dart`|Exact three-line CRLF clipboard/no final newline; rendered complete/partial color and height, matching sample and tooltip|
+|`app/test/studio_http_acceptance_test.dart`|Both current/previous completion orders; current10/previous5/+100%; exact ranges and seven-day scope|
+|`app/test/studio_visual_matrix_test.dart`|Existing four-theme/width/scale Funnel interactions now inspect actual partial bar/legend and compare entire clipboard; independent CSV escaping includes embedded newline|
+
+### Fresh final verification
+
+| Gate | Result |
+|---|---|
+|Shared analyze / tests|Clean /65 pass|
+|Server analyze / tests|Clean /271 pass|
+|App analyze / complete suite|Clean /521 pass,58 seconds|
+|Total|857 pass|
+|Focused follow-up review|No remaining blockers in production/test/docs fix scope|
+|Exact MCP documentation comparison|24 documented names equal24 actual registrations|
+|Whitespace validation|`git diff --check` clean|
+
+Used installed Dart SDK and Flutter snapshot, command forms from completion plan. Ignored local logs: `build/fix-contract-red.log`, `fix-contract-green.log`, `fix-visible-final.log`, `fix-http.log`, `fix-all-{shared,server}-tests.log`, `fix-all-app-final.log`. First new supersession test initially sampled before the new provider finished; fixed test to wait for the expected visible data with bounded frames, not production timing changes. Analyzer brace findings in new tests were corrected and analyzer rerun clean.
+
+**Closure:** BUG-0060 and BUG-0065 resolved from relevant automated/source evidence and focused read-only review. No commit/merge/push performed. All15 native Windows walkthroughs and six baseline runtime verification records remain PENDING; no native UI checks/build performed in this repair session. BUG-0010 auth remains separately deferred, with IAM/device/platform prerequisites unchanged.

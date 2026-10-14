@@ -205,6 +205,16 @@ void main() {
 
             // Verify data / partial marker
             expect(find.textContaining('2026-10-05'), findsWidgets);
+            final partialMark = find.byKey(const ValueKey('entered-bar-2026-10-05'));
+            await t.ensureVisible(partialMark);
+            await t.pumpAndSettle();
+            final partialDecoration = t.widget<Container>(partialMark).decoration! as BoxDecoration;
+            final completeDecoration = t.widget<Container>(
+              find.byKey(const ValueKey('entered-bar-2026-09-28'))).decoration! as BoxDecoration;
+            expect(partialDecoration.color!.a, closeTo(.4, .01));
+            expect(completeDecoration.color!.a, closeTo(.85, .01));
+            expect(t.getRect(partialMark).height, closeTo(50 * 4 / 6, .01));
+            expect(find.text('Partial bucket — may be incomplete'), findsOneWidget);
 
             // 7. Verify CSV clipboard exact content
             final copyCsvBtn = find.text('Copy CSV');
@@ -214,8 +224,10 @@ void main() {
             await t.pump();
             final clipboard = await Clipboard.getData(Clipboard.kTextPlain);
             expect(clipboard?.text, isNotNull);
-            expect(clipboard!.text, contains('2026-10-05'));
-            expect(clipboard.text, contains('true'));
+            expect(clipboard!.text,
+              'Start,Step 1,Step 2,Total conversion,Incomplete\r\n'
+              '2026-09-28,6,3,50%,false\r\n'
+              '2026-10-05,4,2,50%,true');
           });
         }
       }
@@ -582,13 +594,17 @@ void main() {
       final csv = toCsv(headers, rows);
 
       // Verify headers correctly quoted and joined with commas
-      expect(csv, startsWith('ID,"Event, Name","Player ""Tag""",Count,Conversion\r\n'));
+      expect(csv,
+        'ID,"Event, Name","Player ""Tag""",Count,Conversion\r\n'
+        '1,"level_up, boss","Pro ""Gamer""",1000000,0.4567\r\n'
+        '2,normal_step,Simple,42,');
 
       // Verify line 1 has escaped quotes, escaped comma, raw unformatted integer 1000000 and float 0.4567
       expect(csv, contains('1,"level_up, boss","Pro ""Gamer""",1000000,0.4567\r\n'));
 
       // Verify line 2 handles null as empty without crash
       expect(csv, endsWith('2,normal_step,Simple,42,'));
+      expect(toCsv(['Event'], [['line1\nline2']]), 'Event\r\n"line1\nline2"');
     });
   });
 }

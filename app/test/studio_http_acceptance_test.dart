@@ -75,7 +75,8 @@ void main() {
     expect(values.last.url.queryParameters['key'], 'key');
   });
 
-  testWidgets('Events reverse completion correctly resolves counts and previous comparison', (t) async {
+  for (final previousFirst in [false, true]) {
+  testWidgets('Events exact comparison resolves in either order (previous first=$previousFirst)', (t) async {
     final currentCompleter = Completer<http.Response>();
     final prevCompleter = Completer<http.Response>();
     final requests = <http.Request>[];
@@ -87,8 +88,8 @@ void main() {
           return http.Response(jsonEncode({'platforms': ['ANDROID'], 'versions': ['1.0']}), 200);
         case '/days':
           return http.Response(jsonEncode([
-            {'day': '2026-10-01', 'rowCount': 1, 'pulledAt': '2026-10-05T00:00:00Z'},
-            {'day': '2026-10-02', 'rowCount': 1, 'pulledAt': '2026-10-05T00:00:00Z'},
+            for (final day in daysBetween('2026-09-24', '2026-10-07'))
+              {'day': day, 'rowCount': 1, 'pulledAt': '2026-10-10T00:00:00Z'},
           ]), 200);
         case '/events/names':
           return http.Response(jsonEncode(['event_a']), 200);
@@ -125,20 +126,39 @@ void main() {
     );
     await t.pump();
 
-    // Complete previous first, current later (reversed order)
-    prevCompleter.complete(http.Response(jsonEncode([
+    final prevResponse = http.Response(jsonEncode([
       {'day': '2026-09-24', 'eventName': 'event_a', 'count': 5},
-    ]), 200));
-    await t.pump();
-
-    currentCompleter.complete(http.Response(jsonEncode([
+    ]), 200);
+    final currentResponse = http.Response(jsonEncode([
       {'day': '2026-10-01', 'eventName': 'event_a', 'count': 10},
-    ]), 200));
+    ]), 200);
+    if (previousFirst) {
+      prevCompleter.complete(prevResponse);
+    } else {
+      currentCompleter.complete(currentResponse);
+    }
+    await t.pump();
+    expect(find.text('vs previous period (5)'), findsNothing);
+    if (previousFirst) {
+      currentCompleter.complete(currentResponse);
+    } else {
+      prevCompleter.complete(prevResponse);
+    }
     await t.pumpAndSettle();
 
     expect(find.text('event_a'), findsWidgets);
     expect(find.text('10'), findsWidgets);
+    expect(find.text('vs previous period (5)'), findsOneWidget);
+    expect(find.text('+100.0%'), findsWidgets);
+    expect(find.text('Across 7 stored days'), findsOneWidget);
+    final countRequests = requests.where((r) => r.url.path == '/events/count').toList();
+    expect(countRequests.map((r) => r.url.queryParameters).toList(), unorderedEquals([
+      {'from': '2026-10-01', 'to': '2026-10-07'},
+      {'from': '2026-09-24', 'to': '2026-09-30'},
+    ]));
+    expect(find.textContaining('Missing days:'), findsNothing);
   });
+  }
 
   testWidgets('Old URL response arriving after new URL does not overwrite active data', (t) async {
     final serverACompleter = Completer<http.Response>();
