@@ -62,6 +62,7 @@ class _ParamScreenState extends ConsumerState<ParamScreen> {
     return ActiveRequestScope(
       page: AppPage.parameters,
       queryKey: (baseUrl, currentEvent, currentKey, f),
+      cacheKey: ('parameters', baseUrl, currentEvent, currentKey, f),
       reload: () async {
         try {
           final futures = <Future<dynamic>>[

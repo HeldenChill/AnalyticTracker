@@ -524,6 +524,126 @@ void main() {
         reason: 'previously cached comparison-off query predates manual refresh',
       );
     });
+
+    test('removed cached query remains stale for replacement owner', () async {
+      final r = ActiveRequestRegistry();
+      final a = Object(), other = Object(), replacement = Object();
+      var calls = 0;
+      Future<RefreshResult> load() async {
+        calls++;
+        return const RefreshResult();
+      }
+      r.register(page: AppPage.events, owner: a,
+        queryKey: ('events', 'server', 'A'), reload: load);
+      r.remove(a);
+      r.register(page: AppPage.overview, owner: other,
+        queryKey: ('overview', 'server'),
+        reload: () async => const RefreshResult());
+      await r.reload(AppPage.overview, analyticTab: 0);
+      r.register(page: AppPage.events, owner: replacement,
+        queryKey: ('events', 'server', 'A'), reload: load);
+      await r.reloadOwnerIfStale(replacement);
+      await r.reloadOwnerIfStale(replacement);
+      expect(calls, 1);
+    });
+
+    for (final explicitIdentity in [false, true]) {
+      testWidgets('recreated Events scope reloads stale request (explicit identity=$explicitIdentity)', (t) async {
+        const queryFilters = Filters(from: '2026-10-01', to: '2026-10-04');
+        final api = _ReviewApi(queryFilters);
+        final container = ProviderContainer(overrides: [
+          apiClientProvider.overrideWithValue(api),
+          selectedPageProvider.overrideWith((ref) => AppPage.events),
+        ]);
+        addTearDown(api.close);
+        addTearDown(container.dispose);
+        bool show = true;
+        late StateSetter change;
+        await t.pumpWidget(UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(home: StatefulBuilder(builder: (context, update) {
+            change = update;
+            if (!show) return const SizedBox.shrink();
+            return Consumer(builder: (context, ref, child) {
+              const query = (filters: queryFilters, compare: false);
+              final value = ref.watch(eventsExplorerProvider(query));
+              return ActiveRequestScope(
+                page: AppPage.events,
+                queryKey: ('http://review-fixture', query),
+                cacheKey: explicitIdentity ? ('events', 'http://review-fixture', query) : null,
+                reload: () async {
+                  ref.invalidate(eventsExplorerProvider(query));
+                  await ref.read(eventsExplorerProvider(query).future);
+                  return const RefreshResult();
+                },
+                child: Text('count=${value.valueOrNull?.current.first.count}'),
+              );
+            });
+          })),
+        ));
+        await t.pumpAndSettle();
+        expect(find.text('count=1'), findsOneWidget);
+        change(() => show = false);
+        container.read(selectedPageProvider.notifier).state = AppPage.overview;
+        await t.pumpAndSettle();
+        final registry = container.read(activeRequestRegistryProvider);
+        registry.register(page: AppPage.overview, owner: Object(), queryKey: 'overview',
+            reload: () async => const RefreshResult());
+        api.dataVersion = 2;
+        await registry.reload(AppPage.overview, analyticTab: 0);
+        container.read(selectedPageProvider.notifier).state = AppPage.events;
+        change(() => show = true);
+        await t.pumpAndSettle();
+        expect(find.text('count=2'), findsOneWidget,
+            reason: 'same cached request must retain freshness across scope recreation');
+      });
+    }
+
+    testWidgets('queue stale activation then remove/switch query before frame yields zero requests for canceled identity', (t) async {
+      final registry = ActiveRequestRegistry();
+      var calls = 0;
+      final container = ProviderContainer(overrides: [
+        activeRequestRegistryProvider.overrideWithValue(registry),
+        selectedPageProvider.overrideWith((ref) => AppPage.overview),
+      ]);
+      addTearDown(container.dispose);
+      bool active = true;
+      var queryKey = 'queryA';
+      late StateSetter setHost;
+      await t.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              setHost = setState;
+              if (!active) return const SizedBox.shrink();
+              return ActiveRequestScope(
+                page: AppPage.overview,
+                queryKey: queryKey,
+                reload: () async {
+                  calls++;
+                  return const RefreshResult();
+                },
+                child: Text('query: $queryKey'),
+              );
+            },
+          ),
+        ),
+      ));
+      expect(find.text('query: queryA'), findsOneWidget);
+      expect(calls, 0);
+
+      await registry.reload(AppPage.overview, analyticTab: 0);
+      expect(calls, 1);
+
+      registry.register(page: AppPage.retention, owner: Object(), queryKey: 'ret', reload: () async => const RefreshResult());
+      await registry.reload(AppPage.retention, analyticTab: 0);
+
+      setHost(() => active = false);
+      await t.pump();
+      await t.pumpAndSettle();
+      expect(calls, 1);
+    });
   });
 }
 

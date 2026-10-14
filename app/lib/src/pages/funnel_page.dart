@@ -87,6 +87,7 @@ class _FunnelPageState extends ConsumerState<FunnelPage> {
     return ActiveRequestScope(
       page: AppPage.funnels,
       queryKey: baseUrl,
+      cacheKey: ('funnel-definitions', baseUrl),
       reload: () async {
         try {
           await Future.wait([ref.refresh(savedFunnelsProvider.future)]);
@@ -236,6 +237,7 @@ class _FunnelResultViewState extends ConsumerState<_FunnelResultView> {
     return ActiveRequestScope(
       page: AppPage.funnels,
       queryKey: (baseUrl, q),
+      cacheKey: ('funnel-run', baseUrl, q),
       reload: () async {
         try {
           await Future.wait([ref.refresh(funnelResultProvider(q).future)]);

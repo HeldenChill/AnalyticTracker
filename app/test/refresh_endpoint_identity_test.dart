@@ -13,6 +13,7 @@ void main() {
       analyticTab: 3,
       owner: survival,
       queryKey: query,
+      cacheKey: ('survival', query),
       reload: () async => const RefreshResult(),
     );
     registry.register(
@@ -20,6 +21,7 @@ void main() {
       analyticTab: 3,
       owner: impact,
       queryKey: query,
+      cacheKey: ('versionImpact', query),
       reload: () async {
         impactCalls++;
         return RefreshResult(errors: [StateError('versionImpact request failed')]);

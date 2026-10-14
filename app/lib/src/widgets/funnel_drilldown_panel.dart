@@ -175,6 +175,7 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
     return ActiveRequestScope(
       page: AppPage.funnels,
       queryKey: (baseUrl, q),
+      cacheKey: ('funnel-players', baseUrl, q),
       reload: () async {
         try {
           await Future.wait([ref.refresh(funnelPlayersProvider(q).future)]);
@@ -321,6 +322,7 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
     return ActiveRequestScope(
       page: AppPage.funnels,
       queryKey: (baseUrl, q),
+      cacheKey: ('player-events', baseUrl, q),
       reload: () async {
         try {
           await Future.wait([ref.refresh(playerEventsProvider(q).future)]);
