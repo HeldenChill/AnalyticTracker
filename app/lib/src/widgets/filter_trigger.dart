@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 ///
 /// This is only the visual child of a [PopupMenuButton]; it is never a
 /// second nested click handler. Ink/hover feedback is constrained to the
-/// rounded shape by [Material.clipBehavior].
+/// rounded shape by the owning [PopupMenuButton.borderRadius]. [Ink] paints
+/// the outline and surface on that same Material, below its hover feedback.
 class FilterTrigger extends StatelessWidget {
   const FilterTrigger({
     super.key,
@@ -33,10 +34,8 @@ class FilterTrigger extends StatelessWidget {
               ? theme.colorScheme.outlineVariant
               : theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
     );
-    final surface = Material(
-      color: theme.colorScheme.surface,
-      shape: shape,
-      clipBehavior: Clip.antiAlias,
+    final surface = Ink(
+      decoration: ShapeDecoration(color: theme.colorScheme.surface, shape: shape),
       child: ConstrainedBox(
         constraints: BoxConstraints(
             minHeight: 44,

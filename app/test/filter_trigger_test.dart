@@ -1,3 +1,6 @@
+import 'dart:ui' as ui;
+
+import 'package:flutter/rendering.dart';
 import 'package:analytic_app/src/providers.dart';
 import 'package:analytic_app/src/theme/app_style.dart';
 import 'package:analytic_app/src/widgets/filter_bar.dart';
@@ -36,7 +39,7 @@ Future<ProviderContainer> _pumpFilterBar(
         child: Scaffold(
           body: Align(
             alignment: Alignment.topLeft,
-            child: FilterBar(onRefresh: () {}),
+            child: RepaintBoundary(key: const ValueKey('filter-pixels'), child: FilterBar(onRefresh: () {})),
           ),
         ),
       ),
@@ -94,37 +97,42 @@ void main() {
     final center = t.getCenter(date);
     final rect = t.getRect(date);
 
-    // Capture pre-hover image.
-    final boundary = find.byKey(const RepaintBoundary(key: null).key ?? Key(''))
-        .evaluate()
-        .isEmpty
-        ? null
-        : null; // fallback: capture the whole scaffold.
-
-    // We cannot easily do pixel-level comparison in headless Flutter tests
-    // without a golden baseline. Record the hover interaction; if the widget
-    // accepts pointer events without exception that is the automated gate.
-    // Native screenshot is the full sign-off per plan A2 step 4.
+    final boundary = t.renderObject<RenderRepaintBoundary>(
+        find.byKey(const ValueKey('filter-pixels')));
+    Future<List<int>> pixels() async {
+      final image = await boundary.toImage(pixelRatio: 1);
+      final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      image.dispose();
+      return data!.buffer.asUint8List().toList();
+    }
+    final before = (await t.runAsync(pixels))!;
     final pointer = await t.createGesture(kind: PointerDeviceKind.mouse);
     addTearDown(pointer.removePointer);
     await pointer.addPointer(location: Offset.zero);
     await pointer.moveTo(center);
-    await t.pump(const Duration(milliseconds: 250));
-    expect(t.takeException(), isNull,
-        reason: 'hover over date trigger must not throw');
-
-    // Verify trigger bounds still contain center after hover.
-    expect(rect.contains(center), isTrue);
-
-    await pointer.moveTo(Offset.zero);
     await t.pump();
-
-    // Keyboard focus: Tab to date, then Enter opens menu; Escape closes.
-    await t.sendKeyEvent(LogicalKeyboardKey.tab);
-    await t.pump();
-    // Focus on something; just ensure no exception during focus traversal.
+    await t.pump(const Duration(milliseconds: 150));
+    final after = (await t.runAsync(pixels))!;
+    final origin = boundary.localToGlobal(Offset.zero);
+    final local = rect.shift(-origin);
+    final imageWidth = boundary.size.width.round();
+    bool changed(int x, int y) {
+      final offset = (y * imageWidth + x) * 4;
+      return List.generate(4, (i) => before[offset + i] != after[offset + i]).any((v) => v);
+    }
+    final left = local.left.round();
+    final top = local.top.round();
+    expect(changed(left + 1, top + 1), isFalse,
+        reason: 'hover must not paint outside rounded corner');
+    var interiorChanged = false;
+    for (var y = top + 5; y < local.bottom - 5; y++) {
+      for (var x = left + 10; x < local.right - 10; x++) {
+        interiorChanged |= changed(x, y);
+      }
+    }
+    expect(interiorChanged, isTrue, reason: 'oracle must observe real hover ink');
     expect(t.takeException(), isNull);
-    expect(boundary, isNull); // boundary lookup not used; pixel diff is native gate
+
   });
 
   // storageScope: disabled triggers still render at >= 44px height.
