@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +13,7 @@ import '../../theme/motion_policy.dart';
 import '../../widgets/charts/chart_frame.dart';
 import '../../widgets/charts/chart_models.dart';
 import '../../widgets/charts/chart_motion.dart';
+import '../../widgets/charts/chart_reveal.dart';
 import '../../widgets/charts/series_visual_style.dart';
 import '../../widgets/format.dart';
 import '../../widgets/studio_async_panel.dart';
@@ -228,14 +231,11 @@ class _SurvivalChartState extends State<_SurvivalChart> {
         ],
         child: SizedBox(
           height: 260,
-          child: Builder(
-            builder: (rendererContext) {
+          child: LayoutBuilder(
+            builder: (rendererContext, constraints) {
               final motion = ChartMotion.of(rendererContext);
               final allowed = chartAnimationsAllowed(rendererContext);
-              return LineChart(
-                key: ValueKey('survival-chart-$allowed'),
-                duration: motion.geometryDuration,
-                LineChartData(
+              final data = LineChartData(
               minX: 0,
               maxX: maxDay.toDouble(),
               minY: 0.0,
@@ -336,11 +336,70 @@ class _SurvivalChartState extends State<_SurvivalChart> {
                     color: styles[widget.curves[i].group]!.color.withValues(alpha: 0.12),
                   ),
               ],
-            ),
-          );
-        },
+            );
+
+            if (motion.phase == ChartMotionPhase.entrance) {
+              const plotLeft = 40.0;
+              final plotWidth = math.max(0.0, constraints.maxWidth - plotLeft);
+              final plotRect = Rect.fromLTWH(plotLeft, 0.0, plotWidth, 260.0 - 24.0);
+
+              final staticData = data.copyWith(
+                lineBarsData: const [],
+                betweenBarsData: const [],
+                lineTouchData: const LineTouchData(enabled: false),
+              );
+
+              final foregroundData = data.copyWith(
+                gridData: const FlGridData(show: false),
+                borderData: FlBorderData(show: false),
+                lineTouchData: const LineTouchData(enabled: false),
+                titlesData: data.titlesData.copyWith(
+                  leftTitles: AxisTitles(
+                    sideTitles: data.titlesData.leftTitles.sideTitles.copyWith(
+                      getTitlesWidget: (v, m) => const SizedBox.shrink(),
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: data.titlesData.bottomTitles.sideTitles.copyWith(
+                      getTitlesWidget: (v, m) => const SizedBox.shrink(),
+                    ),
+                  ),
+                ),
+              );
+
+              return Stack(
+                fit: StackFit.passthrough,
+                children: [
+                  LineChart(
+                    key: ValueKey('survival-chart-$allowed-static'),
+                    staticData,
+                    duration: Duration.zero,
+                  ),
+                  ClipRect(
+                    clipper: ChartRevealClip(
+                      progress: motion.revealProgress,
+                      plot: plotRect,
+                    ),
+                    child: ExcludeSemantics(
+                      child: LineChart(
+                        key: ValueKey('survival-chart-$allowed-foreground'),
+                        foregroundData,
+                        duration: Duration.zero,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return LineChart(
+              key: ValueKey('survival-chart-$allowed'),
+              duration: motion.geometryDuration,
+              data,
+            );
+          },
+        ),
       ),
-    ),
       ),
     );
   }

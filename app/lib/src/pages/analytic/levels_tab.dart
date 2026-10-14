@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +12,7 @@ import '../../theme/analytics_tokens.dart';
 import '../../theme/motion_policy.dart';
 import '../../widgets/charts/chart_frame.dart';
 import '../../widgets/charts/chart_motion.dart';
+import '../../widgets/charts/chart_reveal.dart';
 import '../../widgets/format.dart';
 import '../../widgets/studio_async_panel.dart';
 import '../../widgets/studio_layout.dart';
@@ -139,73 +142,128 @@ class _LevelsLineChart extends StatelessWidget {
         ],
         child: SizedBox(
           height: 240,
-          child: Builder(
-            builder: (rendererContext) {
+          child: LayoutBuilder(
+            builder: (rendererContext, constraints) {
               final motion = ChartMotion.of(rendererContext);
               final allowed = chartAnimationsAllowed(rendererContext);
+              final data = LineChartData(
+                minX: minL,
+                maxX: maxL,
+                minY: 0.0,
+                maxY: 1.0,
+                titlesData: FlTitlesData(
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 22,
+                      interval: (maxL - minL > 15) ? 2 : 1,
+                      getTitlesWidget: (v, _) => Text(
+                        'L${v.toInt()}',
+                        style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 36,
+                      interval: 0.25,
+                      getTitlesWidget: (v, _) => Text(
+                        '${(v * 100).round()}%',
+                        style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ),
+                ),
+                gridData: const FlGridData(show: true, drawVerticalLine: false),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: winSpots,
+                    color: tokens.chart.first,
+                    barWidth: 2,
+                    dotData: const FlDotData(show: false),
+                  ),
+                  LineChartBarData(
+                    spots: hazardSpots,
+                    color: tokens.bad,
+                    barWidth: 2,
+                    dotData: FlDotData(
+                      show: true,
+                      checkToShowDot: (spot, barData) {
+                        final idx = spot.x.toInt();
+                        final lvl = levels.where((l) => l.level == idx).firstOrNull;
+                        return lvl?.wall == true;
+                      },
+                    ),
+                  ),
+                ],
+              );
+
+              if (motion.phase == ChartMotionPhase.entrance) {
+                const plotLeft = 36.0;
+                final plotWidth = math.max(0.0, constraints.maxWidth - plotLeft);
+                final plotRect = Rect.fromLTWH(plotLeft, 0.0, plotWidth, 240.0 - 22.0);
+
+                final staticData = data.copyWith(
+                  lineBarsData: const [],
+                  lineTouchData: const LineTouchData(enabled: false),
+                );
+
+                final foregroundData = data.copyWith(
+                  gridData: const FlGridData(show: false),
+                  borderData: FlBorderData(show: false),
+                  lineTouchData: const LineTouchData(enabled: false),
+                  titlesData: data.titlesData.copyWith(
+                    leftTitles: AxisTitles(
+                      sideTitles: data.titlesData.leftTitles.sideTitles.copyWith(
+                        getTitlesWidget: (v, m) => const SizedBox.shrink(),
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: data.titlesData.bottomTitles.sideTitles.copyWith(
+                        getTitlesWidget: (v, m) => const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
+                );
+
+                return Stack(
+                  fit: StackFit.passthrough,
+                  children: [
+                    LineChart(
+                      key: ValueKey('levels-trend-chart-$allowed-static'),
+                      staticData,
+                      duration: Duration.zero,
+                    ),
+                    ClipRect(
+                      clipper: ChartRevealClip(
+                        progress: motion.revealProgress,
+                        plot: plotRect,
+                      ),
+                      child: ExcludeSemantics(
+                        child: LineChart(
+                          key: ValueKey('levels-trend-chart-$allowed-foreground'),
+                          foregroundData,
+                          duration: Duration.zero,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
               return LineChart(
                 key: ValueKey('levels-trend-chart-$allowed'),
                 duration: motion.geometryDuration,
-                LineChartData(
-            minX: minL,
-            maxX: maxL,
-            minY: 0.0,
-            maxY: 1.0,
-            titlesData: FlTitlesData(
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 22,
-                  interval: (maxL - minL > 15) ? 2 : 1,
-                  getTitlesWidget: (v, _) => Text(
-                    'L${v.toInt()}',
-                    style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                ),
-              ),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 36,
-                  interval: 0.25,
-                  getTitlesWidget: (v, _) => Text(
-                    '${(v * 100).round()}%',
-                    style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                ),
-              ),
-            ),
-            gridData: const FlGridData(show: true, drawVerticalLine: false),
-            borderData: FlBorderData(show: false),
-            lineBarsData: [
-              LineChartBarData(
-                spots: winSpots,
-                color: tokens.chart.first,
-                barWidth: 2,
-                dotData: const FlDotData(show: false),
-              ),
-              LineChartBarData(
-                spots: hazardSpots,
-                color: tokens.bad,
-                barWidth: 2,
-                dotData: FlDotData(
-                  show: true,
-                  checkToShowDot: (spot, barData) {
-                    final idx = spot.x.toInt();
-                    final lvl = levels.where((l) => l.level == idx).firstOrNull;
-                    return lvl?.wall == true;
-                  },
-                ),
-              ),
-            ],
+                data,
+              );
+            },
           ),
-        );
-      },
-    ),
-    ),
-    ),
+        ),
+      ),
     );
   }
 }
@@ -294,13 +352,17 @@ class _LevelsAttemptsChart extends StatelessWidget {
                   x: l.level,
                   barRods: [
                     BarChartRodData(
-                      toY: l.completes.toDouble(),
+                      toY: motion.phase == ChartMotionPhase.entrance
+                          ? revealValue(0.0, l.completes.toDouble(), motion.revealProgress)
+                          : l.completes.toDouble(),
                       color: tokens.chart.first,
                       width: 8,
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
                     ),
                     BarChartRodData(
-                      toY: l.fails.toDouble(),
+                      toY: motion.phase == ChartMotionPhase.entrance
+                          ? revealValue(0.0, l.fails.toDouble(), motion.revealProgress)
+                          : l.fails.toDouble(),
                       color: tokens.bad,
                       width: 8,
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),

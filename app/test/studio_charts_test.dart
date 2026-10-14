@@ -2,6 +2,7 @@ import 'package:analytic_app/src/theme/app_style.dart';
 import 'package:analytic_app/src/widgets/charts/chart_frame.dart';
 import 'package:analytic_app/src/widgets/charts/chart_models.dart';
 import 'package:analytic_app/src/widgets/charts/chart_motion.dart';
+import 'package:analytic_app/src/widgets/charts/chart_reveal.dart';
 import 'package:analytic_app/src/widgets/charts/diverging_bar_chart.dart';
 import 'package:analytic_app/src/widgets/charts/ranked_bar_chart.dart';
 import 'package:analytic_app/src/widgets/charts/time_series_chart.dart';
@@ -586,8 +587,8 @@ void main() {
     bool gated() =>
         t.widget<IgnorePointer>(find.byKey(const ValueKey('chart-motion-plot'))).ignoring;
     await show(1);
-    final initialKey = t.widget<LineChart>(find.byType(LineChart)).key;
-    expect(t.widget<LineChart>(find.byType(LineChart)).duration, Duration.zero);
+    final initialKey = t.widget<LineChart>(find.byType(LineChart).last).key;
+    expect(t.widget<LineChart>(find.byType(LineChart).last).duration, Duration.zero);
     expect(gated(), isTrue);
     await t.pump(const Duration(milliseconds: 401));
     expect(gated(), isFalse);
@@ -1025,5 +1026,174 @@ void main() {
     expect((first.color, first.borderSide), isNot((second.color, second.borderSide)));
     expect(second.borderSide.width, 4);
     expect(find.byKey(const ValueKey('partial-bar-legend')), findsOneWidget);
+  });
+
+  group('chart reveal entrance animations', () {
+    testWidgets('time series bar entrance grows rods from baseline to target', (t) async {
+      await pumpRepairChart(
+        t,
+        const TimeSeriesChart(
+          kind: TimeChartKind.bars,
+          unit: 'events',
+          series: [
+            ChartSeries(
+              id: 's1',
+              label: 'Series 1',
+              points: [ChartPoint(0, 10, label: 'd1')],
+            ),
+          ],
+        ),
+      );
+
+      // Frame 0: entrance running, rod height near 0
+      await t.pump();
+      var chart = t.widget<BarChart>(find.byType(BarChart));
+      var toY = chart.data.barGroups.first.barRods.first.toY;
+      expect(toY, closeTo(0.0, 0.5));
+
+      // Intermediate entrance (200ms): rod height between 0 and 10
+      await t.pump(const Duration(milliseconds: 200));
+      chart = t.widget<BarChart>(find.byType(BarChart));
+      toY = chart.data.barGroups.first.barRods.first.toY;
+      expect(toY, greaterThan(1.0));
+      expect(toY, lessThan(10.0));
+
+      // Settled (450ms): rod height reaches target exactly 10.0
+      await t.pump(const Duration(milliseconds: 250));
+      chart = t.widget<BarChart>(find.byType(BarChart));
+      toY = chart.data.barGroups.first.barRods.first.toY;
+      expect(toY, 10.0);
+    });
+
+    testWidgets('time series line entrance clips marks horizontally and completes at settled', (t) async {
+      await pumpRepairChart(
+        t,
+        const TimeSeriesChart(
+          kind: TimeChartKind.line,
+          unit: 'events',
+          series: [
+            ChartSeries(
+              id: 's1',
+              label: 'Series 1',
+              points: [
+                ChartPoint(0, 5, label: 'd1'),
+                ChartPoint(1, 10, label: 'd2'),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      // Frame 0: entrance running, static axes + clipped foreground line
+      await t.pump();
+      expect(find.byKey(const ValueKey('chart-static-axes')), findsOneWidget);
+      final clipFinder = find.byWidgetPredicate((w) => w is ClipRect && w.clipper is ChartRevealClip);
+      expect(clipFinder, findsOneWidget);
+      final clipWidget = t.widget<ClipRect>(clipFinder);
+      final initialClipper = clipWidget.clipper as ChartRevealClip;
+      expect(initialClipper.progress, closeTo(0.0, 0.05));
+
+      // Intermediate entrance (200ms): progress intermediate
+      await t.pump(const Duration(milliseconds: 200));
+      final midClipWidget = t.widget<ClipRect>(clipFinder);
+      final midClipper = midClipWidget.clipper as ChartRevealClip;
+      expect(midClipper.progress, greaterThan(0.0));
+      expect(midClipper.progress, lessThan(1.0));
+
+      // Settled (450ms): static axes and ChartRevealClip are removed, standard LineChart remains
+      await t.pump(const Duration(milliseconds: 250));
+      expect(find.byKey(const ValueKey('chart-static-axes')), findsNothing);
+      expect(clipFinder, findsNothing);
+      expect(find.byType(LineChart), findsOneWidget);
+    });
+
+    testWidgets('ranked horizontal bar scales widthFactor by revealProgress on entrance', (t) async {
+      await pumpRepairChart(
+        t,
+        const RankedBarChart(
+          values: [RankedValue('a', 'Alpha', 100)],
+          unit: 'events',
+        ),
+      );
+
+      // Frame 0: widthFactor near 0
+      await t.pump();
+      var box = t.widget<FractionallySizedBox>(find.descendant(
+        of: find.byKey(const ValueKey('ranked-bar:a')),
+        matching: find.byType(FractionallySizedBox),
+      ));
+      expect(box.widthFactor!, closeTo(0.0, 0.05));
+
+      // Intermediate (200ms): widthFactor between 0 and 1
+      await t.pump(const Duration(milliseconds: 200));
+      box = t.widget<FractionallySizedBox>(find.descendant(
+        of: find.byKey(const ValueKey('ranked-bar:a')),
+        matching: find.byType(FractionallySizedBox),
+      ));
+      expect(box.widthFactor!, greaterThan(0.0));
+      expect(box.widthFactor!, lessThan(1.0));
+
+      // Settled (450ms): widthFactor reaches 1.0
+      await t.pump(const Duration(milliseconds: 250));
+      box = t.widget<FractionallySizedBox>(find.descendant(
+        of: find.byKey(const ValueKey('ranked-bar:a')),
+        matching: find.byType(FractionallySizedBox),
+      ));
+      expect(box.widthFactor!, 1.0);
+    });
+
+    testWidgets('diverging bar scales positive and negative widths by revealProgress on entrance', (t) async {
+      await pumpRepairChart(
+        t,
+        const DivergingBarChart(
+          values: [
+            RankedValue('a', 'Alpha', 100),
+            RankedValue('b', 'Beta', -100),
+          ],
+          unit: 'events',
+        ),
+      );
+
+      // Frame 0: widthFactor near 0
+      await t.pump();
+      var boxA = t.widget<FractionallySizedBox>(find.descendant(
+        of: find.byKey(const ValueKey('ranked-bar:a')),
+        matching: find.byType(FractionallySizedBox),
+      ));
+      var boxB = t.widget<FractionallySizedBox>(find.descendant(
+        of: find.byKey(const ValueKey('ranked-bar:b')),
+        matching: find.byType(FractionallySizedBox),
+      ));
+      expect(boxA.widthFactor!, closeTo(0.0, 0.05));
+      expect(boxB.widthFactor!, closeTo(0.0, 0.05));
+
+      // Intermediate (200ms): widthFactor between 0 and 1
+      await t.pump(const Duration(milliseconds: 200));
+      boxA = t.widget<FractionallySizedBox>(find.descendant(
+        of: find.byKey(const ValueKey('ranked-bar:a')),
+        matching: find.byType(FractionallySizedBox),
+      ));
+      boxB = t.widget<FractionallySizedBox>(find.descendant(
+        of: find.byKey(const ValueKey('ranked-bar:b')),
+        matching: find.byType(FractionallySizedBox),
+      ));
+      expect(boxA.widthFactor!, greaterThan(0.0));
+      expect(boxA.widthFactor!, lessThan(1.0));
+      expect(boxB.widthFactor!, greaterThan(0.0));
+      expect(boxB.widthFactor!, lessThan(1.0));
+
+      // Settled (450ms): widthFactor reaches full scale
+      await t.pump(const Duration(milliseconds: 250));
+      boxA = t.widget<FractionallySizedBox>(find.descendant(
+        of: find.byKey(const ValueKey('ranked-bar:a')),
+        matching: find.byType(FractionallySizedBox),
+      ));
+      boxB = t.widget<FractionallySizedBox>(find.descendant(
+        of: find.byKey(const ValueKey('ranked-bar:b')),
+        matching: find.byType(FractionallySizedBox),
+      ));
+      expect(boxA.widthFactor!, 1.0);
+      expect(boxB.widthFactor!, 1.0);
+    });
   });
 }

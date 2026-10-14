@@ -125,8 +125,11 @@ class DivergingBarChart extends StatelessWidget {
 
               Widget buildDivergingBar(RankedValue v, {bool includeGuide = false}) {
                 final allowed = chartAnimationsAllowed(context);
+                final isEntrance = motion.phase == ChartMotionPhase.entrance;
                 final negTarget = (v.value.abs() / m).clamp(0.0, 1.0);
                 final posTarget = (v.value / m).clamp(0.0, 1.0);
+                final currentNeg = isEntrance ? negTarget * motion.revealProgress : negTarget;
+                final currentPos = isEntrance ? posTarget * motion.revealProgress : posTarget;
                 final barContent = SizedBox(
                   height: 20,
                   child: Row(
@@ -138,9 +141,9 @@ class DivergingBarChart extends StatelessWidget {
                           child: v.value < 0
                               ? KeyedSubtree(
                                   key: ValueKey('ranked-bar:${v.id}'),
-                                  child: !allowed
+                                  child: !allowed || isEntrance
                                       ? FractionallySizedBox(
-                                          widthFactor: negTarget,
+                                          widthFactor: currentNeg,
                                           child: Container(
                                             height: 20,
                                             decoration: BoxDecoration(
@@ -177,9 +180,9 @@ class DivergingBarChart extends StatelessWidget {
                           child: v.value > 0
                               ? KeyedSubtree(
                                   key: ValueKey('ranked-bar:${v.id}'),
-                                  child: !allowed
+                                  child: !allowed || isEntrance
                                       ? FractionallySizedBox(
-                                          widthFactor: posTarget,
+                                          widthFactor: currentPos,
                                           child: Container(
                                             height: 20,
                                             decoration: BoxDecoration(

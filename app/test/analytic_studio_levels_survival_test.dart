@@ -1,6 +1,7 @@
 import 'package:analytic_app/src/pages/analytic/levels_tab.dart';
 import 'package:analytic_app/src/pages/analytic/survival_tab.dart';
 import 'package:analytic_app/src/providers.dart';
+import 'package:analytic_app/src/widgets/charts/chart_reveal.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -327,5 +328,129 @@ void main() {
     final groupEBarThird = chart.data.lineBarsData[0];
     expect(groupEBarThird.color, colorE);
     expect(groupEBarThird.dashArray, dashE);
+  });
+
+  testWidgets('levels attempts bar grows rods on entrance and trend line has reveal clip', (tester) async {
+    const fakeResult = LevelResult(
+      players: 100,
+      observable: 100,
+      levels: [
+        LevelStats(
+          level: 1,
+          attempts: 100,
+          completes: 80,
+          fails: 20,
+          rawWinRate: 0.8,
+          smoothedWinRate: 0.8,
+          reached: 100,
+          stopped: 10,
+          hazard: 0.1,
+          wall: false,
+        ),
+      ],
+      exitEvents: [],
+      transitions: [],
+      medianHazard: 0.1,
+      reason: null,
+    );
+
+    await pumpStudio(
+      tester,
+      const LevelsTab(),
+      overrides: [
+        levelsProvider.overrideWith((ref, f) async => fakeResult),
+      ],
+      settle: false,
+    );
+
+    // Frame 0: entrance active
+    await tester.pump();
+    final clipFinder = find.byWidgetPredicate((w) => w is ClipRect && w.clipper is ChartRevealClip);
+    expect(clipFinder, findsOneWidget);
+
+    var barChart = tester.widget<BarChart>(find.byType(BarChart));
+    var completesY = barChart.data.barGroups.first.barRods.first.toY;
+    expect(completesY, closeTo(0.0, 5.0));
+
+    // Intermediate entrance (200ms)
+    await tester.pump(const Duration(milliseconds: 200));
+    barChart = tester.widget<BarChart>(find.byType(BarChart));
+    completesY = barChart.data.barGroups.first.barRods.first.toY;
+    expect(completesY, greaterThan(5.0));
+    expect(completesY, lessThan(80.0));
+
+    // Settled (450ms)
+    await tester.pump(const Duration(milliseconds: 250));
+    barChart = tester.widget<BarChart>(find.byType(BarChart));
+    completesY = barChart.data.barGroups.first.barRods.first.toY;
+    expect(completesY, 80.0);
+    expect(clipFinder, findsNothing);
+  });
+
+  testWidgets('survival curve clips horizontally during entrance and completes at settled', (tester) async {
+    const fakePoint = SurvivalPoint(
+      day: 1,
+      survival: 0.85,
+      ciLower: 0.75,
+      ciUpper: 0.95,
+      atRisk: 50,
+      events: 5,
+      censored: 0,
+    );
+    const fakeCurve = SurvivalCurve(
+      group: '1.0.4',
+      players: 50,
+      events: 10,
+      censored: 40,
+      medianDays: 14.0,
+      points: [
+        SurvivalPoint(day: 0, survival: 1.0, ciLower: 1.0, ciUpper: 1.0, atRisk: 50, events: 0, censored: 0),
+        fakePoint,
+      ],
+    );
+    const result = SurvivalResult(
+      players: 50,
+      by: 'version',
+      curves: [fakeCurve],
+      logRank: null,
+      reason: null,
+    );
+    const impact = VersionImpactResult(
+      targetVersion: '1.0.4',
+      baselineVersion: '1.0.3',
+      targetPlayers: 50,
+      baselinePlayers: 50,
+      availableVersions: ['1.0.3', '1.0.4'],
+      metrics: [],
+      reason: null,
+    );
+
+    await pumpStudio(
+      tester,
+      const SurvivalTab(),
+      overrides: [
+        survivalProvider.overrideWith((ref, q) async => result),
+        versionImpactProvider.overrideWith((ref, q) async => impact),
+      ],
+      settle: false,
+    );
+
+    // Frame 0: entrance running, ChartRevealClip present
+    await tester.pump();
+    final clipFinder = find.byWidgetPredicate((w) => w is ClipRect && w.clipper is ChartRevealClip);
+    expect(clipFinder, findsOneWidget);
+
+    final clipper = (tester.widget<ClipRect>(clipFinder).clipper as ChartRevealClip);
+    expect(clipper.progress, closeTo(0.0, 0.05));
+
+    // Intermediate entrance (200ms)
+    await tester.pump(const Duration(milliseconds: 200));
+    final midClipper = (tester.widget<ClipRect>(clipFinder).clipper as ChartRevealClip);
+    expect(midClipper.progress, greaterThan(0.0));
+    expect(midClipper.progress, lessThan(1.0));
+
+    // Settled (450ms)
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(clipFinder, findsNothing);
   });
 }

@@ -10,6 +10,7 @@ import '../format.dart';
 import 'chart_axis_layout.dart';
 import 'chart_models.dart';
 import 'chart_motion.dart';
+import 'chart_reveal.dart';
 import 'series_visual_style.dart';
 
 enum TimeChartKind { line, area, bars }
@@ -287,9 +288,13 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                         ),
                         width: style.rodBorder.width,
                       );
+                final targetY = p.value!;
+                final toY = motion.phase == ChartMotionPhase.entrance
+                    ? revealValue(bounds.minY > 0 ? bounds.minY : 0.0, targetY, motion.revealProgress)
+                    : targetY;
                 rods.add(
                   BarChartRodData(
-                    toY: p.value!,
+                    toY: toY,
                     color: markColor,
                     borderSide: rodBorder,
                     width: rodWidth,
@@ -828,15 +833,78 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
 
           final chartHeight =
               math.max(80.0, math.max(200.0, widget.plotHeight) - axisLayout.xReservedSize);
-          final chartWidget = SizedBox(
-            key: const ValueKey('chart-mark-area'),
-            height: chartHeight,
-            child: LineChart(
-              key: ValueKey((topology, chartAnimationsAllowed(context))),
-              lineData,
-              duration: motion.geometryDuration,
-            ),
+          final plotRect = Rect.fromLTWH(
+            axisLayout.plotLeft,
+            0.0,
+            axisLayout.plotWidth,
+            chartHeight,
           );
+
+          Widget chartWidget;
+          if (motion.phase == ChartMotionPhase.entrance) {
+            final staticData = lineData.copyWith(
+              lineBarsData: [
+                for (final bar in lineBarsData)
+                  bar.copyWith(
+                    color: Colors.transparent,
+                    belowBarData: BarAreaData(show: false),
+                    dotData: const FlDotData(show: false),
+                  ),
+              ],
+              lineTouchData: const LineTouchData(enabled: false),
+            );
+
+            final foregroundData = lineData.copyWith(
+              gridData: const FlGridData(show: false),
+              borderData: FlBorderData(show: false),
+              lineTouchData: const LineTouchData(enabled: false),
+              titlesData: lineData.titlesData.copyWith(
+                leftTitles: AxisTitles(
+                  sideTitles: lineData.titlesData.leftTitles.sideTitles.copyWith(
+                    getTitlesWidget: (v, m) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+            );
+
+            chartWidget = SizedBox(
+              key: const ValueKey('chart-mark-area'),
+              height: chartHeight,
+              child: Stack(
+                fit: StackFit.passthrough,
+                children: [
+                  LineChart(
+                    key: const ValueKey('chart-static-axes'),
+                    staticData,
+                    duration: Duration.zero,
+                  ),
+                  ClipRect(
+                    clipper: ChartRevealClip(
+                      progress: motion.revealProgress,
+                      plot: plotRect,
+                    ),
+                    child: ExcludeSemantics(
+                      child: LineChart(
+                        key: ValueKey((topology, chartAnimationsAllowed(context))),
+                        foregroundData,
+                        duration: Duration.zero,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            chartWidget = SizedBox(
+              key: const ValueKey('chart-mark-area'),
+              height: chartHeight,
+              child: LineChart(
+                key: ValueKey((topology, chartAnimationsAllowed(context))),
+                lineData,
+                duration: motion.geometryDuration,
+              ),
+            );
+          }
 
           return Column(
             mainAxisSize: MainAxisSize.min,

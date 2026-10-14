@@ -89,6 +89,7 @@ class RankedBarChart extends StatelessWidget {
       child: Builder(
         builder: (context) {
           final motion = ChartMotion.of(context);
+          final allowed = chartAnimationsAllowed(context);
           final markColor = primaryColor.withValues(
             alpha: primaryColor.a * motion.markOpacity,
           );
@@ -134,7 +135,8 @@ class RankedBarChart extends StatelessWidget {
 
               Widget buildBar(RankedValue v) {
                 final targetWidth = maxVal > 0 ? (v.value / maxVal).clamp(0.0, 1.0) : 0.0;
-                final allowed = chartAnimationsAllowed(context);
+                final isEntrance = motion.phase == ChartMotionPhase.entrance;
+                final currentTarget = isEntrance ? targetWidth * motion.revealProgress : targetWidth;
                 return Container(
                   height: 20,
                   decoration: BoxDecoration(
@@ -145,9 +147,9 @@ class RankedBarChart extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     child: KeyedSubtree(
                       key: ValueKey('ranked-bar:${v.id}'),
-                      child: !allowed
+                      child: !allowed || isEntrance
                           ? FractionallySizedBox(
-                              widthFactor: targetWidth,
+                              widthFactor: currentTarget,
                               child: Container(
                                 height: 20,
                                 decoration: BoxDecoration(
