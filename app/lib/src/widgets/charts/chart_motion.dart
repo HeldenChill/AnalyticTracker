@@ -10,12 +10,14 @@ class ChartMotionSnapshot {
     required this.geometryDuration,
     required this.markOpacity,
     required this.running,
+    this.revealProgress = 1.0,
   });
 
   final ChartMotionPhase phase;
   final Duration geometryDuration;
   final double markOpacity;
   final bool running;
+  final double revealProgress;
 }
 
 class ChartMotion extends StatefulWidget {
@@ -39,6 +41,7 @@ class ChartMotion extends StatefulWidget {
           geometryDuration: Duration.zero,
           markOpacity: 1.0,
           running: false,
+          revealProgress: 1.0,
         );
   }
 
@@ -59,7 +62,8 @@ class _ChartMotionScope extends InheritedWidget {
     return snapshot.phase != oldWidget.snapshot.phase ||
         snapshot.geometryDuration != oldWidget.snapshot.geometryDuration ||
         snapshot.markOpacity != oldWidget.snapshot.markOpacity ||
-        snapshot.running != oldWidget.snapshot.running;
+        snapshot.running != oldWidget.snapshot.running ||
+        snapshot.revealProgress != oldWidget.snapshot.revealProgress;
   }
 }
 
@@ -74,9 +78,11 @@ class _ChartMotionState extends State<ChartMotion> with SingleTickerProviderStat
     _controller = AnimationController(vsync: this);
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        setState(() {
-          _phase = ChartMotionPhase.settled;
-        });
+        if (mounted) {
+          setState(() {
+            _phase = ChartMotionPhase.settled;
+          });
+        }
       }
     });
   }
@@ -120,6 +126,14 @@ class _ChartMotionState extends State<ChartMotion> with SingleTickerProviderStat
         _controller.forward(from: 0.0);
       }
     } else if (widget.dataRevision != oldWidget.dataRevision) {
+      if (_phase == ChartMotionPhase.entrance && _controller.isAnimating) {
+        if (!allowed) {
+          _controller.stop();
+          _controller.value = 1.0;
+          _phase = ChartMotionPhase.settled;
+        }
+        return;
+      }
       _consumedEntrance = true;
       if (!allowed) {
         _controller.stop();
@@ -146,6 +160,7 @@ class _ChartMotionState extends State<ChartMotion> with SingleTickerProviderStat
         geometryDuration: Duration.zero,
         markOpacity: 1.0,
         running: false,
+        revealProgress: 1.0,
       );
     }
     switch (_phase) {
@@ -155,6 +170,7 @@ class _ChartMotionState extends State<ChartMotion> with SingleTickerProviderStat
           geometryDuration: Duration.zero,
           markOpacity: _controller.value,
           running: true,
+          revealProgress: Curves.easeOutCubic.transform(_controller.value.clamp(0.0, 1.0)),
         );
       case ChartMotionPhase.update:
         return const ChartMotionSnapshot(
@@ -162,6 +178,7 @@ class _ChartMotionState extends State<ChartMotion> with SingleTickerProviderStat
           geometryDuration: Duration(milliseconds: 350),
           markOpacity: 1.0,
           running: true,
+          revealProgress: 1.0,
         );
       case ChartMotionPhase.topology:
         return ChartMotionSnapshot(
@@ -169,6 +186,7 @@ class _ChartMotionState extends State<ChartMotion> with SingleTickerProviderStat
           geometryDuration: Duration.zero,
           markOpacity: _controller.value,
           running: true,
+          revealProgress: 1.0,
         );
       case ChartMotionPhase.settled:
         return const ChartMotionSnapshot(
@@ -176,6 +194,7 @@ class _ChartMotionState extends State<ChartMotion> with SingleTickerProviderStat
           geometryDuration: Duration.zero,
           markOpacity: 1.0,
           running: false,
+          revealProgress: 1.0,
         );
     }
   }
