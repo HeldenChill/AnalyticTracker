@@ -40,6 +40,16 @@ class _CountsScreenState extends ConsumerState<CountsScreen> {
 
   late final TextEditingController _searchController;
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey _detailKey = GlobalKey();
+
+  /// The detail panel sits below the long table; bring it into view on select.
+  void _revealDetail() => WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = _detailKey.currentContext;
+        if (ctx != null) {
+          Scrollable.ensureVisible(ctx,
+              duration: const Duration(milliseconds: 250), alignment: 0.1);
+        }
+      });
 
   @override
   void initState() {
@@ -524,7 +534,8 @@ class _CountsScreenState extends ConsumerState<CountsScreen> {
                           selected: selectedEvent == r.name,
                           onSelectChanged: (_) {
                             ref.read(selectedEventProvider.notifier).state =
-                                r.name;
+                                selectedEvent == r.name ? null : r.name;
+                            if (selectedEvent != r.name) _revealDetail();
                           },
                         ),
                     ],
@@ -535,6 +546,7 @@ class _CountsScreenState extends ConsumerState<CountsScreen> {
           ),
           if (selectedRow != null) ...[
             EventDetailPanel(
+              key: _detailKey,
               event: selectedRow,
               filters: f,
               onClose: () =>

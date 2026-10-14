@@ -10,6 +10,7 @@ Cross-platform team dashboard for PetVsMonster: Windows-first Flutter app, Dart 
 
 | Topic | File |
 |---|---|
+| Latest session event vocabulary CSV import readable names Settings preview Events Parameters Funnel Analytic wording branch feature/importable-event-vocabulary B1-B8 Codex out of tokens commits 753d142 6a8ae09 uncommitted popup position row deselect 690 tests native pending BUG0070-0072 verify pending | `mem-event-vocabulary-session-handoff.md` |
 | Latest whole-session Dashboard Refresh demo approval detailed Gemini plan inline review REQUEST CHANGES fixes0066-0069 resolved942 tests606 app uncommitted fresh build native pending optimization candidate | `mem-dashboard-refresh-session-handoff.md` |
 | Bug ledger — BUG-NNNN ids, status lifecycle, review findings | `mem-known-bugs-index.md` |
 | Project completion plan Gemini 363aadd review coordinator fixes BUG0060/0065 resolved 857 tests uncommitted graph/page animation native pending next steps | `mem-project-completion-session-handoff.md` |

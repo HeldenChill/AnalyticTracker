@@ -50,6 +50,9 @@ class FilterBar extends ConsumerWidget {
                     key: const ValueKey('filter-date-range'),
                     tooltip: 'Date range',
                     borderRadius: borderRadius,
+                    position: PopupMenuPosition.under,
+                    offset: const Offset(0, 4),
+                    shape: RoundedRectangleBorder(borderRadius: borderRadius),
                     onSelected: (days) async {
                       if (days > 0) {
                         notifier.applyPreset(days);
@@ -243,6 +246,9 @@ class _OptionDropdown extends StatelessWidget {
       key: dropdownKey,
       enabled: onChanged != null,
       borderRadius: borderRadius,
+      position: PopupMenuPosition.under,
+      offset: const Offset(0, 4),
+      shape: RoundedRectangleBorder(borderRadius: borderRadius),
       tooltip: displayLabel,
       onSelected: (choice) => onChanged?.call(choice.value),
       itemBuilder: (_) => [

@@ -132,6 +132,17 @@ void main() {
     expect(find.text('Retry'), findsOneWidget);
   });
 
+  testWidgets('tapping the selected row again deselects it', (t) async {
+    await pumpEventsFixture(t, width: 720, longName: 'custom_event');
+    final row = find.byKey(const ValueKey('event-row-custom_event'));
+    await t.tap(row);
+    await t.pumpAndSettle();
+    expect(find.byType(EventDetailPanel), findsOneWidget);
+    await t.tap(row);
+    await t.pumpAndSettle();
+    expect(find.byType(EventDetailPanel), findsNothing);
+  });
+
   testWidgets('closing detail panel clears selection', (t) async {
     await pumpEventsFixture(t, width: 720, longName: 'custom_event');
     await t.tap(find.byKey(const ValueKey('event-row-custom_event')));

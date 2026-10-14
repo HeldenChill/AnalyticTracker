@@ -84,3 +84,5 @@ Then `flutter build windows --release` (~25–40 s). Ship the **whole** `Release
   - Running `flutter build windows --release --no-pub` while the process is active will fail with an access denied / link error.
   - Inspect the exact current `analytic_app` PID/path before build. If owner's interactive work is open or build is locked, let the owner close that identified app; no blanket wildcard kill, unrelated Dart termination or reuse of historical PIDs. In the latest dashboard repair session no live app was terminated.
   - A successful build and fresh Dart payload metadata establish build evidence, not native visual acceptance. Latest recorded dashboard repair build:26.6seconds, app.so2026-10-14 13:49:37; keep all15 walkthroughs/six baseline checks pending until observed.
+- **Git Bash tool failure (2026-10-14):** mid-session the Bash tool began failing with `bash.exe: add_item ... errno 1` (Cygwin mount error). Switch to the PowerShell tool; use `;` not `&&`, and the Edit tool for CRLF-sensitive replacements (PowerShell `.Replace` with `
+` silently misses CRLF files).
