@@ -546,4 +546,49 @@ void main() {
       expect(find.byKey(const ValueKey('event-detail-panel')), findsOneWidget);
     });
   });
+
+  group('Studio Visual Matrix - 72 Combinations Grid', () {
+    for (final style in AppStyle.values) {
+      for (final width in [720.0, 1024.0, 1440.0]) {
+        for (final scale in [1.0, 1.5, 2.0]) {
+          for (final bold in [false, true]) {
+            testWidgets('Grid ${style.name} $width scale $scale bold $bold', (t) async {
+              await pumpStudio(
+                t,
+                const AppShell(),
+                width: width,
+                textScale: scale,
+                bold: bold,
+                style: style,
+                overrides: studioMatrixOverrides(withFunnels: true),
+              );
+              expect(t.takeException(), isNull);
+              expect(find.text('Overview'), findsWidgets);
+            });
+          }
+        }
+      }
+    }
+  });
+
+  group('Studio Visual Matrix - Literal CSV formatting', () {
+    test('toCsv produces exact RFC 4180 output with raw precision and escaping', () {
+      final headers = ['ID', 'Event, Name', 'Player "Tag"', 'Count', 'Conversion'];
+      final rows = [
+        [1, 'level_up, boss', 'Pro "Gamer"', 1000000, 0.4567],
+        [2, 'normal_step', 'Simple', 42, null],
+      ];
+
+      final csv = toCsv(headers, rows);
+
+      // Verify headers correctly quoted and joined with commas
+      expect(csv, startsWith('ID,"Event, Name","Player ""Tag""",Count,Conversion\r\n'));
+
+      // Verify line 1 has escaped quotes, escaped comma, raw unformatted integer 1000000 and float 0.4567
+      expect(csv, contains('1,"level_up, boss","Pro ""Gamer""",1000000,0.4567\r\n'));
+
+      // Verify line 2 handles null as empty without crash
+      expect(csv, endsWith('2,normal_step,Simple,42,'));
+    });
+  });
 }

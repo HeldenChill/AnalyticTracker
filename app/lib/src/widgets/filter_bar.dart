@@ -66,12 +66,20 @@ class FilterBar extends ConsumerWidget {
                   child: Padding(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.date_range, size: 18),
-                      const SizedBox(width: 6),
-                      Text('${f.from} → ${f.to}'),
-                      const Icon(Icons.arrow_drop_down),
-                    ]),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.date_range, size: 18),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            '${f.from} → ${f.to}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const Icon(Icons.arrow_drop_down),
+                      ],
+                    ),
                   ),
                 ),
                 _OptionDropdown(

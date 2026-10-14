@@ -12,6 +12,7 @@ Future<void> pumpStudio(
   double width = 720,
   double height = 1200,
   double textScale = 1.5,
+  bool bold = false,
   AppStyle style = AppStyle.tremor,
   bool reducedMotion = false,
   List<Override> overrides = const [],
@@ -29,6 +30,7 @@ Future<void> pumpStudio(
           data: MediaQueryData(
               size: Size(width, height),
               textScaler: TextScaler.linear(textScale),
+              boldText: bold,
               disableAnimations: reducedMotion),
           child: Scaffold(body: child),
         )),
