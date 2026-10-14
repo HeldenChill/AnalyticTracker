@@ -28,6 +28,7 @@ class _StudioAnimatedSizeState extends State<StudioAnimatedSize> {
       duration: motionDuration(context, MotionKind.expansion),
       alignment: widget.alignment,
       curve: widget.curve,
+      clipBehavior: Clip.hardEdge,
       child: content,
     );
   }

@@ -125,6 +125,9 @@ class _PageSlotState extends State<_PageSlot> with SingleTickerProviderStateMixi
   void didUpdateWidget(_PageSlot oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!widget.isActive && oldWidget.isActive) {
+      if (_controller.isAnimating) {
+        _controller.stop();
+      }
       if (_focusScopeNode.hasFocus) {
         _focusScopeNode.unfocus(disposition: UnfocusDisposition.scope);
       }
