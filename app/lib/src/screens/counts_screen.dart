@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../widgets/format.dart';
 import '../providers.dart';
+import '../state/event_vocabulary.dart';
 import '../state/events_explorer.dart';
 import '../state/navigation.dart';
 import '../state/refresh.dart';
@@ -61,7 +62,9 @@ class _CountsScreenState extends ConsumerState<CountsScreen> {
   }
 
   int _compareChanges(EventChange a, EventChange b, bool ascending) {
-    if (a.kind == ChangeKind.unavailable && b.kind == ChangeKind.unavailable) return 0;
+    if (a.kind == ChangeKind.unavailable && b.kind == ChangeKind.unavailable) {
+      return 0;
+    }
     if (a.kind == ChangeKind.unavailable) return 1;
     if (b.kind == ChangeKind.unavailable) return -1;
 
@@ -125,6 +128,7 @@ class _CountsScreenState extends ConsumerState<CountsScreen> {
     EventsQuery q,
   ) {
     final theme = Theme.of(context);
+    final vocabulary = ref.watch(effectiveVocabularyProvider);
     final selectedEvent = ref.watch(selectedEventProvider);
 
     var filteredRows = model.rows;
@@ -132,7 +136,7 @@ class _CountsScreenState extends ConsumerState<CountsScreen> {
       final query = _search.trim().toLowerCase();
       filteredRows = [
         for (final r in filteredRows)
-          if (r.name.toLowerCase().contains(query)) r,
+          if (vocabulary.matchesSearch(r.name, query)) r,
       ];
     }
 
@@ -151,7 +155,10 @@ class _CountsScreenState extends ConsumerState<CountsScreen> {
       int c = 0;
       switch (_sortColumnIndex) {
         case 0:
-          c = a.name.compareTo(b.name);
+          c = vocabulary
+              .eventLabel(a.name)
+              .compareTo(vocabulary.eventLabel(b.name));
+          if (c == 0) c = a.name.compareTo(b.name);
           return _sortAscending ? c : -c;
         case 1:
           c = a.current.compareTo(b.current);
@@ -197,11 +204,13 @@ class _CountsScreenState extends ConsumerState<CountsScreen> {
           final fr = totalChange.fraction ?? 0.0;
           final sign = fr > 0 ? '+' : '';
           final text = '$sign${(fr * 100).toStringAsFixed(1)}%';
-          totalDetail = 'vs previous period (${fmtCount(model.previousTotal ?? 0)})';
+          totalDetail =
+              'vs previous period (${fmtCount(model.previousTotal ?? 0)})';
           totalBadge = Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: (fr >= 0 ? Colors.green : Colors.red).withValues(alpha: 0.15),
+              color:
+                  (fr >= 0 ? Colors.green : Colors.red).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
@@ -254,136 +263,104 @@ class _CountsScreenState extends ConsumerState<CountsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-        StudioHeading(
-          title: 'Events',
-          subtitle: 'Event volume, mix and trends across selected gameplay filters.',
-          actions: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Compare'),
-                const SizedBox(width: 8),
-                Switch(
-                  value: _compare,
-                  onChanged: (val) => setState(() => _compare = val),
-                ),
-              ],
-            ),
-            SegmentedButton<TimeChartKind>(
-              segments: const [
-                ButtonSegment(value: TimeChartKind.line, label: Text('Line')),
-                ButtonSegment(value: TimeChartKind.area, label: Text('Area')),
-                ButtonSegment(value: TimeChartKind.bars, label: Text('Bars')),
-              ],
-              selected: {_chartKind},
-              onSelectionChanged: (set) => setState(() => _chartKind = set.first),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        if (previousError != null && _compare) ...[
-          Card(
-            color: theme.colorScheme.errorContainer.withValues(alpha: 0.5),
-            margin: const EdgeInsets.only(bottom: 20),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
+          StudioHeading(
+            title: 'Events',
+            subtitle:
+                'Event volume, mix and trends across selected gameplay filters.',
+            actions: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Comparison unavailable: unable to load previous period counts.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onErrorContainer,
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => ref.invalidate(eventsExplorerProvider(q)),
-                    child: const Text('Retry'),
+                  const Text('Compare'),
+                  const SizedBox(width: 8),
+                  Switch(
+                    value: _compare,
+                    onChanged: (val) => setState(() => _compare = val),
                   ),
                 ],
               ),
-            ),
+              SegmentedButton<TimeChartKind>(
+                segments: const [
+                  ButtonSegment(value: TimeChartKind.line, label: Text('Line')),
+                  ButtonSegment(value: TimeChartKind.area, label: Text('Area')),
+                  ButtonSegment(value: TimeChartKind.bars, label: Text('Bars')),
+                ],
+                selected: {_chartKind},
+                onSelectionChanged: (set) =>
+                    setState(() => _chartKind = set.first),
+              ),
+            ],
           ),
-        ],
-        StudioGrid(
-          minChildWidth: 200,
-          maxColumns: 4,
-          children: [
-            StudioMetric(
-              key: const ValueKey('events-total-occurrences'),
-              title: 'Total occurrences',
-              value: fmtCount(model.total),
-              detail: totalDetail,
-              badge: totalBadge,
-            ),
-            StudioMetric(
-              key: const ValueKey('events-distinct-types'),
-              title: 'Event types',
-              value: '${model.distinctNames}',
-              detail: 'Active event names',
-            ),
-            StudioMetric(
-              key: const ValueKey('events-average-day'),
-              title: 'Average per stored day',
-              value: model.averagePerStoredDay != null
-                  ? model.averagePerStoredDay!.toStringAsFixed(1)
-                  : '—',
-              detail: 'Across ${model.storedDayCount} stored days',
-            ),
-            StudioMetric(
-              key: const ValueKey('events-peak-day'),
-              title: 'Peak stored day',
-              value: model.peakDay != null
-                  ? '${model.peakDay} (${fmtCount(model.peakCount ?? 0)})'
-                  : '—',
-              detail: 'Highest single day',
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        StudioGrid(
-          minChildWidth: 320,
-          maxColumns: 2,
-          children: [
+          const SizedBox(height: 20),
+          if (previousError != null && _compare) ...[
             Card(
+              color: theme.colorScheme.errorContainer.withValues(alpha: 0.5),
+              margin: const EdgeInsets.only(bottom: 20),
               child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                padding: const EdgeInsets.all(12),
+                child: Row(
                   children: [
-                    Text(
-                      'Daily occurrences trend',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    Icon(Icons.warning_amber_rounded,
+                        color: theme.colorScheme.error),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Comparison unavailable: unable to load previous period counts.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onErrorContainer,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    TimeSeriesChart(
-                      series: [
-                        ChartSeries(
-                          id: 'current',
-                          label: 'Current period',
-                          points: model.currentSeries,
-                        ),
-                        if (_compare && model.previousSeries.isNotEmpty)
-                          ChartSeries(
-                            id: 'previous',
-                            label: 'Previous period',
-                            points: model.previousSeries,
-                          ),
-                      ],
-                      kind: _chartKind,
-                      unit: 'occurrences',
-                      plotHeight: 180,
+                    TextButton(
+                      onPressed: () =>
+                          ref.invalidate(eventsExplorerProvider(q)),
+                      child: const Text('Retry'),
                     ),
                   ],
                 ),
               ),
             ),
-            if (model.rows.isNotEmpty)
+          ],
+          StudioGrid(
+            minChildWidth: 200,
+            maxColumns: 4,
+            children: [
+              StudioMetric(
+                key: const ValueKey('events-total-occurrences'),
+                title: 'Total occurrences',
+                value: fmtCount(model.total),
+                detail: totalDetail,
+                badge: totalBadge,
+              ),
+              StudioMetric(
+                key: const ValueKey('events-distinct-types'),
+                title: 'Event types',
+                value: '${model.distinctNames}',
+                detail: 'Active event names',
+              ),
+              StudioMetric(
+                key: const ValueKey('events-average-day'),
+                title: 'Average per stored day',
+                value: model.averagePerStoredDay != null
+                    ? model.averagePerStoredDay!.toStringAsFixed(1)
+                    : '—',
+                detail: 'Across ${model.storedDayCount} stored days',
+              ),
+              StudioMetric(
+                key: const ValueKey('events-peak-day'),
+                title: 'Peak stored day',
+                value: model.peakDay != null
+                    ? '${model.peakDay} (${fmtCount(model.peakCount ?? 0)})'
+                    : '—',
+                detail: 'Highest single day',
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          StudioGrid(
+            minChildWidth: 320,
+            maxColumns: 2,
+            children: [
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -391,139 +368,182 @@ class _CountsScreenState extends ConsumerState<CountsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Top events',
+                        'Daily occurrences trend',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 12),
-                      RankedBarChart(
-                        values: [
-                          for (final r in model.rows.take(10))
-                            RankedValue(
-                              r.name,
-                              r.name,
-                              r.current.toDouble(),
-                              detail: '${(r.share * 100).toStringAsFixed(1)}%',
+                      TimeSeriesChart(
+                        series: [
+                          ChartSeries(
+                            id: 'current',
+                            label: 'Current period',
+                            points: model.currentSeries,
+                          ),
+                          if (_compare && model.previousSeries.isNotEmpty)
+                            ChartSeries(
+                              id: 'previous',
+                              label: 'Previous period',
+                              points: model.previousSeries,
                             ),
                         ],
+                        kind: _chartKind,
                         unit: 'occurrences',
+                        plotHeight: 180,
                       ),
                     ],
                   ),
                 ),
               ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'All events',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+              if (model.rows.isNotEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Top events',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 260,
-                      child: TextField(
-                        key: const ValueKey('events-search'),
-                        controller: _searchController,
-                        decoration: const InputDecoration(
-                          hintText: 'Search events...',
-                          prefixIcon: Icon(Icons.search, size: 20),
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                          contentPadding:
-                              EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        const SizedBox(height: 12),
+                        RankedBarChart(
+                          values: [
+                            for (final r in model.rows.take(10))
+                              RankedValue(
+                                r.name,
+                                vocabulary.eventLabel(r.name),
+                                r.current.toDouble(),
+                                detail:
+                                    '${(r.share * 100).toStringAsFixed(1)}%',
+                              ),
+                          ],
+                          unit: 'occurrences',
                         ),
-                        onChanged: (val) => setState(() => _search = val),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 16),
-                StudioTable(
-                  sortColumnIndex: _sortColumnIndex,
-                  sortAscending: _sortAscending,
-                  emptyMessage: tableEmptyMessage,
-                  columns: [
-                    StudioColumn(
-                      'Event name',
-                      width: 260,
-                      onSort: (col, asc) => _setSort(col, asc),
-                    ),
-                    StudioColumn(
-                      'Occurrences',
-                      width: 130,
-                      numeric: true,
-                      onSort: (col, asc) => _setSort(col, asc),
-                    ),
-                    StudioColumn(
-                      'Share',
-                      width: 100,
-                      numeric: true,
-                      onSort: (col, asc) => _setSort(col, asc),
-                    ),
-                    StudioColumn(
-                      'Change',
-                      width: 120,
-                      numeric: true,
-                      onSort: (col, asc) => _setSort(col, asc),
-                    ),
-                  ],
-                  rows: [
-                    for (final r in sortedRows)
-                      StudioRow(
-                        [
-                          KeyedSubtree(
-                            key: ValueKey('event-row-${r.name}'),
-                            child: StudioTextCell(r.name, width: 260),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'All events',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
                           ),
-                          StudioTextCell(fmtCount(r.current), numeric: true),
-                          StudioTextCell(
-                            '${(r.share * 100).toStringAsFixed(1)}%',
-                            numeric: true,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 260,
+                        child: TextField(
+                          key: const ValueKey('events-search'),
+                          controller: _searchController,
+                          decoration: const InputDecoration(
+                            hintText: 'Search events...',
+                            prefixIcon: Icon(Icons.search, size: 20),
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 8),
                           ),
-                          StudioTextCell(
-                            _formatChange(r.change),
-                            numeric: true,
-                            style: TextStyle(
-                              color: _changeColor(r.change, theme),
-                              fontWeight: FontWeight.w600,
+                          onChanged: (val) => setState(() => _search = val),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  StudioTable(
+                    sortColumnIndex: _sortColumnIndex,
+                    sortAscending: _sortAscending,
+                    emptyMessage: tableEmptyMessage,
+                    columns: [
+                      StudioColumn(
+                        'Event name',
+                        width: 260,
+                        onSort: (col, asc) => _setSort(col, asc),
+                      ),
+                      StudioColumn(
+                        'Occurrences',
+                        width: 130,
+                        numeric: true,
+                        onSort: (col, asc) => _setSort(col, asc),
+                      ),
+                      StudioColumn(
+                        'Share',
+                        width: 100,
+                        numeric: true,
+                        onSort: (col, asc) => _setSort(col, asc),
+                      ),
+                      StudioColumn(
+                        'Change',
+                        width: 120,
+                        numeric: true,
+                        onSort: (col, asc) => _setSort(col, asc),
+                      ),
+                    ],
+                    rows: [
+                      for (final r in sortedRows)
+                        StudioRow(
+                          [
+                            KeyedSubtree(
+                              key: ValueKey('event-row-${r.name}'),
+                              child: Tooltip(
+                                  message: r.name,
+                                  child: StudioTextCell(
+                                      vocabulary.eventLabel(r.name),
+                                      width: 260)),
                             ),
-                          ),
-                        ],
-                        key: ValueKey('event-row-${r.name}'),
-                        selected: selectedEvent == r.name,
-                        onSelectChanged: (_) {
-                          ref.read(selectedEventProvider.notifier).state = r.name;
-                        },
-                      ),
-                  ],
-                ),
-              ],
+                            StudioTextCell(fmtCount(r.current), numeric: true),
+                            StudioTextCell(
+                              '${(r.share * 100).toStringAsFixed(1)}%',
+                              numeric: true,
+                            ),
+                            StudioTextCell(
+                              _formatChange(r.change),
+                              numeric: true,
+                              style: TextStyle(
+                                color: _changeColor(r.change, theme),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                          key: ValueKey('event-row-${r.name}'),
+                          selected: selectedEvent == r.name,
+                          onSelectChanged: (_) {
+                            ref.read(selectedEventProvider.notifier).state =
+                                r.name;
+                          },
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        if (selectedRow != null) ...[
-          EventDetailPanel(
-            event: selectedRow,
-            filters: f,
-            onClose: () => ref.read(selectedEventProvider.notifier).state = null,
-            onExploreParameters: widget.onExploreParameters,
-          ),
+          if (selectedRow != null) ...[
+            EventDetailPanel(
+              event: selectedRow,
+              filters: f,
+              onClose: () =>
+                  ref.read(selectedEventProvider.notifier).state = null,
+              onExploreParameters: widget.onExploreParameters,
+            ),
+          ],
         ],
-      ],
-    ),
+      ),
     );
   }
 

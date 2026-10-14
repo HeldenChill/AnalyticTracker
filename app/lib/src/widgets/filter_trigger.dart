@@ -35,7 +35,8 @@ class FilterTrigger extends StatelessWidget {
               : theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
     );
     final surface = Ink(
-      decoration: ShapeDecoration(color: theme.colorScheme.surface, shape: shape),
+      decoration:
+          ShapeDecoration(color: theme.colorScheme.surface, shape: shape),
       child: ConstrainedBox(
         constraints: BoxConstraints(
             minHeight: 44,
@@ -53,6 +54,8 @@ class FilterTrigger extends StatelessWidget {
         ),
       ),
     );
-    return tooltip == null ? surface : Tooltip(message: tooltip!, child: surface);
+    return tooltip == null
+        ? surface
+        : Tooltip(message: tooltip!, child: surface);
   }
 }

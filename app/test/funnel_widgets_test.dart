@@ -47,9 +47,9 @@ void main() {
       FunnelStepTable(result: result),
     ]))));
     expect(find.text('100%'), findsWidgets);
-    expect(find.text('3. tut'), findsOneWidget);
-    expect(find.text('step = 3'), findsWidgets); // chart label keeps the compact form
-    expect(find.text('tut where step is 3'), findsOneWidget); // table uses plain words
+    expect(find.text('3. Tutorial'), findsOneWidget);
+    expect(find.text('Step = 3'), findsWidgets); // chart label keeps the compact form
+    expect(find.text('Tutorial where Step is 3'), findsOneWidget); // table uses plain words
     expect(find.text('−38'), findsOneWidget);
     expect(find.text('2m 10s'), findsOneWidget);
     expect(find.text('81%'), findsOneWidget); // step 3 from previous: 160/198

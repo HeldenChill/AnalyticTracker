@@ -7,7 +7,6 @@ import 'package:analytic_app/src/widgets/filter_bar.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -34,12 +33,13 @@ Future<ProviderContainer> _pumpFilterBar(
       theme: buildTheme(style),
       home: MediaQuery(
         data: MediaQueryData(
-            size: Size(width, 800),
-            textScaler: TextScaler.linear(textScale)),
+            size: Size(width, 800), textScaler: TextScaler.linear(textScale)),
         child: Scaffold(
           body: Align(
             alignment: Alignment.topLeft,
-            child: RepaintBoundary(key: const ValueKey('filter-pixels'), child: FilterBar(onRefresh: () {})),
+            child: RepaintBoundary(
+                key: const ValueKey('filter-pixels'),
+                child: FilterBar(onRefresh: () {})),
           ),
         ),
       ),
@@ -105,6 +105,7 @@ void main() {
       image.dispose();
       return data!.buffer.asUint8List().toList();
     }
+
     final before = (await t.runAsync(pixels))!;
     final pointer = await t.createGesture(kind: PointerDeviceKind.mouse);
     addTearDown(pointer.removePointer);
@@ -118,8 +119,10 @@ void main() {
     final imageWidth = boundary.size.width.round();
     bool changed(int x, int y) {
       final offset = (y * imageWidth + x) * 4;
-      return List.generate(4, (i) => before[offset + i] != after[offset + i]).any((v) => v);
+      return List.generate(4, (i) => before[offset + i] != after[offset + i])
+          .any((v) => v);
     }
+
     final left = local.left.round();
     final top = local.top.round();
     expect(changed(left + 1, top + 1), isFalse,
@@ -130,9 +133,9 @@ void main() {
         interiorChanged |= changed(x, y);
       }
     }
-    expect(interiorChanged, isTrue, reason: 'oracle must observe real hover ink');
+    expect(interiorChanged, isTrue,
+        reason: 'oracle must observe real hover ink');
     expect(t.takeException(), isNull);
-
   });
 
   // storageScope: disabled triggers still render at >= 44px height.

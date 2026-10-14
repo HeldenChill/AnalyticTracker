@@ -1,3 +1,5 @@
+import '../presentation/funnel_language.dart';
+import 'vocabulary_scope.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
 
@@ -43,18 +45,23 @@ class _StandardFunnelChart extends StatelessWidget {
                     child: Column(
                       children: [
                         Text(fmtPct(s.fromFirst),
-                            style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700)),
+                            style: theme.textTheme.labelMedium
+                                ?.copyWith(fontWeight: FontWeight.w700)),
                         const SizedBox(height: 4),
                         Expanded(
                           child: LayoutBuilder(builder: (context, c) {
-                            final prev = s.index == 0 ? s.players : steps[s.index - 1].players;
+                            final prev = s.index == 0
+                                ? s.players
+                                : steps[s.index - 1].players;
                             final kept = first == 0 ? 0.0 : s.players / first;
-                            final lost = first == 0 ? 0.0 : (prev - s.players) / first;
+                            final lost =
+                                first == 0 ? 0.0 : (prev - s.players) / first;
                             return Container(
                               clipBehavior: Clip.antiAlias,
                               decoration: BoxDecoration(
                                 color: tokens.grid,
-                                borderRadius: BorderRadius.circular(tokens.radius / 2),
+                                borderRadius:
+                                    BorderRadius.circular(tokens.radius / 2),
                               ),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.end,
@@ -62,7 +69,8 @@ class _StandardFunnelChart extends StatelessWidget {
                                   GestureDetector(
                                     behavior: HitTestBehavior.opaque,
                                     onTap: s.index >= 1 && onSelectStep != null
-                                        ? () => onSelectStep!(s.index + 1, FunnelPlayerOutcome.dropped)
+                                        ? () => onSelectStep!(s.index + 1,
+                                            FunnelPlayerOutcome.dropped)
                                         : null,
                                     child: Container(
                                       height: c.maxHeight * lost,
@@ -72,7 +80,8 @@ class _StandardFunnelChart extends StatelessWidget {
                                   GestureDetector(
                                     behavior: HitTestBehavior.opaque,
                                     onTap: s.index >= 1 && onSelectStep != null
-                                        ? () => onSelectStep!(s.index + 1, FunnelPlayerOutcome.converted)
+                                        ? () => onSelectStep!(s.index + 1,
+                                            FunnelPlayerOutcome.converted)
                                         : null,
                                     child: Container(
                                       height: c.maxHeight * kept,
@@ -98,22 +107,29 @@ class _StandardFunnelChart extends StatelessWidget {
             for (final s in steps)
               Expanded(
                 child: Tooltip(
-                  message: s.text,
+                  message: resultLanguage(s, VocabularyScope.of(context)),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 5),
                     child: Column(
                       children: [
-                        Text('${s.index + 1}. ${s.eventsLabel}',
+                        Text(
+                            '${s.index + 1}. ${resultEventsLanguage(s, VocabularyScope.of(context))}',
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600)),
-                        if (s.filterLabel != null)
-                          Text(s.filterLabel!,
+                            style: theme.textTheme.labelSmall
+                                ?.copyWith(fontWeight: FontWeight.w600)),
+                        if (resultFilterLanguage(
+                                s, VocabularyScope.of(context)) !=
+                            null)
+                          Text(
+                              resultFilterLanguage(
+                                  s, VocabularyScope.of(context))!,
                               textAlign: TextAlign.center,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant)),
                       ],
                     ),
                   ),
@@ -186,22 +202,28 @@ class _GroupedFunnelChart extends StatelessWidget {
                         for (var i = 0; i < segments.length; i++)
                           Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 1.5),
                               child: LayoutBuilder(builder: (context, c) {
-                                final segStep = k < segments[i].steps.length ? segments[i].steps[k] : null;
+                                final segStep = k < segments[i].steps.length
+                                    ? segments[i].steps[k]
+                                    : null;
                                 final pct = segStep?.fromFirst ?? 0.0;
-                                final color = tokens.chart[i % tokens.chart.length];
+                                final color =
+                                    tokens.chart[i % tokens.chart.length];
                                 return Column(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
                                     if (pct > 0)
                                       Text('${(pct * 100).round()}%',
-                                          style: theme.textTheme.labelSmall?.copyWith(fontSize: 9)),
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(fontSize: 9)),
                                     Container(
                                       height: c.maxHeight * 0.85 * pct,
                                       decoration: BoxDecoration(
                                         color: color,
-                                        borderRadius: BorderRadius.circular(tokens.radius / 4),
+                                        borderRadius: BorderRadius.circular(
+                                            tokens.radius / 4),
                                       ),
                                     ),
                                   ],
@@ -223,16 +245,18 @@ class _GroupedFunnelChart extends StatelessWidget {
             for (final s in steps)
               Expanded(
                 child: Tooltip(
-                  message: s.text,
+                  message: resultLanguage(s, VocabularyScope.of(context)),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 5),
                     child: Column(
                       children: [
-                        Text('${s.index + 1}. ${s.eventsLabel}',
+                        Text(
+                            '${s.index + 1}. ${resultEventsLanguage(s, VocabularyScope.of(context))}',
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600)),
+                            style: theme.textTheme.labelSmall
+                                ?.copyWith(fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),

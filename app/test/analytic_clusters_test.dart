@@ -78,8 +78,8 @@ void main() {
     expect(find.text('▲ level_fails  9.0 vs 3.0 avg'), findsOneWidget);
     expect(find.text('▼ sessions  1.5 vs 7.8 avg'), findsOneWidget);
     // ev: prefix hidden in card lines and table headers.
-    expect(find.text('▲ pet_buy  1.0 vs 0.5 avg'), findsOneWidget);
-    expect(find.descendant(of: find.byType(ClusterRawTable), matching: find.text('pet_buy')), findsOneWidget);
+    expect(find.text('▲ Pet purchased  1.0 vs 0.5 avg'), findsOneWidget);
+    expect(find.descendant(of: find.byType(ClusterRawTable), matching: find.text('Pet purchased')), findsOneWidget);
     expect(find.text('All players'), findsOneWidget);
     expect(find.text('20.5'), findsOneWidget);
   });

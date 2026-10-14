@@ -46,7 +46,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
   static String _dataSignature(TimeSeriesChart chart) {
     final sb = StringBuffer();
     sb.write('${chart.kind.name};${chart.unit};${chart.percentage};');
-    final sorted = List<ChartSeries>.of(chart.series)..sort((a, b) => a.id.compareTo(b.id));
+    final sorted = List<ChartSeries>.of(chart.series)
+      ..sort((a, b) => a.id.compareTo(b.id));
     for (final s in sorted) {
       sb.write('${s.id}:');
       for (final p in s.points) {
@@ -99,15 +100,17 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
   ) {
     final s = sortedSeries.firstWhere(
       (s) => s.id == seriesId,
-      orElse: () => ChartSeries(id: seriesId, label: seriesId, points: const []),
+      orElse: () =>
+          ChartSeries(id: seriesId, label: seriesId, points: const []),
     );
     final p = s.points.where((p) => p.x == x).firstOrNull;
     if (p == null) {
       return '$seriesId: ${_formatValue(spotY)}';
     }
     final formatted = _formatValue(p.value ?? spotY);
-    final valStr =
-        widget.unit.isEmpty || widget.percentage ? formatted : '$formatted ${widget.unit}';
+    final valStr = widget.unit.isEmpty || widget.percentage
+        ? formatted
+        : '$formatted ${widget.unit}';
     final partial = p.incomplete ? ' (partial)' : '';
     return '${p.label}\n${s.label}: $valStr$partial';
   }
@@ -128,7 +131,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
         sortedSeries.any((s) => s.points.any((p) => p.value != null));
     if (!hasAnyObservation) {
       return ConstrainedBox(
-        constraints: BoxConstraints(minHeight: math.max(200, widget.plotHeight)),
+        constraints:
+            BoxConstraints(minHeight: math.max(200, widget.plotHeight)),
         child: Center(
           child: Text(
             'No observations available',
@@ -146,8 +150,12 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
         for (final s in sortedSeries) {
           for (final p in s.points) {
             if (p.value != null) {
-              if (p.value!.isNaN || p.value!.isInfinite || p.value! < 0 || p.value! > 1) {
-                throw ArgumentError('Percentage values must be between 0 and 1: ${p.value}');
+              if (p.value!.isNaN ||
+                  p.value!.isInfinite ||
+                  p.value! < 0 ||
+                  p.value! > 1) {
+                throw ArgumentError(
+                    'Percentage values must be between 0 and 1: ${p.value}');
               }
             }
           }
@@ -162,26 +170,28 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
           : computed;
     } on ArgumentError {
       return ConstrainedBox(
-        constraints: BoxConstraints(minHeight: math.max(200, widget.plotHeight)),
+        constraints:
+            BoxConstraints(minHeight: math.max(200, widget.plotHeight)),
         child: const Center(
-          child: Text('These values cannot be displayed on a finite chart axis.'),
+          child:
+              Text('These values cannot be displayed on a finite chart axis.'),
         ),
       );
     }
 
     final revision = jsonEncode([
-      for (final s in sortedSeries) {
-        'id': s.id,
-        'points': [
-          for (final p in s.points)
-            {
-              'x': p.x,
-              'value': p.value,
-              'label': p.label,
-              'incomplete': p.incomplete,
-            }
-        ],
-      },
+      for (final s in sortedSeries)
+        {
+          'id': s.id,
+          'points': [
+            for (final p in s.points)
+              {
+                'x': p.x,
+                'value': p.value,
+                'incomplete': p.incomplete,
+              }
+          ],
+        },
     ]);
 
     final String topology;
@@ -191,17 +201,20 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
           for (final p in s.points) p.x
       }.toList()
         ..sort();
-      topology =
-          'bars;${allBucketX.join(',')};${[
-            for (final s in sortedSeries)
-              '${s.id}:${[for (final p in s.points) '${p.x}:${p.value == null}'].join(',')}'
-          ].join(';')}';
+      topology = 'bars;${allBucketX.join(',')};${[
+        for (final s in sortedSeries)
+          '${s.id}:${[
+            for (final p in s.points) '${p.x}:${p.value == null}'
+          ].join(',')}'
+      ].join(';')}';
     } else {
-      topology =
-          '${widget.kind.name};${[
-            for (final s in sortedSeries)
-              '${s.id}:${[for (final p in s.points) '${p.x}:${p.value == null}:${p.incomplete}'].join(',')}'
-          ].join(';')}';
+      topology = '${widget.kind.name};${[
+        for (final s in sortedSeries)
+          '${s.id}:${[
+            for (final p in s.points)
+              '${p.x}:${p.value == null}:${p.incomplete}'
+          ].join(',')}'
+      ].join(';')}';
     }
 
     Widget plotWidget;
@@ -241,9 +254,11 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             bounds: bounds,
             buckets: buckets,
             ordinalBars: true,
-            formatY: (y) =>
-                widget.percentage ? '${(y * 100).toStringAsFixed(0)}%' : _formatValue(y),
-            style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+            formatY: (y) => widget.percentage
+                ? '${(y * 100).toStringAsFixed(0)}%'
+                : _formatValue(y),
+            style: TextStyle(
+                fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
             plotHeight: math.max(200, widget.plotHeight),
           );
 
@@ -252,7 +267,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
           final seriesCount = sortedSeries.length;
           final rodWidth = math.min(
             14.0,
-            plotUsableWidth / (2 * math.max(1, bucketCount) * math.max(1, seriesCount)),
+            plotUsableWidth /
+                (2 * math.max(1, bucketCount) * math.max(1, seriesCount)),
           );
 
           final rodSources = <(int, int), (ChartSeries, ChartPoint)>{};
@@ -290,7 +306,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                       );
                 final targetY = p.value!;
                 final toY = motion.phase == ChartMotionPhase.entrance
-                    ? revealValue(bounds.minY > 0 ? bounds.minY : 0.0, targetY, motion.revealProgress)
+                    ? revealValue(bounds.minY > 0 ? bounds.minY : 0.0, targetY,
+                        motion.revealProgress)
                     : targetY;
                 rods.add(
                   BarChartRodData(
@@ -312,7 +329,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                 x: ord,
                 barRods: rods,
                 barsSpace: 0,
-                showingTooltipIndicators: isSelectedGroup ? [_barSelection!.$2] : const [],
+                showingTooltipIndicators:
+                    isSelectedGroup ? [_barSelection!.$2] : const [],
               ),
             );
             groupWidths.add(rods.isEmpty ? 0.0 : rods.length * rodWidth);
@@ -325,9 +343,11 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             bounds: bounds,
             buckets: buckets,
             ordinalBars: true,
-            formatY: (y) =>
-                widget.percentage ? '${(y * 100).toStringAsFixed(0)}%' : _formatValue(y),
-            style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+            formatY: (y) => widget.percentage
+                ? '${(y * 100).toStringAsFixed(0)}%'
+                : _formatValue(y),
+            style: TextStyle(
+                fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
             plotHeight: math.max(200, widget.plotHeight),
             barCenters: centers.map((x) => x / plotUsableWidth).toList(),
           );
@@ -377,9 +397,11 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
               touchTooltipData: BarTouchTooltipData(
                 fitInsideHorizontally: true,
                 fitInsideVertically: true,
-                maxContentWidth: math.max(1.0, math.min(280.0, usableWidth - 32)),
+                maxContentWidth:
+                    math.max(1.0, math.min(280.0, usableWidth - 32)),
                 tooltipPadding: const EdgeInsets.all(8),
-                getTooltipColor: (_) => theme.colorScheme.surfaceContainerHighest,
+                getTooltipColor: (_) =>
+                    theme.colorScheme.surfaceContainerHighest,
                 getTooltipItem: (group, groupIndex, rod, rodIndex) {
                   final source = rodSources[(group.x, rodIndex)];
                   if (source == null) return null;
@@ -401,14 +423,21 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
               ),
             ),
             titlesData: FlTitlesData(
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              bottomTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               leftTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: axisLayout.yReservedSize > 0,
-                  reservedSize: axisLayout.yReservedSize > 0 ? axisLayout.yReservedSize : 44,
-                  interval: bounds.maxY > bounds.minY ? (bounds.maxY - bounds.minY) / 4 : null,
+                  reservedSize: axisLayout.yReservedSize > 0
+                      ? axisLayout.yReservedSize
+                      : 44,
+                  interval: bounds.maxY > bounds.minY
+                      ? (bounds.maxY - bounds.minY) / 4
+                      : null,
                   getTitlesWidget: (val, meta) {
                     return Text(
                       widget.percentage
@@ -449,7 +478,9 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                           ? '${(axisLayout.yTicks[i] * 100).toStringAsFixed(0)}%'
                           : _formatValue(axisLayout.yTicks[i]),
                       key: ValueKey('chart-y-tick:$i'),
-                      style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: theme.colorScheme.onSurfaceVariant),
                     ),
                 ],
               ),
@@ -468,7 +499,9 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                     Text(
                       entry.value,
                       key: ValueKey('chart-x-tick:${entry.key}'),
-                      style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: theme.colorScheme.onSurfaceVariant),
                     ),
                 ],
               ),
@@ -483,35 +516,39 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
               height: axisLayout.xReservedSize,
               child: Stack(
                 children: [
-                  for (final entry in axisLayout.xTicks.entries) () {
-                    final ord = entry.key.toInt();
-                    final center = (ord >= 0 && ord < centers.length)
-                        ? centers[ord]
-                        : (buckets.isEmpty ? 0.0 : (ord + 0.5) / buckets.length * plotWidth);
-                    final left = (center - axisLayout.xLabelWidth / 2)
-                        .clamp(0.0, math.max(0.0, plotWidth - axisLayout.xLabelWidth));
-                    return Positioned(
-                      left: plotLeft + left,
-                      top: 4,
-                      width: axisLayout.xLabelWidth,
-                      child: Text(
-                        entry.value,
-                        key: ValueKey('chart-x-tick:${entry.key}'),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: theme.colorScheme.onSurfaceVariant,
+                  for (final entry in axisLayout.xTicks.entries)
+                    () {
+                      final ord = entry.key.toInt();
+                      final center = (ord >= 0 && ord < centers.length)
+                          ? centers[ord]
+                          : (buckets.isEmpty
+                              ? 0.0
+                              : (ord + 0.5) / buckets.length * plotWidth);
+                      final left = (center - axisLayout.xLabelWidth / 2).clamp(
+                          0.0,
+                          math.max(0.0, plotWidth - axisLayout.xLabelWidth));
+                      return Positioned(
+                        left: plotLeft + left,
+                        top: 4,
+                        width: axisLayout.xLabelWidth,
+                        child: Text(
+                          entry.value,
+                          key: ValueKey('chart-x-tick:${entry.key}'),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                    );
-                  }(),
+                      );
+                    }(),
                 ],
               ),
             );
           }
 
-          final chartHeight =
-              math.max(80.0, math.max(200.0, widget.plotHeight) - axisLayout.xReservedSize);
+          final chartHeight = math.max(80.0,
+              math.max(200.0, widget.plotHeight) - axisLayout.xReservedSize);
           final chartWidget = SizedBox(
             key: const ValueKey('chart-mark-area'),
             height: chartHeight,
@@ -564,9 +601,11 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             bounds: bounds,
             buckets: buckets,
             ordinalBars: false,
-            formatY: (y) =>
-                widget.percentage ? '${(y * 100).toStringAsFixed(0)}%' : _formatValue(y),
-            style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+            formatY: (y) => widget.percentage
+                ? '${(y * 100).toStringAsFixed(0)}%'
+                : _formatValue(y),
+            style: TextStyle(
+                fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
             plotHeight: math.max(200, widget.plotHeight),
           );
 
@@ -584,9 +623,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             final segments = splitSeries(s.points);
 
             for (final segment in segments) {
-              final pattern = segment.incomplete
-                  ? const <int>[1, 4]
-                  : style.lineDash;
+              final pattern =
+                  segment.incomplete ? const <int>[1, 4] : style.lineDash;
 
               final spots = [
                 for (final p in segment.points)
@@ -614,7 +652,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                   barWidth: 2.5,
                   belowBarData: BarAreaData(
                     show: widget.kind == TimeChartKind.area,
-                    color: markColor.withValues(alpha: 0.15 * motion.markOpacity),
+                    color:
+                        markColor.withValues(alpha: 0.15 * motion.markOpacity),
                   ),
                 ),
               );
@@ -631,7 +670,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                   for (var sIdx = 0; sIdx < bar.spots.length; sIdx++) {
                     final spot = bar.spots[sIdx];
                     if (spot != FlSpot.nullSpot && spot.x == sel.x) {
-                      currentSpots.add(TouchLineBarSpot(bar, bIdx, spot, sIdx.toDouble()));
+                      currentSpots.add(
+                          TouchLineBarSpot(bar, bIdx, spot, sIdx.toDouble()));
                       found = true;
                       break;
                     }
@@ -679,7 +719,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                 var unchanged = next.length == _lineSelection.length;
                 if (unchanged) {
                   for (var i = 0; i < next.length; i++) {
-                    if (next[i].id != _lineSelection[i].id || next[i].x != _lineSelection[i].x) {
+                    if (next[i].id != _lineSelection[i].id ||
+                        next[i].x != _lineSelection[i].x) {
                       unchanged = false;
                       break;
                     }
@@ -694,7 +735,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                 fitInsideVertically: true,
                 maxContentWidth: maxTipWidth,
                 tooltipPadding: const EdgeInsets.all(8),
-                getTooltipColor: (spot) => theme.colorScheme.surfaceContainerHighest,
+                getTooltipColor: (spot) =>
+                    theme.colorScheme.surfaceContainerHighest,
                 getTooltipItems: (touchedSpots) {
                   final seen = <(String, double)>{};
                   return [
@@ -723,14 +765,21 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
               ),
             ),
             titlesData: FlTitlesData(
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              bottomTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               leftTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: axisLayout.yReservedSize > 0,
-                  reservedSize: axisLayout.yReservedSize > 0 ? axisLayout.yReservedSize : 44,
-                  interval: bounds.maxY > bounds.minY ? (bounds.maxY - bounds.minY) / 4 : null,
+                  reservedSize: axisLayout.yReservedSize > 0
+                      ? axisLayout.yReservedSize
+                      : 44,
+                  interval: bounds.maxY > bounds.minY
+                      ? (bounds.maxY - bounds.minY) / 4
+                      : null,
                   getTitlesWidget: (val, meta) {
                     return Text(
                       widget.percentage
@@ -771,7 +820,9 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                           ? '${(axisLayout.yTicks[i] * 100).toStringAsFixed(0)}%'
                           : _formatValue(axisLayout.yTicks[i]),
                       key: ValueKey('chart-y-tick:$i'),
-                      style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: theme.colorScheme.onSurfaceVariant),
                     ),
                 ],
               ),
@@ -790,7 +841,9 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                     Text(
                       entry.value,
                       key: ValueKey('chart-x-tick:${entry.key}'),
-                      style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: theme.colorScheme.onSurfaceVariant),
                     ),
                 ],
               ),
@@ -806,33 +859,36 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
               height: axisLayout.xReservedSize,
               child: Stack(
                 children: [
-                  for (final entry in axisLayout.xTicks.entries) () {
-                    final normalized = span <= 0 ? 0.0 : (entry.key - bounds.minX) / span;
-                    final center = normalized.clamp(0.0, 1.0) * plotWidth;
-                    final left = (center - axisLayout.xLabelWidth / 2)
-                        .clamp(0.0, math.max(0.0, plotWidth - axisLayout.xLabelWidth));
-                    return Positioned(
-                      left: plotLeft + left,
-                      top: 4,
-                      width: axisLayout.xLabelWidth,
-                      child: Text(
-                        entry.value,
-                        key: ValueKey('chart-x-tick:${entry.key}'),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: theme.colorScheme.onSurfaceVariant,
+                  for (final entry in axisLayout.xTicks.entries)
+                    () {
+                      final normalized =
+                          span <= 0 ? 0.0 : (entry.key - bounds.minX) / span;
+                      final center = normalized.clamp(0.0, 1.0) * plotWidth;
+                      final left = (center - axisLayout.xLabelWidth / 2).clamp(
+                          0.0,
+                          math.max(0.0, plotWidth - axisLayout.xLabelWidth));
+                      return Positioned(
+                        left: plotLeft + left,
+                        top: 4,
+                        width: axisLayout.xLabelWidth,
+                        child: Text(
+                          entry.value,
+                          key: ValueKey('chart-x-tick:${entry.key}'),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                    );
-                  }(),
+                      );
+                    }(),
                 ],
               ),
             );
           }
 
-          final chartHeight =
-              math.max(80.0, math.max(200.0, widget.plotHeight) - axisLayout.xReservedSize);
+          final chartHeight = math.max(80.0,
+              math.max(200.0, widget.plotHeight) - axisLayout.xReservedSize);
           final plotRect = Rect.fromLTWH(
             axisLayout.plotLeft,
             0.0,
@@ -860,7 +916,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
               lineTouchData: const LineTouchData(enabled: false),
               titlesData: lineData.titlesData.copyWith(
                 leftTitles: AxisTitles(
-                  sideTitles: lineData.titlesData.leftTitles.sideTitles.copyWith(
+                  sideTitles:
+                      lineData.titlesData.leftTitles.sideTitles.copyWith(
                     getTitlesWidget: (v, m) => const SizedBox.shrink(),
                   ),
                 ),
@@ -885,7 +942,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                     ),
                     child: ExcludeSemantics(
                       child: LineChart(
-                        key: ValueKey((topology, chartAnimationsAllowed(context))),
+                        key: ValueKey(
+                            (topology, chartAnimationsAllowed(context))),
                         foregroundData,
                         duration: Duration.zero,
                       ),
@@ -921,7 +979,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
     }
 
     final hasPartialBar = widget.kind == TimeChartKind.bars &&
-        sortedSeries.any((s) => s.points.any((p) => p.value != null && p.incomplete));
+        sortedSeries
+            .any((s) => s.points.any((p) => p.value != null && p.incomplete));
     final showSeriesLegend = sortedSeries.length > 1 ||
         (sortedSeries.isNotEmpty && sortedSeries.first.id != 'primary');
     final showLegend = showSeriesLegend || hasPartialBar;
@@ -941,40 +1000,87 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     if (showSeriesLegend)
-                      for (final s in sortedSeries) () {
-                        final slot = _registry.slotFor(s.id);
-                        final style = resolveSeriesVisualStyle(
+                      for (final s in sortedSeries)
+                        () {
+                          final slot = _registry.slotFor(s.id);
+                          final style = resolveSeriesVisualStyle(
+                            palette: palette,
+                            slot: slot,
+                            seriesId: s.id,
+                            outline: theme.colorScheme.onSurface,
+                          );
+                          final semanticsLabel = describeSeriesVisualStyle(
+                            style,
+                            isBars: widget.kind == TimeChartKind.bars,
+                            seriesId: s.id,
+                          );
+                          return ConstrainedBox(
+                            key: ValueKey('series-legend:${s.id}'),
+                            constraints:
+                                BoxConstraints(maxWidth: constraints.maxWidth),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Semantics(
+                                  label: semanticsLabel,
+                                  child: CustomPaint(
+                                    key: ValueKey('series-sample:${s.id}'),
+                                    size: const Size(20, 10),
+                                    painter: SeriesSamplePainter(
+                                      style: style,
+                                      isBars: widget.kind == TimeChartKind.bars,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    s.label,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }(),
+                    if (hasPartialBar)
+                      () {
+                        final baseStyle = resolveSeriesVisualStyle(
                           palette: palette,
-                          slot: slot,
-                          seriesId: s.id,
+                          slot: 0,
+                          seriesId: 'partial',
                           outline: theme.colorScheme.onSurface,
                         );
-                        final semanticsLabel = describeSeriesVisualStyle(
-                          style,
-                          isBars: widget.kind == TimeChartKind.bars,
-                          seriesId: s.id,
+                        final partialStyle = barObservationStyle(
+                          baseStyle,
+                          incomplete: true,
+                          outline: theme.colorScheme.onSurface,
                         );
+                        const label = 'Partial observation — may be incomplete';
                         return ConstrainedBox(
-                          key: ValueKey('series-legend:${s.id}'),
-                          constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+                          key: const ValueKey('partial-bar-legend'),
+                          constraints:
+                              BoxConstraints(maxWidth: constraints.maxWidth),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Semantics(
-                                label: semanticsLabel,
+                                label: label,
                                 child: CustomPaint(
-                                  key: ValueKey('series-sample:${s.id}'),
+                                  key: const ValueKey('partial-bar-sample'),
                                   size: const Size(20, 10),
                                   painter: SeriesSamplePainter(
-                                    style: style,
-                                    isBars: widget.kind == TimeChartKind.bars,
+                                    style: partialStyle,
+                                    isBars: true,
                                   ),
                                 ),
                               ),
                               const SizedBox(width: 6),
                               Flexible(
                                 child: Text(
-                                  s.label,
+                                  label,
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -984,56 +1090,14 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                           ),
                         );
                       }(),
-                    if (hasPartialBar) () {
-                      final baseStyle = resolveSeriesVisualStyle(
-                        palette: palette,
-                        slot: 0,
-                        seriesId: 'partial',
-                        outline: theme.colorScheme.onSurface,
-                      );
-                      final partialStyle = barObservationStyle(
-                        baseStyle,
-                        incomplete: true,
-                        outline: theme.colorScheme.onSurface,
-                      );
-                      const label = 'Partial observation — may be incomplete';
-                      return ConstrainedBox(
-                        key: const ValueKey('partial-bar-legend'),
-                        constraints: BoxConstraints(maxWidth: constraints.maxWidth),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Semantics(
-                              label: label,
-                              child: CustomPaint(
-                                key: const ValueKey('partial-bar-sample'),
-                                size: const Size(20, 10),
-                                painter: SeriesSamplePainter(
-                                  style: partialStyle,
-                                  isBars: true,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                label,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }(),
                   ],
                 );
               },
             ),
           ),
         ConstrainedBox(
-          constraints: BoxConstraints(minHeight: math.max(200, widget.plotHeight)),
+          constraints:
+              BoxConstraints(minHeight: math.max(200, widget.plotHeight)),
           child: ChartMotion(
             dataRevision: revision,
             topologyRevision: topology,

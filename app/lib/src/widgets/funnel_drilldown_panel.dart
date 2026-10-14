@@ -1,3 +1,4 @@
+import '../state/event_vocabulary.dart';
 import 'dart:convert';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
@@ -31,7 +32,8 @@ class FunnelDrilldownPanel extends ConsumerStatefulWidget {
   final VoidCallback onClose;
 
   @override
-  ConsumerState<FunnelDrilldownPanel> createState() => _FunnelDrilldownPanelState();
+  ConsumerState<FunnelDrilldownPanel> createState() =>
+      _FunnelDrilldownPanelState();
 }
 
 class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
@@ -101,7 +103,9 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
     final tokens = AnalyticsTokens.of(context);
     final stepIndex = widget.step - 1;
     final stepName = stepIndex < widget.def.steps.length
-        ? widget.def.steps[stepIndex].event
+        ? ref
+            .watch(effectiveVocabularyProvider)
+            .eventLabel(widget.def.steps[stepIndex].event)
         : 'Step ${widget.step}';
 
     return Container(
@@ -114,50 +118,51 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Step ${widget.step}: $stepName',
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (widget.segment != null)
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          'Segment: ${widget.segment}',
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                          'Step ${widget.step}: $stepName',
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                          softWrap: true,
                         ),
-                    ],
+                        if (widget.segment != null)
+                          Text(
+                            'Segment: ${widget.segment}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: widget.onClose,
-                  tooltip: 'Close panel',
-                ),
-              ],
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: widget.onClose,
+                    tooltip: 'Close panel',
+                  ),
+                ],
+              ),
             ),
-          ),
-          const Divider(height: 1),
+            const Divider(height: 1),
 
-          // Content: Player Timeline OR Player List
-          Expanded(
-            child: _selectedPlayer != null
-                ? _buildTimelineView(theme, tokens)
-                : _buildPlayerListView(theme, tokens),
-          ),
-        ],
+            // Content: Player Timeline OR Player List
+            Expanded(
+              child: _selectedPlayer != null
+                  ? _buildTimelineView(theme, tokens)
+                  : _buildPlayerListView(theme, tokens),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildPlayerListView(ThemeData theme, AnalyticsTokens tokens) {
     final baseUrl = ref.watch(baseUrlProvider);
@@ -205,7 +210,8 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
                     ],
                     selected: {_outcome},
                     showSelectedIcon: false,
-                    onSelectionChanged: (s) => setState(() => _outcome = s.first),
+                    onSelectionChanged: (s) =>
+                        setState(() => _outcome = s.first),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -232,7 +238,8 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
                   return Center(
                     child: Text(
                       'No players ${_outcome == FunnelPlayerOutcome.dropped ? 'dropped' : 'converted'} at this step',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                   );
                 }
@@ -252,7 +259,8 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
                               message: p.uid,
                               child: Text(
                                 shortUid,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600),
                               ),
                             ),
                           ),
@@ -261,7 +269,8 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
                             onPressed: () => _copyUid(p.uid),
                             tooltip: 'Copy user ID',
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                            constraints: const BoxConstraints(
+                                minWidth: 24, minHeight: 24),
                           ),
                         ],
                       ),
@@ -277,7 +286,8 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: tokens.grid,
                                 borderRadius: BorderRadius.circular(4),
@@ -358,11 +368,14 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Timeline', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                Text('Timeline',
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 2),
                 Text(
                   '${_formatTs(fromTs)} → ${_formatTs(toTs)}',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -379,7 +392,8 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
               builder: (events) {
                 if (events.isEmpty) {
                   return Center(
-                    child: Text('No events found for this player', style: theme.textTheme.bodyMedium),
+                    child: Text('No events found for this player',
+                        style: theme.textTheme.bodyMedium),
                   );
                 }
                 return ListView.builder(
@@ -391,7 +405,8 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
                     final isStepMatch = matchedStepIdx != -1;
 
                     return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: isStepMatch
@@ -399,7 +414,9 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
                             : theme.scaffoldBackgroundColor,
                         borderRadius: BorderRadius.circular(tokens.radius / 2),
                         border: Border.all(
-                          color: isStepMatch ? theme.colorScheme.primary : tokens.grid,
+                          color: isStepMatch
+                              ? theme.colorScheme.primary
+                              : tokens.grid,
                           width: isStepMatch ? 1.5 : 1.0,
                         ),
                       ),
@@ -410,12 +427,14 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
                             children: [
                               Text(
                                 _formatTs(ev.ts),
-                                style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant),
                               ),
                               const Spacer(),
                               if (isStepMatch)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: theme.colorScheme.primary,
                                     borderRadius: BorderRadius.circular(4),
@@ -433,16 +452,23 @@ class _FunnelDrilldownPanelState extends ConsumerState<FunnelDrilldownPanel> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            ev.event,
+                            ref
+                                .watch(effectiveVocabularyProvider)
+                                .eventLabel(ev.event),
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
-                              color: isStepMatch ? theme.colorScheme.primary : null,
+                              color: isStepMatch
+                                  ? theme.colorScheme.primary
+                                  : null,
                             ),
                           ),
                           if (ev.params.isNotEmpty) ...[
                             const SizedBox(height: 4),
                             SelectableText(
-                              jsonEncode(ev.params),
+                              ev.params.entries
+                                  .map((p) =>
+                                      '${ref.watch(effectiveVocabularyProvider).parameterLabel(ev.event, p.key)}: ${jsonEncode(p.value)}')
+                                  .join(', '),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 fontFamily: 'monospace',
                                 color: theme.colorScheme.onSurfaceVariant,

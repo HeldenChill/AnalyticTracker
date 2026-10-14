@@ -77,7 +77,8 @@ class ProgressionPage extends ConsumerWidget {
                 subtitle: 'Unique players · stage order preserved',
                 unit: 'players',
                 kind: TimeChartKind.bars,
-                series: progressionChartSeries(d.stages, ProgressionMetric.players),
+                series:
+                    progressionChartSeries(d.stages, ProgressionMetric.players),
               ),
               const SizedBox(height: 16),
               StudioGrid(
@@ -91,7 +92,8 @@ class ProgressionPage extends ConsumerWidget {
                     unit: 'win rate (%)',
                     percentage: true,
                     valueFormatter: formatDashboardRate,
-                    series: progressionChartSeries(d.stages, ProgressionMetric.winRate),
+                    series: progressionChartSeries(
+                        d.stages, ProgressionMetric.winRate),
                   ),
                   DashboardChartPanel(
                     key: const ValueKey('progression-drop-off-chart'),
@@ -101,7 +103,8 @@ class ProgressionPage extends ConsumerWidget {
                     kind: TimeChartKind.bars,
                     percentage: false,
                     valueFormatter: formatDashboardRate,
-                    series: progressionChartSeries(d.stages, ProgressionMetric.dropOff),
+                    series: progressionChartSeries(
+                        d.stages, ProgressionMetric.dropOff),
                   ),
                 ],
               ),

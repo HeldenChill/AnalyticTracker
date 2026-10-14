@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
@@ -48,7 +49,8 @@ class RankedBarChart extends StatelessWidget {
         throw ArgumentError('RankedValue value must be finite, got ${v.value}');
       }
       if (v.value < 0) {
-        throw ArgumentError('RankedBarChart values must be nonnegative, got ${v.value}');
+        throw ArgumentError(
+            'RankedBarChart values must be nonnegative, got ${v.value}');
       }
     }
 
@@ -73,7 +75,9 @@ class RankedBarChart extends StatelessWidget {
     }
 
     final topology = values.map((v) => v.id).join(';');
-    final revision = values.map((v) => '${v.id}:${v.value}:${v.label}').join(';');
+    final revision = jsonEncode([
+      for (final v in values) [v.id, v.value]
+    ]);
 
     final labelStyle = theme.textTheme.bodyMedium?.copyWith(
       fontWeight: FontWeight.w500,
@@ -96,13 +100,18 @@ class RankedBarChart extends StatelessWidget {
 
           final scaler = MediaQuery.textScalerOf(context);
           final isBold = MediaQuery.boldTextOf(context);
-          final effectiveValStyle = DefaultTextStyle.of(context).style.merge(valueStyle).copyWith(
+          final effectiveValStyle = DefaultTextStyle.of(context)
+              .style
+              .merge(valueStyle)
+              .copyWith(
                 fontWeight: isBold ? FontWeight.bold : valueStyle?.fontWeight,
               );
 
           final formattedValues = {
             for (final v in values)
-              v.id: unit.isEmpty ? formatVal(v.value) : '${formatVal(v.value)} $unit',
+              v.id: unit.isEmpty
+                  ? formatVal(v.value)
+                  : '${formatVal(v.value)} $unit',
           };
 
           double measureTextWidth(String text) {
@@ -128,19 +137,25 @@ class RankedBarChart extends StatelessWidget {
               final isWide = availableWidth >= maxValueWidth + 160;
 
               final valueWidth = maxValueWidth;
-              var labelWidth = math.min(240.0, math.max(96.0, availableWidth * 0.35));
+              var labelWidth =
+                  math.min(240.0, math.max(96.0, availableWidth * 0.35));
               if (availableWidth - valueWidth - labelWidth - 16.0 < 64.0) {
-                labelWidth = math.max(64.0, availableWidth - valueWidth - 16.0 - 64.0);
+                labelWidth =
+                    math.max(64.0, availableWidth - valueWidth - 16.0 - 64.0);
               }
 
               Widget buildBar(RankedValue v) {
-                final targetWidth = maxVal > 0 ? (v.value / maxVal).clamp(0.0, 1.0) : 0.0;
+                final targetWidth =
+                    maxVal > 0 ? (v.value / maxVal).clamp(0.0, 1.0) : 0.0;
                 final isEntrance = motion.phase == ChartMotionPhase.entrance;
-                final currentTarget = isEntrance ? targetWidth * motion.revealProgress : targetWidth;
+                final currentTarget = isEntrance
+                    ? targetWidth * motion.revealProgress
+                    : targetWidth;
                 return Container(
                   height: 20,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    color: theme.colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Align(

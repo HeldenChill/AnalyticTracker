@@ -184,12 +184,16 @@ class EventCatalog {
     }
   }
   final Map<String, EventMeaning> entries;
+  late final _patterns = [
+    for (final e in entries.values)
+      if (EventPattern.compile(e.modeBTemplate) != null)
+        (e, EventPattern.compile(e.modeBTemplate)!)
+  ];
   EventMeaning? meaning(String rawId) {
     if (entries.containsKey(rawId)) return entries[rawId];
-    final matches = entries.values
-        .where((e) =>
-            EventPattern.compile(e.modeBTemplate)?.regex.hasMatch(rawId) ??
-            false)
+    final matches = _patterns
+        .where((pair) => pair.$2.regex.hasMatch(rawId))
+        .map((pair) => pair.$1)
         .toList();
     if (matches.length == 1) return matches.single;
     if (matches.length > 1) return null;

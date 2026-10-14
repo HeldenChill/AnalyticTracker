@@ -164,7 +164,7 @@ void main() {
       final rankedChart = tester.widget<RankedBarChart>(find.byType(RankedBarChart));
       expect(rankedChart.unit, 'lift');
       expect(rankedChart.values.map((v) => v.label), containsAll([
-        'Reward_request_success to pet_buy',
+        'Reward_request_success to Pet purchased',
         'tutorial_skip to churn_risk',
       ]));
 

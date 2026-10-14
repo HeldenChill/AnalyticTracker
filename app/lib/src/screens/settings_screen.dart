@@ -6,6 +6,7 @@ import '../providers.dart';
 import '../state/style.dart';
 import '../theme/analytics_tokens.dart';
 import '../theme/app_style.dart';
+import '../widgets/event_vocabulary_settings.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -14,7 +15,8 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  late final TextEditingController _ctrl = TextEditingController(text: ref.read(baseUrlProvider));
+  late final TextEditingController _ctrl =
+      TextEditingController(text: ref.read(baseUrlProvider));
   String? _error;
 
   @override
@@ -26,7 +28,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _save() async {
     final v = _ctrl.text.trim();
     final uri = Uri.tryParse(v);
-    if (uri == null || !(uri.scheme == 'http' || uri.scheme == 'https') || uri.host.isEmpty) {
+    if (uri == null ||
+        !(uri.scheme == 'http' || uri.scheme == 'https') ||
+        uri.host.isEmpty) {
       setState(() => _error = 'Enter a URL like http://192.168.1.20:8080');
       return;
     }
@@ -35,7 +39,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await prefs.setString(baseUrlPrefKey, v);
     ref.read(baseUrlProvider.notifier).set(v);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Saved')));
     }
   }
 
@@ -63,13 +68,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
         const SizedBox(height: 28),
+        const EventVocabularySettings(),
+        const SizedBox(height: 28),
         Text('Server', style: theme.textTheme.titleMedium),
         const SizedBox(height: 12),
         SizedBox(
           width: 480,
           child: TextField(
             controller: _ctrl,
-            decoration: InputDecoration(labelText: 'Server URL', errorText: _error),
+            decoration:
+                InputDecoration(labelText: 'Server URL', errorText: _error),
             keyboardType: TextInputType.url,
           ),
         ),
@@ -87,7 +95,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 }
 
 class _StyleCard extends StatelessWidget {
-  const _StyleCard({required this.style, required this.selected, required this.onTap});
+  const _StyleCard(
+      {required this.style, required this.selected, required this.onTap});
 
   final AppStyle style;
   final bool selected;
@@ -105,7 +114,9 @@ class _StyleCard extends StatelessWidget {
       child: Card(
         shape: RoundedRectangleBorder(
           borderRadius: radius,
-          side: BorderSide(color: selected ? scheme.primary : scheme.outlineVariant, width: selected ? 2 : 1),
+          side: BorderSide(
+              color: selected ? scheme.primary : scheme.outlineVariant,
+              width: selected ? 2 : 1),
         ),
         child: InkWell(
           borderRadius: radius,
@@ -116,7 +127,13 @@ class _StyleCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(children: [
-                  for (final c in [p.background, p.card, p.accent, p.chart[1], p.text])
+                  for (final c in [
+                    p.background,
+                    p.card,
+                    p.accent,
+                    p.chart[1],
+                    p.text
+                  ])
                     Container(
                       width: 22,
                       height: 22,
@@ -130,8 +147,12 @@ class _StyleCard extends StatelessWidget {
                 ]),
                 const SizedBox(height: 10),
                 Row(children: [
-                  Expanded(child: Text(style.label, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
-                  if (selected) Icon(Icons.check_circle, color: scheme.primary, size: 18),
+                  Expanded(
+                      child: Text(style.label,
+                          style: theme.textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700))),
+                  if (selected)
+                    Icon(Icons.check_circle, color: scheme.primary, size: 18),
                 ]),
                 const SizedBox(height: 4),
                 Text(style.description, style: theme.textTheme.bodySmall),

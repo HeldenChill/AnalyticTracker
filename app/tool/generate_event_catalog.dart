@@ -47,14 +47,18 @@ void main(List<String> args) {
         modeBTemplate: raw.modeBTemplate,
         sources: raw.sources,
         parameters: {
-          for (final p in (raw.parameters.entries.toList()..sort((a,b)=>a.key.compareTo(b.key))))
+          for (final p
+              in (raw.parameters.entries.toList()
+                ..sort((a, b) => a.key.compareTo(b.key))))
             p.key: ParameterMeaning(
                 fullName: p.value.fullName,
                 label: parameterLabels[p.key] as String? ?? p.value.label,
                 description: p.value.description)
         },
         tutorials: {
-          for (final t in (raw.tutorials.entries.toList()..sort((a,b)=>a.key.compareTo(b.key))))
+          for (final t
+              in (raw.tutorials.entries.toList()
+                ..sort((a, b) => a.key.compareTo(b.key))))
             t.key: TutorialMeaning(
                 id: t.key,
                 label: requiredText(

@@ -1,3 +1,4 @@
+import '../../widgets/vocabulary_scope.dart';
 import 'dart:math' as math;
 
 import 'package:analytic_shared/analytic_shared.dart';
@@ -39,61 +40,64 @@ class LevelsTab extends ConsumerWidget {
         }
       },
       child: StudioAsyncPanel<LevelResult>(
-      queryKey: (baseUrl, f),
-      value: ref.watch(levelsProvider(f)),
-      onRetry: () => ref.invalidate(levelsProvider(f)),
-      builder: (r) {
-        if (r.reason == 'too_few_players') {
-          return Center(
-            child: Text(
-              'Not enough players in this range to analyze levels: ${r.players} in range, need at least $minAnalysisPlayers.',
+        queryKey: (baseUrl, f),
+        value: ref.watch(levelsProvider(f)),
+        onRetry: () => ref.invalidate(levelsProvider(f)),
+        builder: (r) {
+          if (r.reason == 'too_few_players') {
+            return Center(
+              child: Text(
+                'Not enough players in this range to analyze levels: ${r.players} in range, need at least $minAnalysisPlayers.',
+              ),
+            );
+          }
+          if (r.reason == 'no_level_events' || r.levels.isEmpty) {
+            return const Center(
+              child: Text(
+                  'No level tracking events (level_N_start/complete/fail) found in this range.'),
+            );
+          }
+
+          final theme = Theme.of(context);
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                StudioHeading(
+                  title: 'Levels',
+                  subtitle:
+                      'Level difficulty, win rate, and quit hazard. Quit walls mark levels where quit hazard exceeds 2× the median hazard.',
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${r.levels.length} levels tracked · Median quit hazard: ${(r.medianHazard * 100).round()}%',
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 16),
+                _LevelsLineChart(levels: r.levels),
+                const SizedBox(height: 16),
+                _LevelsAttemptsChart(levels: r.levels),
+                const SizedBox(height: 24),
+                Text('Level Difficulty & Quit Hazard',
+                    style: theme.textTheme.titleSmall),
+                const SizedBox(height: 8),
+                Card(
+                  child: _LevelsTable(levels: r.levels),
+                ),
+                const SizedBox(height: 24),
+                Text('How players leave', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                _ExitsAndTransitions(
+                    exitEvents: r.exitEvents, transitions: r.transitions),
+              ],
             ),
           );
-        }
-        if (r.reason == 'no_level_events' || r.levels.isEmpty) {
-          return const Center(
-            child: Text('No level tracking events (level_N_start/complete/fail) found in this range.'),
-          );
-        }
-
-        final theme = Theme.of(context);
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              StudioHeading(
-                title: 'Levels',
-                subtitle:
-                    'Level difficulty, win rate, and quit hazard. Quit walls mark levels where quit hazard exceeds 2× the median hazard.',
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${r.levels.length} levels tracked · Median quit hazard: ${(r.medianHazard * 100).round()}%',
-                style: theme.textTheme.titleMedium,
-              ),
-              const SizedBox(height: 16),
-              _LevelsLineChart(levels: r.levels),
-              const SizedBox(height: 16),
-              _LevelsAttemptsChart(levels: r.levels),
-              const SizedBox(height: 24),
-              Text('Level Difficulty & Quit Hazard', style: theme.textTheme.titleSmall),
-              const SizedBox(height: 8),
-              Card(
-                child: _LevelsTable(levels: r.levels),
-              ),
-              const SizedBox(height: 24),
-              Text('How players leave', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              _ExitsAndTransitions(exitEvents: r.exitEvents, transitions: r.transitions),
-            ],
-          ),
-        );
-      },
-    ),
-  );
-}
+        },
+      ),
+    );
+  }
 }
 
 class _LevelsLineChart extends StatelessWidget {
@@ -114,13 +118,16 @@ class _LevelsLineChart extends StatelessWidget {
 
     final minL = levels.isEmpty ? 1.0 : levels.first.level.toDouble();
     final maxL = levels.isEmpty ? 1.0 : levels.last.level.toDouble();
-    final revision = levels.map((l) => '${l.level}:${l.smoothedWinRate}:${l.hazard}:${l.wall}').join(';');
+    final revision = levels
+        .map((l) => '${l.level}:${l.smoothedWinRate}:${l.hazard}:${l.wall}')
+        .join(';');
 
     return ChartMotion(
       dataRevision: revision,
       child: ChartFrame(
         title: 'Win Rate & Quit Hazard Trend',
-        subtitle: 'Smoothed win rate vs quit hazard per level. Red dots highlight quit walls.',
+        subtitle:
+            'Smoothed win rate vs quit hazard per level. Red dots highlight quit walls.',
         unit: '%',
         legend: [
           Row(
@@ -136,7 +143,8 @@ class _LevelsLineChart extends StatelessWidget {
             children: [
               Container(width: 12, height: 12, color: tokens.bad),
               const SizedBox(width: 6),
-              Text('Quit Hazard (dots = Wall)', style: theme.textTheme.bodySmall),
+              Text('Quit Hazard (dots = Wall)',
+                  style: theme.textTheme.bodySmall),
             ],
           ),
         ],
@@ -152,8 +160,10 @@ class _LevelsLineChart extends StatelessWidget {
                 minY: 0.0,
                 maxY: 1.0,
                 titlesData: FlTitlesData(
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
@@ -161,7 +171,9 @@ class _LevelsLineChart extends StatelessWidget {
                       interval: (maxL - minL > 15) ? 2 : 1,
                       getTitlesWidget: (v, _) => Text(
                         'L${v.toInt()}',
-                        style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: theme.colorScheme.onSurfaceVariant),
                       ),
                     ),
                   ),
@@ -172,7 +184,9 @@ class _LevelsLineChart extends StatelessWidget {
                       interval: 0.25,
                       getTitlesWidget: (v, _) => Text(
                         '${(v * 100).round()}%',
-                        style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: theme.colorScheme.onSurfaceVariant),
                       ),
                     ),
                   ),
@@ -194,7 +208,8 @@ class _LevelsLineChart extends StatelessWidget {
                       show: true,
                       checkToShowDot: (spot, barData) {
                         final idx = spot.x.toInt();
-                        final lvl = levels.where((l) => l.level == idx).firstOrNull;
+                        final lvl =
+                            levels.where((l) => l.level == idx).firstOrNull;
                         return lvl?.wall == true;
                       },
                     ),
@@ -204,8 +219,10 @@ class _LevelsLineChart extends StatelessWidget {
 
               if (motion.phase == ChartMotionPhase.entrance) {
                 const plotLeft = 36.0;
-                final plotWidth = math.max(0.0, constraints.maxWidth - plotLeft);
-                final plotRect = Rect.fromLTWH(plotLeft, 0.0, plotWidth, 240.0 - 22.0);
+                final plotWidth =
+                    math.max(0.0, constraints.maxWidth - plotLeft);
+                final plotRect =
+                    Rect.fromLTWH(plotLeft, 0.0, plotWidth, 240.0 - 22.0);
 
                 final staticData = data.copyWith(
                   lineBarsData: const [],
@@ -218,12 +235,14 @@ class _LevelsLineChart extends StatelessWidget {
                   lineTouchData: const LineTouchData(enabled: false),
                   titlesData: data.titlesData.copyWith(
                     leftTitles: AxisTitles(
-                      sideTitles: data.titlesData.leftTitles.sideTitles.copyWith(
+                      sideTitles:
+                          data.titlesData.leftTitles.sideTitles.copyWith(
                         getTitlesWidget: (v, m) => const SizedBox.shrink(),
                       ),
                     ),
                     bottomTitles: AxisTitles(
-                      sideTitles: data.titlesData.bottomTitles.sideTitles.copyWith(
+                      sideTitles:
+                          data.titlesData.bottomTitles.sideTitles.copyWith(
                         getTitlesWidget: (v, m) => const SizedBox.shrink(),
                       ),
                     ),
@@ -245,7 +264,8 @@ class _LevelsLineChart extends StatelessWidget {
                       ),
                       child: ExcludeSemantics(
                         child: LineChart(
-                          key: ValueKey('levels-trend-chart-$allowed-foreground'),
+                          key: ValueKey(
+                              'levels-trend-chart-$allowed-foreground'),
                           foregroundData,
                           duration: Duration.zero,
                         ),
@@ -276,7 +296,8 @@ class _LevelsAttemptsChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tokens = AnalyticsTokens.of(context);
-    final revision = levels.map((l) => '${l.level}:${l.completes}:${l.fails}').join(';');
+    final revision =
+        levels.map((l) => '${l.level}:${l.completes}:${l.fails}').join(';');
 
     var maxAttempts = 1.0;
     for (final l in levels) {
@@ -288,7 +309,8 @@ class _LevelsAttemptsChart extends StatelessWidget {
       dataRevision: revision,
       child: ChartFrame(
         title: 'Level Attempts: Completes vs Fails',
-        subtitle: 'Absolute completed and failed attempt counts (distinct from unique reached players).',
+        subtitle:
+            'Absolute completed and failed attempt counts (distinct from unique reached players).',
         unit: 'attempts',
         legend: [
           Row(
@@ -318,64 +340,75 @@ class _LevelsAttemptsChart extends StatelessWidget {
                 key: ValueKey('levels-attempts-chart-$allowed'),
                 duration: motion.geometryDuration,
                 BarChartData(
-            maxY: maxAttempts * 1.15,
-            gridData: const FlGridData(show: true, drawVerticalLine: false),
-            borderData: FlBorderData(show: false),
-            titlesData: FlTitlesData(
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 22,
-                  interval: 1,
-                  getTitlesWidget: (v, _) => Text(
-                    'L${v.toInt()}',
-                    style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                ),
-              ),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 40,
-                  getTitlesWidget: (v, _) => Text(
-                    fmtCount(v.toInt()),
-                    style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                ),
-              ),
-            ),
-            barGroups: [
-              for (final l in levels)
-                BarChartGroupData(
-                  x: l.level,
-                  barRods: [
-                    BarChartRodData(
-                      toY: motion.phase == ChartMotionPhase.entrance
-                          ? revealValue(0.0, l.completes.toDouble(), motion.revealProgress)
-                          : l.completes.toDouble(),
-                      color: tokens.chart.first,
-                      width: 8,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
+                  maxY: maxAttempts * 1.15,
+                  gridData:
+                      const FlGridData(show: true, drawVerticalLine: false),
+                  borderData: FlBorderData(show: false),
+                  titlesData: FlTitlesData(
+                    rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 22,
+                        interval: 1,
+                        getTitlesWidget: (v, _) => Text(
+                          'L${v.toInt()}',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ),
                     ),
-                    BarChartRodData(
-                      toY: motion.phase == ChartMotionPhase.entrance
-                          ? revealValue(0.0, l.fails.toDouble(), motion.revealProgress)
-                          : l.fails.toDouble(),
-                      color: tokens.bad,
-                      width: 8,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 40,
+                        getTitlesWidget: (v, _) => Text(
+                          fmtCount(v.toInt()),
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ),
                     ),
+                  ),
+                  barGroups: [
+                    for (final l in levels)
+                      BarChartGroupData(
+                        x: l.level,
+                        barRods: [
+                          BarChartRodData(
+                            toY: motion.phase == ChartMotionPhase.entrance
+                                ? revealValue(0.0, l.completes.toDouble(),
+                                    motion.revealProgress)
+                                : l.completes.toDouble(),
+                            color: tokens.chart.first,
+                            width: 8,
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(2)),
+                          ),
+                          BarChartRodData(
+                            toY: motion.phase == ChartMotionPhase.entrance
+                                ? revealValue(0.0, l.fails.toDouble(),
+                                    motion.revealProgress)
+                                : l.fails.toDouble(),
+                            color: tokens.bad,
+                            width: 8,
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(2)),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
-            ],
+              );
+            },
           ),
-        );
-      },
-    ),
-    ),
-    ),
+        ),
+      ),
     );
   }
 }
@@ -409,12 +442,15 @@ class _LevelsTable extends StatelessWidget {
             StudioTextCell('${l.attempts}', numeric: true),
             StudioTextCell('${l.completes}', numeric: true),
             StudioTextCell('${l.fails}', numeric: true),
-            StudioTextCell('${(l.smoothedWinRate * 100).round()}% (${(l.rawWinRate * 100).round()}%)', numeric: true),
+            StudioTextCell(
+                '${(l.smoothedWinRate * 100).round()}% (${(l.rawWinRate * 100).round()}%)',
+                numeric: true),
             StudioTextCell('${l.stopped}', numeric: true),
             StudioTextCell('${(l.hazard * 100).round()}%', numeric: true),
             l.wall
                 ? Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: tokens.bad.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(4),
@@ -422,11 +458,17 @@ class _LevelsTable extends StatelessWidget {
                     ),
                     child: Text(
                       'QUIT WALL',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tokens.bad),
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: tokens.bad),
                     ),
                   )
                 : (l.reached < 10
-                    ? Text('small sample', style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant))
+                    ? Text('small sample',
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: theme.colorScheme.onSurfaceVariant))
                     : const Text('—')),
           ]),
       ],
@@ -435,7 +477,8 @@ class _LevelsTable extends StatelessWidget {
 }
 
 class _ExitsAndTransitions extends StatelessWidget {
-  const _ExitsAndTransitions({required this.exitEvents, required this.transitions});
+  const _ExitsAndTransitions(
+      {required this.exitEvents, required this.transitions});
   final List<ExitEvent> exitEvents;
   final List<EventTransition> transitions;
 
@@ -453,7 +496,8 @@ class _ExitsAndTransitions extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Last Action Before Quitting', style: theme.textTheme.titleSmall),
+                Text('Last Action Before Quitting',
+                    style: theme.textTheme.titleSmall),
                 const SizedBox(height: 4),
                 Text(
                   'Exit events compared across churned vs stayed players (lift > 1 = overrepresented in churn).',
@@ -473,15 +517,26 @@ class _ExitsAndTransitions extends StatelessWidget {
                     rows: [
                       for (final e in exitEvents)
                         StudioRow([
-                          StudioTextCell(e.eventName, width: 180),
-                          StudioTextCell('${e.churnedCount} (${(e.churnedShare * 100).round()}%)', numeric: true),
-                          StudioTextCell('${e.stayedCount} (${(e.stayedShare * 100).round()}%)', numeric: true),
                           StudioTextCell(
-                            e.lift != null ? '${fmtDecimal(e.lift!, digits: 1)}×' : '—',
+                              VocabularyScope.of(context)
+                                  .eventLabel(e.eventName),
+                              width: 180),
+                          StudioTextCell(
+                              '${e.churnedCount} (${(e.churnedShare * 100).round()}%)',
+                              numeric: true),
+                          StudioTextCell(
+                              '${e.stayedCount} (${(e.stayedShare * 100).round()}%)',
+                              numeric: true),
+                          StudioTextCell(
+                            e.lift != null
+                                ? '${fmtDecimal(e.lift!, digits: 1)}×'
+                                : '—',
                             numeric: true,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: (e.lift != null && e.lift! >= 2.0) ? tokens.bad : null,
+                              color: (e.lift != null && e.lift! >= 2.0)
+                                  ? tokens.bad
+                                  : null,
                             ),
                           ),
                         ]),
@@ -498,7 +553,8 @@ class _ExitsAndTransitions extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Strongest Transitions', style: theme.textTheme.titleSmall),
+                Text('Strongest Transitions',
+                    style: theme.textTheme.titleSmall),
                 const SizedBox(height: 4),
                 Text(
                   'P(next | current) for consecutive events, including transitions to quit.',
@@ -523,11 +579,14 @@ class _ExitsAndTransitions extends StatelessWidget {
                             t.toEvent,
                             width: 160,
                             style: t.toEvent == 'quit'
-                                ? TextStyle(fontWeight: FontWeight.bold, color: tokens.bad)
+                                ? TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: tokens.bad)
                                 : null,
                           ),
                           StudioTextCell('${t.count}', numeric: true),
-                          StudioTextCell('${(t.probability * 100).round()}%', numeric: true),
+                          StudioTextCell('${(t.probability * 100).round()}%',
+                              numeric: true),
                         ]),
                     ],
                   ),

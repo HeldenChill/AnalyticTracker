@@ -1,3 +1,4 @@
+import '../widgets/vocabulary_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -61,7 +62,9 @@ class _AppShellState extends ConsumerState<AppShell> {
       _filterStaleQueued = false;
       if (!mounted) return;
       if (_lastFilterMapping != null) {
-        ref.read(activeRequestRegistryProvider).reloadOwnerIfStale(_filterOptionsOwner);
+        ref
+            .read(activeRequestRegistryProvider)
+            .reloadOwnerIfStale(_filterOptionsOwner);
       }
     });
   }
@@ -90,7 +93,9 @@ class _AppShellState extends ConsumerState<AppShell> {
   Future<void> _refresh() async {
     final currentPage = ref.read(selectedPageProvider);
     final isDataHealth = currentPage == AppPage.dataHealth;
-    if (_refreshing || (isDataHealth && ref.read(daysProvider).isLoading)) return;
+    if (_refreshing || (isDataHealth && ref.read(daysProvider).isLoading)) {
+      return;
+    }
     final originUrl = ref.read(baseUrlProvider);
     final originPage = currentPage;
     final originTab = ref.read(analyticTabIndexProvider);
@@ -123,7 +128,8 @@ class _AppShellState extends ConsumerState<AppShell> {
         ));
       } else if (result.warnings.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Updated $pageName; some comparison data is unavailable'),
+          content:
+              Text('Updated $pageName; some comparison data is unavailable'),
           duration: const Duration(seconds: 2),
         ));
       } else {
@@ -131,7 +137,9 @@ class _AppShellState extends ConsumerState<AppShell> {
           content: Text(
             originPage == AppPage.dataHealth
                 ? 'Refreshed Data health'
-                : (originPage == AppPage.overview ? 'Refreshed' : 'Refreshed $pageName'),
+                : (originPage == AppPage.overview
+                    ? 'Refreshed'
+                    : 'Refreshed $pageName'),
           ),
           duration: const Duration(seconds: 1),
         ));
@@ -209,7 +217,8 @@ class _AppShellState extends ConsumerState<AppShell> {
                   iconColor: tokens.sidebarFg,
                   textColor: tokens.sidebarFg,
                   onTap: () {
-                    ref.read(selectedPageProvider.notifier).state = _items[i].page;
+                    ref.read(selectedPageProvider.notifier).state =
+                        _items[i].page;
                   },
                 ),
               ),
@@ -305,7 +314,8 @@ class _AppShellState extends ConsumerState<AppShell> {
                 textColor: tokens.sidebarFg,
                 onTap: () {
                   _scaffoldKey.currentState?.closeDrawer();
-                  ref.read(selectedPageProvider.notifier).state = _items[i].page;
+                  ref.read(selectedPageProvider.notifier).state =
+                      _items[i].page;
                 },
               ),
             ),
@@ -325,9 +335,14 @@ class _AppShellState extends ConsumerState<AppShell> {
     final isDataHealth = currentPage == AppPage.dataHealth;
 
     final registry = ref.read(activeRequestRegistryProvider);
-    final mapping = (currentPage != AppPage.dataHealth && currentPage != AppPage.settings)
-        ? (currentPage, currentPage == AppPage.analytic ? currentTab : null, baseUrl)
-        : null;
+    final mapping =
+        (currentPage != AppPage.dataHealth && currentPage != AppPage.settings)
+            ? (
+                currentPage,
+                currentPage == AppPage.analytic ? currentTab : null,
+                baseUrl
+              )
+            : null;
     if (mapping != null) {
       registry.register(
         page: currentPage,
@@ -357,7 +372,8 @@ class _AppShellState extends ConsumerState<AppShell> {
     final isSmall = screenWidth < 900;
     final pageTitle = _items.firstWhere((i) => i.page == currentPage).label;
 
-    return Scaffold(
+    return VocabularyHost(
+        child: Scaffold(
       key: _scaffoldKey,
       appBar: isSmall
           ? AppBar(
@@ -369,7 +385,8 @@ class _AppShellState extends ConsumerState<AppShell> {
               ),
             )
           : null,
-      drawer: isSmall ? _buildDrawer(context, currentPage, tokens, theme) : null,
+      drawer:
+          isSmall ? _buildDrawer(context, currentPage, tokens, theme) : null,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
@@ -377,7 +394,8 @@ class _AppShellState extends ConsumerState<AppShell> {
           if (width >= 1200) {
             navWidget = _buildSidebar(context, currentPage, tokens, theme);
           } else if (width >= 900) {
-            navWidget = _buildNavigationRail(context, currentPage, tokens, theme);
+            navWidget =
+                _buildNavigationRail(context, currentPage, tokens, theme);
           }
 
           return Row(
@@ -403,18 +421,25 @@ class _AppShellState extends ConsumerState<AppShell> {
                         key: const ValueKey('studio-page-stage'),
                         index: currentPage.index,
                         pages: [
-                          const OverviewPage(key: PageStorageKey('page-overview')),
-                          const RetentionPage(key: PageStorageKey('page-retention')),
-                          const ProgressionPage(key: PageStorageKey('page-progression')),
+                          const OverviewPage(
+                              key: PageStorageKey('page-overview')),
+                          const RetentionPage(
+                              key: PageStorageKey('page-retention')),
+                          const ProgressionPage(
+                              key: PageStorageKey('page-progression')),
                           const FunnelPage(key: PageStorageKey('page-funnels')),
-                          const AnalyticPage(key: PageStorageKey('page-analytic')),
+                          const AnalyticPage(
+                              key: PageStorageKey('page-analytic')),
                           CountsScreen(
                             key: const PageStorageKey('page-events'),
                             onExploreParameters: _openParameters,
                           ),
-                          const ParamScreen(key: PageStorageKey('page-parameters')),
-                          const DaysScreen(key: PageStorageKey('page-data-health')),
-                          const SettingsScreen(key: PageStorageKey('page-settings')),
+                          const ParamScreen(
+                              key: PageStorageKey('page-parameters')),
+                          const DaysScreen(
+                              key: PageStorageKey('page-data-health')),
+                          const SettingsScreen(
+                              key: PageStorageKey('page-settings')),
                         ],
                       ),
                     ),
@@ -425,6 +450,6 @@ class _AppShellState extends ConsumerState<AppShell> {
           );
         },
       ),
-    );
+    ));
   }
 }

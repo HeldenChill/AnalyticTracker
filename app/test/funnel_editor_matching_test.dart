@@ -47,10 +47,10 @@ void main() {
 
   testWidgets('event with no parameters in range: condition row explains why', (t) async {
     await open(t, const FunnelDef(name: 'F', windowMinutes: null, steps: [FunnelStepDef(event: 'tut')]), keys: const []);
-    expect(find.textContaining('No parameters for tut'), findsNothing); // no hint before a condition is added
+    expect(find.textContaining('No parameters for Tutorial'), findsNothing); // no hint before a condition is added
     await t.tap(find.text('Add condition'));
     await t.pumpAndSettle();
-    expect(find.text('No parameters for tut in this date range. Turn on "Test devices" to include test-device events.'),
+    expect(find.text('No parameters for Tutorial in this date range. Turn on "Test devices" to include test-device events.'),
         findsOneWidget);
   });
 
@@ -104,7 +104,7 @@ void main() {
     await t.tap(find.text('OK'));
     await t.pumpAndSettle();
     expect(find.text('Tut_1, Tut_2'), findsOneWidget);
-    expect(find.text('Summary: tut where id is one of Tut_1, Tut_2'), findsOneWidget);
+    expect(find.text('Summary: Tutorial where ID is one of Tut_1, Tut_2'), findsOneWidget);
     await t.tap(find.text('Run'));
     await t.pumpAndSettle();
     expect(outcome!.def.steps.single.params.single,
@@ -118,7 +118,7 @@ void main() {
     ]));
     expect(find.text('Add exclusion'), findsOneWidget, reason: 'step 2 only');
     expect(find.text('Drop the player if, before this step, they did:'), findsOneWidget);
-    expect(find.text('Summary: first_open → tut (unless level_start first)'), findsOneWidget);
+    expect(find.text('Summary: first_open → Tutorial (unless level_start first)'), findsOneWidget);
     await t.tap(find.text('Or another event').first);
     await t.pumpAndSettle();
     expect(find.text('— or —'), findsOneWidget);

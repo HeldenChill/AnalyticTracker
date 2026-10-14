@@ -15,17 +15,48 @@ ImportPreview preview(List<VocabularyFile> files, [EventCatalog? current]) =>
         baseRevision: 4);
 
 void main() {
-  test('tutorial reimport updates multiple IDs without treating baseline as a conflicting row', () {
-    final base=EventCatalog({'tut':EventMeaning(rawId:'tut',fullName:'tutorial',label:'Tutorial',
-      tutorials:{'Tut_1':const TutorialMeaning(id:'Tut_1',label:'First',content:'Old 1'),
-        'Tut_2':const TutorialMeaning(id:'Tut_2',label:'Second',content:'Old 2')})});
-    final p=preview([csvFile('t.csv','Event,Abbreviated Event,Parameter,Content\n'
-      'tutorial,tut,id: Tut_1,New 1\ntutorial,tut,id: Tut_2,New 2')],base);
-    expect(p.canApply,isTrue);
-    expect(p.replacements['tut']!.tutorials['Tut_1']!.content,'New 1');
-    expect(p.replacements['tut']!.tutorials['Tut_2']!.content,'New 2');
-    expect(preview([csvFile('t.csv','Event,Abbreviated Event,Parameter,Content\n'
-      'tutorial,tut,id: Tut_1,New 1\ntutorial,tut,id: Tut_1,Conflict')],base).canApply,isFalse);
+  test(
+      'ambiguous pattern diagnostics stay bounded for large conflicting batches',
+      () {
+    final input =
+        'Event,Abbreviated Event,Optional Mode B Template\n${List.generate(100, (i) => 'event$i,e$i,stage_{stage}_start').join('\n')}';
+    final p = preview([csvFile('patterns.csv', input)]);
+    expect(p.canApply, isFalse);
+    expect(p.issues.where((i) => i.severity == IssueSeverity.error).length, 1);
+  });
+  test(
+      'tutorial reimport updates multiple IDs without treating baseline as a conflicting row',
+      () {
+    final base = EventCatalog({
+      'tut': EventMeaning(
+          rawId: 'tut',
+          fullName: 'tutorial',
+          label: 'Tutorial',
+          tutorials: {
+            'Tut_1': const TutorialMeaning(
+                id: 'Tut_1', label: 'First', content: 'Old 1'),
+            'Tut_2': const TutorialMeaning(
+                id: 'Tut_2', label: 'Second', content: 'Old 2')
+          })
+    });
+    final p = preview([
+      csvFile(
+          't.csv',
+          'Event,Abbreviated Event,Parameter,Content\n'
+              'tutorial,tut,id: Tut_1,New 1\ntutorial,tut,id: Tut_2,New 2')
+    ], base);
+    expect(p.canApply, isTrue);
+    expect(p.replacements['tut']!.tutorials['Tut_1']!.content, 'New 1');
+    expect(p.replacements['tut']!.tutorials['Tut_2']!.content, 'New 2');
+    expect(
+        preview([
+          csvFile(
+              't.csv',
+              'Event,Abbreviated Event,Parameter,Content\n'
+                  'tutorial,tut,id: Tut_1,New 1\ntutorial,tut,id: Tut_1,Conflict')
+        ], base)
+            .canApply,
+        isFalse);
   });
   test('strict parser handles quotes newlines and all endings', () {
     expect(

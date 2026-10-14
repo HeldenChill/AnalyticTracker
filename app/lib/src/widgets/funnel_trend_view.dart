@@ -1,3 +1,5 @@
+import '../presentation/funnel_language.dart';
+import 'vocabulary_scope.dart';
 import 'dart:math' as math;
 
 import 'package:analytic_shared/analytic_shared.dart';
@@ -83,10 +85,14 @@ class _FunnelTrendViewState extends State<FunnelTrendView> {
       }
     } else {
       final stepIdx = _selectedStepIndex;
-      final stepLabel = stepIdx < steps.length ? steps[stepIdx].eventsLabel : 'step $stepIdx';
+      final stepLabel = stepIdx < steps.length
+          ? resultEventsLanguage(steps[stepIdx], VocabularyScope.of(context))
+          : 'step $stepIdx';
       chartTitle = 'Step 1 → ${stepIdx + 1}: $stepLabel';
       for (final t in trend) {
-        if (t.players.isEmpty || t.players.first == 0 || stepIdx >= t.players.length) {
+        if (t.players.isEmpty ||
+            t.players.first == 0 ||
+            stepIdx >= t.players.length) {
           conversionValues.add(null);
         } else {
           conversionValues.add(t.players[stepIdx] / t.players.first);
@@ -95,7 +101,9 @@ class _FunnelTrendViewState extends State<FunnelTrendView> {
     }
 
     // Max entered players for scaling bar row
-    final enteredCounts = [for (final t in trend) t.players.isEmpty ? 0 : t.players.first];
+    final enteredCounts = [
+      for (final t in trend) t.players.isEmpty ? 0 : t.players.first
+    ];
     final maxEntered = enteredCounts.fold<int>(0, math.max);
 
     return Column(
@@ -120,18 +128,27 @@ class _FunnelTrendViewState extends State<FunnelTrendView> {
               constraints: const BoxConstraints(maxWidth: 320),
               child: DropdownButton<int>(
                 isExpanded: true,
-                value: _selectedStepIndex.clamp(0, math.max(0, steps.length - 1)),
+                value:
+                    _selectedStepIndex.clamp(0, math.max(0, steps.length - 1)),
                 selectedItemBuilder: (context) => [
-                  const Text('Total conversion (all steps)', overflow: TextOverflow.ellipsis),
+                  const Text('Total conversion (all steps)',
+                      overflow: TextOverflow.ellipsis),
                   for (var k = 1; k < steps.length; k++)
-                    Text('Step 1 → ${k + 1}: ${steps[k].eventsLabel}', overflow: TextOverflow.ellipsis),
+                    Text(
+                        'Step 1 → ${k + 1}: ${resultEventsLanguage(steps[k], VocabularyScope.of(context))}',
+                        overflow: TextOverflow.ellipsis),
                 ],
                 items: [
-                  const DropdownMenuItem(value: 0, child: Text('Total conversion (all steps)', overflow: TextOverflow.ellipsis)),
+                  const DropdownMenuItem(
+                      value: 0,
+                      child: Text('Total conversion (all steps)',
+                          overflow: TextOverflow.ellipsis)),
                   for (var k = 1; k < steps.length; k++)
                     DropdownMenuItem(
                       value: k,
-                      child: Text('Step 1 → ${k + 1}: ${steps[k].eventsLabel}', overflow: TextOverflow.ellipsis),
+                      child: Text(
+                          'Step 1 → ${k + 1}: ${resultEventsLanguage(steps[k], VocabularyScope.of(context))}',
+                          overflow: TextOverflow.ellipsis),
                     ),
                 ],
                 onChanged: (v) {
@@ -161,14 +178,17 @@ class _FunnelTrendViewState extends State<FunnelTrendView> {
         ),
         const SizedBox(height: 16),
         // Entered players bar row
-        Text('Entered players per bucket', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+        Text('Entered players per bucket',
+            style: theme.textTheme.titleSmall
+                ?.copyWith(fontWeight: FontWeight.w600)),
         if (incompleteIndices.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Row(children: [
               Container(
                 key: const ValueKey('partial-trend-sample'),
-                width: 12, height: 12,
+                width: 12,
+                height: 12,
                 decoration: BoxDecoration(
                   color: tokens.chart.first.withValues(alpha: .4),
                   borderRadius: BorderRadius.circular(2),
@@ -189,21 +209,27 @@ class _FunnelTrendViewState extends State<FunnelTrendView> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 2),
                     child: Tooltip(
-                      message: '${bucketStarts[i]}: ${fmtCount(enteredCounts[i])} entered${trend[i].incomplete ? ' (partial)' : ''}',
+                      message:
+                          '${bucketStarts[i]}: ${fmtCount(enteredCounts[i])} entered${trend[i].incomplete ? ' (partial)' : ''}',
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           if (enteredCounts[i] > 0)
                             Text(
                               fmtCount(enteredCounts[i]),
-                              style: theme.textTheme.labelSmall?.copyWith(fontSize: 9),
+                              style: theme.textTheme.labelSmall
+                                  ?.copyWith(fontSize: 9),
                             ),
                           const SizedBox(height: 2),
                           Container(
                             key: ValueKey('entered-bar-${bucketStarts[i]}'),
-                            height: maxEntered == 0 ? 2 : math.max(2.0, 50.0 * (enteredCounts[i] / maxEntered)),
+                            height: maxEntered == 0
+                                ? 2
+                                : math.max(2.0,
+                                    50.0 * (enteredCounts[i] / maxEntered)),
                             decoration: BoxDecoration(
-                              color: tokens.chart.first.withValues(alpha: trend[i].incomplete ? 0.4 : 0.85),
+                              color: tokens.chart.first.withValues(
+                                  alpha: trend[i].incomplete ? 0.4 : 0.85),
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
@@ -67,9 +68,10 @@ class DivergingBarChart extends StatelessWidget {
     );
     final scaler = MediaQuery.textScalerOf(context);
     final isBold = MediaQuery.boldTextOf(context);
-    final effectiveValStyle = DefaultTextStyle.of(context).style.merge(valueStyle).copyWith(
-          fontWeight: isBold ? FontWeight.bold : valueStyle?.fontWeight,
-        );
+    final effectiveValStyle =
+        DefaultTextStyle.of(context).style.merge(valueStyle).copyWith(
+              fontWeight: isBold ? FontWeight.bold : valueStyle?.fontWeight,
+            );
 
     final formattedValues = {
       for (final v in values)
@@ -94,9 +96,12 @@ class DivergingBarChart extends StatelessWidget {
         8.0;
 
     final topology = values
-        .map((v) => '${v.id}:${v.value < 0 ? 'neg' : v.value > 0 ? 'pos' : 'zero'}')
+        .map((v) =>
+            '${v.id}:${v.value < 0 ? 'neg' : v.value > 0 ? 'pos' : 'zero'}')
         .join(';');
-    final revision = values.map((v) => '${v.id}:${v.value}:${v.label}').join(';');
+    final revision = jsonEncode([
+      for (final v in values) [v.id, v.value]
+    ]);
 
     return ChartMotion(
       dataRevision: revision,
@@ -118,18 +123,23 @@ class DivergingBarChart extends StatelessWidget {
               final isWide = availableWidth >= maxValueWidth + 160;
 
               final valueWidth = maxValueWidth;
-              var labelWidth = math.min(240.0, math.max(96.0, availableWidth * 0.35));
+              var labelWidth =
+                  math.min(240.0, math.max(96.0, availableWidth * 0.35));
               if (availableWidth - valueWidth - labelWidth - 16.0 < 64.0) {
-                labelWidth = math.max(64.0, availableWidth - valueWidth - 16.0 - 64.0);
+                labelWidth =
+                    math.max(64.0, availableWidth - valueWidth - 16.0 - 64.0);
               }
 
-              Widget buildDivergingBar(RankedValue v, {bool includeGuide = false}) {
+              Widget buildDivergingBar(RankedValue v,
+                  {bool includeGuide = false}) {
                 final allowed = chartAnimationsAllowed(context);
                 final isEntrance = motion.phase == ChartMotionPhase.entrance;
                 final negTarget = (v.value.abs() / m).clamp(0.0, 1.0);
                 final posTarget = (v.value / m).clamp(0.0, 1.0);
-                final currentNeg = isEntrance ? negTarget * motion.revealProgress : negTarget;
-                final currentPos = isEntrance ? posTarget * motion.revealProgress : posTarget;
+                final currentNeg =
+                    isEntrance ? negTarget * motion.revealProgress : negTarget;
+                final currentPos =
+                    isEntrance ? posTarget * motion.revealProgress : posTarget;
                 final barContent = SizedBox(
                   height: 20,
                   child: Row(
@@ -148,7 +158,8 @@ class DivergingBarChart extends StatelessWidget {
                                             height: 20,
                                             decoration: BoxDecoration(
                                               color: badColor,
-                                              borderRadius: BorderRadius.circular(4),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                             ),
                                           ),
                                         )
@@ -162,7 +173,8 @@ class DivergingBarChart extends StatelessWidget {
                                                 height: 20,
                                                 decoration: BoxDecoration(
                                                   color: badColor,
-                                                  borderRadius: BorderRadius.circular(4),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
                                                 ),
                                               ),
                                             );
@@ -187,7 +199,8 @@ class DivergingBarChart extends StatelessWidget {
                                             height: 20,
                                             decoration: BoxDecoration(
                                               color: goodColor,
-                                              borderRadius: BorderRadius.circular(4),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                             ),
                                           ),
                                         )
@@ -201,7 +214,8 @@ class DivergingBarChart extends StatelessWidget {
                                                 height: 20,
                                                 decoration: BoxDecoration(
                                                   color: goodColor,
-                                                  borderRadius: BorderRadius.circular(4),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
                                                 ),
                                               ),
                                             );

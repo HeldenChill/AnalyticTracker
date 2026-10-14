@@ -178,6 +178,9 @@ void main() {
     // 7. Change event; key clears and next query cannot reuse id from the old event
     await t.tap(find.text(longIdentifier).last);
     await t.pumpAndSettle();
+    // Long identifier wraps in the open menu; later items build lazily.
+    await t.scrollUntilVisible(find.text('custom_event'), 100,
+        scrollable: find.byType(Scrollable).last);
     await t.tap(find.text('custom_event').last);
     await t.pumpAndSettle();
 

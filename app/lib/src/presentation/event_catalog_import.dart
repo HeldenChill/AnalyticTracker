@@ -371,14 +371,18 @@ ImportPreview previewVocabulary(
   final patterned = effective.values
       .where((e) => EventPattern.compile(e.modeBTemplate) != null)
       .toList();
+  final compiled = [
+    for (final e in patterned) EventPattern.compile(e.modeBTemplate)!
+  ];
+  patternCheck:
   for (var i = 0; i < patterned.length; i++) {
     for (var j = i + 1; j < patterned.length; j++) {
-      if (EventPattern.compile(patterned[i].modeBTemplate)!
-          .overlaps(EventPattern.compile(patterned[j].modeBTemplate)!)) {
+      if (compiled[i].overlaps(compiled[j])) {
         final e = incoming[patterned[j].rawId] ?? incoming[patterned[i].rawId];
         if (e != null) {
           issue(e.sources.first.fileName, e.sources.first.record,
               'Ambiguous templates: ${patterned[i].rawId}, ${patterned[j].rawId}');
+          break patternCheck;
         }
       }
     }

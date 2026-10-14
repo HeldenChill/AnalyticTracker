@@ -1,3 +1,5 @@
+import '../../presentation/analysis_language.dart';
+import '../../widgets/vocabulary_scope.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,45 +52,48 @@ class _AnomaliesTabState extends ConsumerState<AnomaliesTab> {
         }
       },
       child: StudioAsyncPanel<AnomalyResult>(
-      queryKey: (baseUrl, filters),
-      value: ref.watch(anomaliesProvider(filters)),
-      onRetry: () => ref.invalidate(anomaliesProvider(filters)),
-      builder: (res) {
-        if (res.reason == 'too_short') {
-          return const Center(
-            child: Text('Range shorter than 8 days (too short for rolling baseline).'),
-          );
-        }
-        if (res.alerts.isEmpty) {
-          return const Center(
-            child: Text(
-              'No alerts available for this range. Series with insufficient baseline history are not evaluated.',
+        queryKey: (baseUrl, filters),
+        value: ref.watch(anomaliesProvider(filters)),
+        onRetry: () => ref.invalidate(anomaliesProvider(filters)),
+        builder: (res) {
+          if (res.reason == 'too_short') {
+            return const Center(
+              child: Text(
+                  'Range shorter than 8 days (too short for rolling baseline).'),
+            );
+          }
+          if (res.alerts.isEmpty) {
+            return const Center(
+              child: Text(
+                'No alerts available for this range. Series with insufficient baseline history are not evaluated.',
+              ),
+            );
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Anomaly Alerts',
+                    style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 4),
+                Text(
+                  'Sudden spikes or drops flagged against rolling 14-day median baseline (|z| ≥ 3.0).',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 20),
+                for (final alert in res.alerts) ...[
+                  _buildAlertCard(alert, tokens),
+                  const SizedBox(height: 12),
+                ],
+              ],
             ),
           );
-        }
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Anomaly Alerts', style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 4),
-              Text(
-                'Sudden spikes or drops flagged against rolling 14-day median baseline (|z| ≥ 3.0).',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 20),
-              for (final alert in res.alerts) ...[
-                _buildAlertCard(alert, tokens),
-                const SizedBox(height: 12),
-              ],
-            ],
-          ),
-        );
-      },
-    ),
-  );
+        },
+      ),
+    );
   }
 
   Widget _buildAlertCard(AnomalyAlert alert, AnalyticsTokens tokens) {
@@ -123,8 +128,9 @@ class _AnomaliesTabState extends ConsumerState<AnomaliesTab> {
                 children: [
                   Expanded(
                     child: Text(
-                      alert.message,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                      anomalyLanguage(alert, VocabularyScope.of(context)),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 15),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -143,19 +149,27 @@ class _AnomaliesTabState extends ConsumerState<AnomaliesTab> {
                 children: [
                   Text(
                     'Observed: ${fmtDecimal(alert.value, digits: 1)}',
-                    style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant),
                   ),
                   Text(
                     '· Median baseline: ${alert.median}',
-                    style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant),
                   ),
                   Text(
                     '· MAD: ${alert.mad}',
-                    style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant),
                   ),
                   Text(
                     '· Day: ${alert.day}',
-                    style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -163,7 +177,9 @@ class _AnomaliesTabState extends ConsumerState<AnomaliesTab> {
                 key: ValueKey('anomaly-expansion:${alert.series}:${alert.day}'),
                 alignment: Alignment.topCenter,
                 curve: Curves.easeInOut,
-                child: isSelected ? _buildDetail(alert, unit) : const SizedBox.shrink(),
+                child: isSelected
+                    ? _buildDetail(alert, unit)
+                    : const SizedBox.shrink(),
               ),
             ],
           ),
@@ -177,7 +193,8 @@ class _AnomaliesTabState extends ConsumerState<AnomaliesTab> {
     final baselinePoints = <ChartPoint>[];
 
     if (alert.history.isNotEmpty) {
-      final sorted = List.of(alert.history)..sort((a, b) => a.day.compareTo(b.day));
+      final sorted = List.of(alert.history)
+        ..sort((a, b) => a.day.compareTo(b.day));
       final start = DateTime.tryParse(sorted.first.day);
       var end = DateTime.tryParse(sorted.last.day);
       final alertDt = DateTime.tryParse(alert.day);
@@ -199,8 +216,10 @@ class _AnomaliesTabState extends ConsumerState<AnomaliesTab> {
         }
       } else {
         for (var i = 0; i < sorted.length; i++) {
-          actualPoints.add(ChartPoint(i.toDouble(), sorted[i].value, label: sorted[i].day));
-          baselinePoints.add(ChartPoint(i.toDouble(), alert.median, label: sorted[i].day));
+          actualPoints.add(
+              ChartPoint(i.toDouble(), sorted[i].value, label: sorted[i].day));
+          baselinePoints.add(
+              ChartPoint(i.toDouble(), alert.median, label: sorted[i].day));
         }
       }
     } else {
@@ -211,7 +230,7 @@ class _AnomaliesTabState extends ConsumerState<AnomaliesTab> {
     final seriesList = [
       ChartSeries(
         id: 'actual',
-        label: alert.series,
+        label: analysisSeriesLabel(alert.series, VocabularyScope.of(context)),
         points: actualPoints,
       ),
       ChartSeries(
@@ -229,7 +248,8 @@ class _AnomaliesTabState extends ConsumerState<AnomaliesTab> {
           const Divider(),
           const SizedBox(height: 8),
           ChartFrame(
-            title: '${alert.series} Baseline History',
+            title:
+                '${analysisSeriesLabel(alert.series, VocabularyScope.of(context))} Baseline History',
             subtitle:
                 'Target alert on ${alert.day}: observed ${alert.value} vs baseline median ${alert.median} (z = ${alert.z.toStringAsFixed(1)}).',
             unit: unit,

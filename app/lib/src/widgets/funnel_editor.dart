@@ -1,3 +1,6 @@
+import '../state/event_vocabulary.dart';
+import '../presentation/funnel_language.dart';
+import 'event_dropdown_menu.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,7 +31,8 @@ Future<FunnelEditorOutcome?> showFunnelEditor(
 typedef DraftEdit = void Function(VoidCallback change, {String? notice});
 
 class FunnelEditorDialog extends ConsumerStatefulWidget {
-  const FunnelEditorDialog({super.key, required this.initial, required this.onSave});
+  const FunnelEditorDialog(
+      {super.key, required this.initial, required this.onSave});
   final FunnelDef? initial;
   final Future<String?> Function(FunnelDef def) onSave;
 
@@ -37,8 +41,11 @@ class FunnelEditorDialog extends ConsumerStatefulWidget {
 }
 
 class _FunnelEditorDialogState extends ConsumerState<FunnelEditorDialog> {
-  late final FunnelDraft _draft = widget.initial == null ? FunnelDraft() : FunnelDraft.fromDef(widget.initial!);
-  late final TextEditingController _nameCtrl = TextEditingController(text: _draft.name);
+  late final FunnelDraft _draft = widget.initial == null
+      ? FunnelDraft()
+      : FunnelDraft.fromDef(widget.initial!);
+  late final TextEditingController _nameCtrl =
+      TextEditingController(text: _draft.name);
   String? _saveError;
   String? _notice;
   bool _saving = false;
@@ -84,7 +91,8 @@ class _FunnelEditorDialogState extends ConsumerState<FunnelEditorDialog> {
     final def = _draft.toDef();
     final problem = def.validate();
     final ready = problem == null && !_saving;
-    final muted = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final muted = theme.textTheme.bodySmall
+        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
 
     return AlertDialog(
       title: Text(widget.initial == null ? 'New funnel' : 'Edit funnel'),
@@ -101,28 +109,33 @@ class _FunnelEditorDialogState extends ConsumerState<FunnelEditorDialog> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: 240, maxWidth: 420),
+                    constraints:
+                        const BoxConstraints(minWidth: 240, maxWidth: 420),
                     child: TextField(
                       controller: _nameCtrl,
-                      decoration: const InputDecoration(labelText: 'Funnel name'),
+                      decoration:
+                          const InputDecoration(labelText: 'Funnel name'),
                     ),
                   ),
                   DropdownButton<int?>(
                     value: _draft.windowMinutes,
                     items: [
                       for (final w in funnelWindowOptions)
-                        DropdownMenuItem<int?>(value: w, child: Text(funnelWindowLabel(w))),
+                        DropdownMenuItem<int?>(
+                            value: w, child: Text(funnelWindowLabel(w))),
                     ],
                     onChanged: (v) => _edit(() => _draft.windowMinutes = v),
                   ),
                   SegmentedButton<FunnelOrder>(
                     segments: [
-                      for (final o in FunnelOrder.values) ButtonSegment(value: o, label: Text(o.label)),
+                      for (final o in FunnelOrder.values)
+                        ButtonSegment(value: o, label: Text(o.label)),
                     ],
                     selected: {_draft.order},
                     showSelectedIcon: false,
                     onSelectionChanged: (s) {
-                      final hadExclusions = _draft.steps.any((st) => st.exclude.isNotEmpty);
+                      final hadExclusions =
+                          _draft.steps.any((st) => st.exclude.isNotEmpty);
                       _edit(() => _draft.setOrder(s.first),
                           notice: s.first == FunnelOrder.any && hadExclusions
                               ? 'Exclusions removed: they need strict order'
@@ -157,13 +170,16 @@ class _FunnelEditorDialogState extends ConsumerState<FunnelEditorDialog> {
               if (def.steps.every((s) => s.event.isNotEmpty))
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: Text('Summary: ${funnelSummary(def)}', style: theme.textTheme.bodyMedium),
+                  child: Text(
+                      'Summary: ${definitionLanguage(def, ref.watch(effectiveVocabularyProvider))}',
+                      style: theme.textTheme.bodyMedium),
                 ),
               if (problem != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Row(children: [
-                    Icon(Icons.info_outline, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                    Icon(Icons.info_outline,
+                        size: 16, color: theme.colorScheme.onSurfaceVariant),
                     const SizedBox(width: 6),
                     Flexible(child: Text(problem, style: muted)),
                   ]),
@@ -178,12 +194,19 @@ class _FunnelEditorDialogState extends ConsumerState<FunnelEditorDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel')),
         OutlinedButton(
-          onPressed: ready ? () => Navigator.of(context).pop(FunnelEditorOutcome(def, saved: false)) : null,
+          onPressed: ready
+              ? () => Navigator.of(context)
+                  .pop(FunnelEditorOutcome(def, saved: false))
+              : null,
           child: const Text('Run'),
         ),
-        FilledButton(onPressed: ready ? () => _save(def) : null, child: const Text('Save')),
+        FilledButton(
+            onPressed: ready ? () => _save(def) : null,
+            child: const Text('Save')),
       ],
     );
   }
@@ -213,7 +236,9 @@ class _StepCard extends StatelessWidget {
     final count = draft.steps.length;
     final strict = draft.order == FunnelOrder.strict;
 
-    _MatcherEditor matcher(MatcherSlot slot, String lead, {String? removeTooltip}) => _MatcherEditor(
+    _MatcherEditor matcher(MatcherSlot slot, String lead,
+            {String? removeTooltip}) =>
+        _MatcherEditor(
           key: ValueKey('m-$i-${slot.exclude}-${slot.index}'),
           draft: draft,
           step: i,
@@ -236,17 +261,26 @@ class _StepCard extends StatelessWidget {
               Text('Step ${i + 1}', style: theme.textTheme.titleSmall),
               const Spacer(),
               IconButton(
-                  tooltip: 'Move up', icon: const Icon(Icons.arrow_upward), onPressed: i == 0 ? null : () => edit(() => draft.moveUp(i))),
+                  tooltip: 'Move up',
+                  icon: const Icon(Icons.arrow_upward),
+                  onPressed: i == 0 ? null : () => edit(() => draft.moveUp(i))),
               IconButton(
                   tooltip: 'Move down',
                   icon: const Icon(Icons.arrow_downward),
-                  onPressed: i == count - 1 ? null : () => edit(() => draft.moveDown(i))),
+                  onPressed: i == count - 1
+                      ? null
+                      : () => edit(() => draft.moveDown(i))),
               IconButton(
                   tooltip: 'Duplicate',
                   icon: const Icon(Icons.copy_outlined),
-                  onPressed: draft.canAdd ? () => edit(() => draft.duplicate(i)) : null),
+                  onPressed: draft.canAdd
+                      ? () => edit(() => draft.duplicate(i))
+                      : null),
               IconButton(
-                  tooltip: 'Remove step', icon: const Icon(Icons.close), onPressed: count == 1 ? null : () => edit(() => draft.remove(i))),
+                  tooltip: 'Remove step',
+                  icon: const Icon(Icons.close),
+                  onPressed:
+                      count == 1 ? null : () => edit(() => draft.remove(i))),
             ]),
             for (var m = 0; m < step.matchers.length; m++) ...[
               if (m > 0)
@@ -254,10 +288,13 @@ class _StepCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Text('— or —', style: theme.textTheme.labelMedium),
                 ),
-              matcher(MatcherSlot.match(m), 'Players who did', removeTooltip: m == 0 ? null : 'Remove or-event'),
+              matcher(MatcherSlot.match(m), 'Players who did',
+                  removeTooltip: m == 0 ? null : 'Remove or-event'),
             ],
             TextButton.icon(
-              onPressed: draft.canAddAlternative(i) ? () => edit(() => draft.addAlternative(i)) : null,
+              onPressed: draft.canAddAlternative(i)
+                  ? () => edit(() => draft.addAlternative(i))
+                  : null,
               icon: const Icon(Icons.alt_route, size: 18),
               label: const Text('Or another event'),
             ),
@@ -265,12 +302,16 @@ class _StepCard extends StatelessWidget {
               if (step.exclude.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
-                  child: Text('Drop the player if, before this step, they did:', style: theme.textTheme.labelMedium),
+                  child: Text('Drop the player if, before this step, they did:',
+                      style: theme.textTheme.labelMedium),
                 ),
               for (var x = 0; x < step.exclude.length; x++)
-                matcher(MatcherSlot.exclude(x), 'Did', removeTooltip: 'Remove exclusion'),
+                matcher(MatcherSlot.exclude(x), 'Did',
+                    removeTooltip: 'Remove exclusion'),
               TextButton.icon(
-                onPressed: draft.canAddExclusion(i) ? () => edit(() => draft.addExclusion(i)) : null,
+                onPressed: draft.canAddExclusion(i)
+                    ? () => edit(() => draft.addExclusion(i))
+                    : null,
                 icon: const Icon(Icons.block, size: 18),
                 label: const Text('Add exclusion'),
               ),
@@ -307,11 +348,17 @@ class _MatcherEditor extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final vocabulary = ref.watch(effectiveVocabularyProvider);
     final m = draft.matcher(step, slot);
-    final loaded = m.event.isEmpty ? null : ref.watch(paramKeysProvider((event: m.event, filters: filters))).valueOrNull;
+    final loaded = m.event.isEmpty
+        ? null
+        : ref
+            .watch(paramKeysProvider((event: m.event, filters: filters)))
+            .valueOrNull;
     final keys = loaded ?? const <String>[];
     final theme = Theme.of(context);
-    final eventOptions = {...names, if (m.event.isNotEmpty) m.event}.toList()..sort();
+    final eventOptions = {...names, if (m.event.isNotEmpty) m.event}.toList()
+      ..sort();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -322,21 +369,16 @@ class _MatcherEditor extends ConsumerWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             SizedBox(width: 120, child: Text(lead)),
-            DropdownMenu<String>(
+            EventDropdownMenu(
               key: ValueKey('event-${m.event}'),
-              width: 260,
-              menuHeight: 320,
-              initialSelection: m.event.isEmpty ? null : m.event,
-              hintText: 'Event',
-              enableFilter: true,
-              requestFocusOnTap: true,
-              dropdownMenuEntries: [
-                for (final n in eventOptions) DropdownMenuEntry<String>(value: n, label: n),
-              ],
+              names: eventOptions,
+              value: m.event.isEmpty ? null : m.event,
               onSelected: (v) {
                 if (v == null || v == m.event) return;
                 edit(() => draft.setEvent(step, v, slot: slot),
-                    notice: m.params.isEmpty ? null : 'Conditions cleared: they belonged to ${m.event}');
+                    notice: m.params.isEmpty
+                        ? null
+                        : 'Conditions cleared: they belonged to ${vocabulary.eventLabel(m.event)}');
               },
             ),
             if (removeTooltip != null)
@@ -357,11 +399,16 @@ class _MatcherEditor extends ConsumerWidget {
               filter: m.params[p],
               keys: keys,
               filters: filters,
-              onKey: (k) => edit(() => draft.setParamKey(step, p, k, slot: slot)),
-              onOp: (op, seed) => edit(() => draft.setParamOp(step, p, op, slot: slot, seed: seed)),
-              onValue: (v) => edit(() => draft.setParamValue(step, p, v, slot: slot)),
-              onValues: (vs) => edit(() => draft.setParamValues(step, p, vs, slot: slot)),
-              onRemove: () => edit(() => draft.removeParam(step, p, slot: slot)),
+              onKey: (k) =>
+                  edit(() => draft.setParamKey(step, p, k, slot: slot)),
+              onOp: (op, seed) => edit(
+                  () => draft.setParamOp(step, p, op, slot: slot, seed: seed)),
+              onValue: (v) =>
+                  edit(() => draft.setParamValue(step, p, v, slot: slot)),
+              onValues: (vs) =>
+                  edit(() => draft.setParamValues(step, p, vs, slot: slot)),
+              onRemove: () =>
+                  edit(() => draft.removeParam(step, p, slot: slot)),
             ),
           ),
         // An empty item list disables the Parameter dropdown; say why instead of failing silently.
@@ -369,9 +416,10 @@ class _MatcherEditor extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(left: 168, top: 4),
             child: Text(
-              'No parameters for ${m.event} in this date range.'
+              'No parameters for ${vocabulary.eventLabel(m.event)} in this date range.'
               '${filters.includeTest ? '' : ' Turn on "Test devices" to include test-device events.'}',
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
         Padding(
@@ -389,7 +437,8 @@ class _MatcherEditor extends ConsumerWidget {
   }
 }
 
-String _fmtNum(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+String _fmtNum(double v) =>
+    v == v.roundToDouble() ? v.toInt().toString() : v.toString();
 
 /// One "parameter · operator · value" condition. Every part is picked;
 /// only number and "contains" values can be typed.
@@ -424,13 +473,20 @@ class _ConditionRow extends ConsumerWidget {
     final key = filter.key.isEmpty ? null : filter.key;
     final buckets = key == null
         ? const <ParamBucket>[]
-        : ref.watch(paramValuesProvider((event: event, key: key, filters: filters))).valueOrNull ??
+        : ref
+                .watch(paramValuesProvider(
+                    (event: event, key: key, filters: filters)))
+                .valueOrNull ??
             const <ParamBucket>[];
     // ponytail: numbers judged from the top 50 values the server returns.
     final nums = [for (final b in buckets) double.tryParse(b.value)];
     final numeric = nums.isNotEmpty && nums.every((n) => n != null);
-    final sorted = numeric ? ([for (final n in nums) n!]..sort()) : const <double>[];
-    final ops = [for (final o in FilterOp.values) if (!o.numeric || numeric || o == filter.op) o];
+    final sorted =
+        numeric ? ([for (final n in nums) n!]..sort()) : const <double>[];
+    final ops = [
+      for (final o in FilterOp.values)
+        if (!o.numeric || numeric || o == filter.op) o
+    ];
 
     return Wrap(
       spacing: 8,
@@ -445,8 +501,18 @@ class _ConditionRow extends ConsumerWidget {
             value: key,
             hint: const Text('Parameter'),
             items: [
-              if (key != null && !keys.contains(key)) DropdownMenuItem(value: key, child: Text(key)),
-              for (final k in keys) DropdownMenuItem(value: k, child: Text(k)),
+              if (key != null && !keys.contains(key))
+                DropdownMenuItem(
+                    value: key,
+                    child: Text(ref
+                        .watch(effectiveVocabularyProvider)
+                        .parameterLabel(event, key))),
+              for (final k in keys)
+                DropdownMenuItem(
+                    value: k,
+                    child: Text(ref
+                        .watch(effectiveVocabularyProvider)
+                        .parameterLabel(event, k))),
             ],
             onChanged: (k) {
               if (k != null && k != key) onKey(k);
@@ -458,23 +524,46 @@ class _ConditionRow extends ConsumerWidget {
           child: DropdownButton<FilterOp>(
             isExpanded: true,
             value: filter.op,
-            items: [for (final o in ops) DropdownMenuItem(value: o, child: Text(o.label))],
+            items: [
+              for (final o in ops)
+                DropdownMenuItem(value: o, child: Text(o.label))
+            ],
             onChanged: key == null
                 ? null
                 : (o) {
-                    if (o != null && o != filter.op) onOp(o, o.numeric && sorted.isNotEmpty ? _fmtNum(sorted[sorted.length ~/ 2]) : null);
+                    if (o != null && o != filter.op) {
+                      onOp(
+                          o,
+                          o.numeric && sorted.isNotEmpty
+                              ? _fmtNum(sorted[sorted.length ~/ 2])
+                              : null);
+                    }
                   },
           ),
         ),
-        SizedBox(width: 240, child: _valueControl(context, key, buckets, sorted)),
-        IconButton(tooltip: 'Remove filter', icon: const Icon(Icons.remove_circle_outline, size: 18), onPressed: onRemove),
+        SizedBox(
+            width: 240,
+            child: _valueControl(
+                context,
+                key,
+                buckets,
+                sorted,
+                ref
+                    .watch(effectiveVocabularyProvider)
+                    .parameterLabel(event, key ?? ''))),
+        IconButton(
+            tooltip: 'Remove filter',
+            icon: const Icon(Icons.remove_circle_outline, size: 18),
+            onPressed: onRemove),
       ],
     );
   }
 
-  Widget _valueControl(BuildContext context, String? key, List<ParamBucket> buckets, List<double> sorted) {
+  Widget _valueControl(BuildContext context, String? key,
+      List<ParamBucket> buckets, List<double> sorted, String caption) {
     if (key == null) {
-      return const DropdownMenu<String>(width: 240, enabled: false, hintText: '—', dropdownMenuEntries: []);
+      return const DropdownMenu<String>(
+          width: 240, enabled: false, hintText: '—', dropdownMenuEntries: []);
     }
     switch (filter.op) {
       case FilterOp.eq:
@@ -488,8 +577,11 @@ class _ConditionRow extends ConsumerWidget {
           enableFilter: true,
           requestFocusOnTap: buckets.length > 15,
           dropdownMenuEntries: [
-            if (value != null && !buckets.any((b) => b.value == value)) DropdownMenuEntry(value: value, label: value),
-            for (final b in buckets) DropdownMenuEntry(value: b.value, label: '${b.value} (${b.count})'),
+            if (value != null && !buckets.any((b) => b.value == value))
+              DropdownMenuEntry(value: value, label: value),
+            for (final b in buckets)
+              DropdownMenuEntry(
+                  value: b.value, label: '${b.value} (${b.count})'),
           ],
           onSelected: onValue,
         );
@@ -498,12 +590,15 @@ class _ConditionRow extends ConsumerWidget {
           onPressed: () async {
             final picked = await showDialog<List<String>>(
               context: context,
-              builder: (_) => _PickValuesDialog(param: key, buckets: buckets, selected: filter.values),
+              builder: (_) => _PickValuesDialog(
+                  param: caption, buckets: buckets, selected: filter.values),
             );
             if (picked != null) onValues(picked);
           },
-          child: Text(filter.values.isEmpty ? 'Pick values' : filter.values.join(', '),
-              maxLines: 1, overflow: TextOverflow.ellipsis),
+          child: Text(
+              filter.values.isEmpty ? 'Pick values' : filter.values.join(', '),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
         );
       case FilterOp.contains:
         return Autocomplete<String>(
@@ -526,7 +621,9 @@ class _ConditionRow extends ConsumerWidget {
       case FilterOp.lte:
         return _NumberField(
           value: filter.value,
-          hint: sorted.isEmpty ? null : 'seen ${_fmtNum(sorted.first)} – ${_fmtNum(sorted.last)}',
+          hint: sorted.isEmpty
+              ? null
+              : 'seen ${_fmtNum(sorted.first)} – ${_fmtNum(sorted.last)}',
           onChanged: onValue,
         );
     }
@@ -535,7 +632,8 @@ class _ConditionRow extends ConsumerWidget {
 
 /// Number box with − / + buttons; letters cannot be typed.
 class _NumberField extends StatefulWidget {
-  const _NumberField({required this.value, required this.hint, required this.onChanged});
+  const _NumberField(
+      {required this.value, required this.hint, required this.onChanged});
   final String? value;
   final String? hint;
   final ValueChanged<String?> onChanged;
@@ -545,7 +643,8 @@ class _NumberField extends StatefulWidget {
 }
 
 class _NumberFieldState extends State<_NumberField> {
-  late final TextEditingController _ctrl = TextEditingController(text: widget.value ?? '');
+  late final TextEditingController _ctrl =
+      TextEditingController(text: widget.value ?? '');
 
   @override
   void didUpdateWidget(_NumberField old) {
@@ -559,28 +658,39 @@ class _NumberFieldState extends State<_NumberField> {
     super.dispose();
   }
 
-  void _step(int delta) => widget.onChanged(_fmtNum((double.tryParse(_ctrl.text) ?? 0) + delta));
+  void _step(int delta) =>
+      widget.onChanged(_fmtNum((double.tryParse(_ctrl.text) ?? 0) + delta));
 
   @override
   Widget build(BuildContext context) => Row(children: [
-        IconButton(tooltip: 'Decrease', icon: const Icon(Icons.remove, size: 18), onPressed: () => _step(-1)),
+        IconButton(
+            tooltip: 'Decrease',
+            icon: const Icon(Icons.remove, size: 18),
+            onPressed: () => _step(-1)),
         Expanded(
           child: TextField(
             controller: _ctrl,
             textAlign: TextAlign.center,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.\-]'))],
+            keyboardType: const TextInputType.numberWithOptions(
+                decimal: true, signed: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.\-]'))
+            ],
             decoration: InputDecoration(helperText: widget.hint),
             onChanged: (v) => widget.onChanged(v.isEmpty ? null : v),
           ),
         ),
-        IconButton(tooltip: 'Increase', icon: const Icon(Icons.add, size: 18), onPressed: () => _step(1)),
+        IconButton(
+            tooltip: 'Increase',
+            icon: const Icon(Icons.add, size: 18),
+            onPressed: () => _step(1)),
       ]);
 }
 
 /// Checklist of seen values for "is one of"; at most [maxInValues].
 class _PickValuesDialog extends StatefulWidget {
-  const _PickValuesDialog({required this.param, required this.buckets, required this.selected});
+  const _PickValuesDialog(
+      {required this.param, required this.buckets, required this.selected});
   final String param;
   final List<ParamBucket> buckets;
   final List<String> selected;
@@ -596,7 +706,8 @@ class _PickValuesDialogState extends State<_PickValuesDialog> {
   Widget build(BuildContext context) {
     final options = [
       for (final v in widget.selected)
-        if (!widget.buckets.any((b) => b.value == v)) ParamBucket(value: v, count: 0),
+        if (!widget.buckets.any((b) => b.value == v))
+          ParamBucket(value: v, count: 0),
       ...widget.buckets,
     ];
     final full = _picked.length >= maxInValues;
@@ -612,17 +723,25 @@ class _PickValuesDialogState extends State<_PickValuesDialog> {
                   CheckboxListTile(
                     dense: true,
                     value: _picked.contains(b.value),
-                    title: Text(b.count == 0 ? b.value : '${b.value} (${b.count})'),
+                    title: Text(
+                        b.count == 0 ? b.value : '${b.value} (${b.count})'),
                     onChanged: !_picked.contains(b.value) && full
                         ? null
-                        : (on) => setState(() => on == true ? _picked.add(b.value) : _picked.remove(b.value)),
+                        : (on) => setState(() => on == true
+                            ? _picked.add(b.value)
+                            : _picked.remove(b.value)),
                   ),
               ]),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel')),
         FilledButton(
-          onPressed: () => Navigator.of(context).pop([for (final b in options) if (_picked.contains(b.value)) b.value]),
+          onPressed: () => Navigator.of(context).pop([
+            for (final b in options)
+              if (_picked.contains(b.value)) b.value
+          ]),
           child: const Text('OK'),
         ),
       ],

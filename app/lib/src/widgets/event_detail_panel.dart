@@ -2,6 +2,7 @@ import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
 
 import 'format.dart';
+import 'vocabulary_scope.dart';
 import '../view_models/events_view_model.dart';
 import 'charts/chart_models.dart';
 import 'charts/time_series_chart.dart';
@@ -24,6 +25,7 @@ class EventDetailPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final vocabulary = VocabularyScope.of(context);
 
     String changeLabel;
     Color? changeColor;
@@ -74,7 +76,7 @@ class EventDetailPanel extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        event.name,
+                        vocabulary.eventLabel(event.name),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -91,6 +93,11 @@ class EventDetailPanel extends StatelessWidget {
                 ),
               ],
             ),
+            Text(
+                'Full name: ${vocabulary.meaning(event.name)?.fullName ?? event.name}'),
+            Text('Tracking ID: ${event.name}'),
+            Text(vocabulary.meaning(event.name)?.description ??
+                'Meaning unavailable for this event.'),
             const SizedBox(height: 16),
             StudioGrid(
               minChildWidth: 160,
@@ -109,7 +116,8 @@ class EventDetailPanel extends StatelessWidget {
                 ),
                 StudioMetric(
                   title: 'Previous period',
-                  value: event.previous != null ? fmtCount(event.previous!) : '—',
+                  value:
+                      event.previous != null ? fmtCount(event.previous!) : '—',
                   detail: 'Prior equivalent days',
                 ),
                 StudioMetric(
@@ -121,7 +129,8 @@ class EventDetailPanel extends StatelessWidget {
                           ? 'New activity'
                           : 'Unavailable',
                   badge: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: changeColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(4),
@@ -149,7 +158,7 @@ class EventDetailPanel extends StatelessWidget {
               series: [
                 ChartSeries(
                   id: 'current',
-                  label: event.name,
+                  label: vocabulary.eventLabel(event.name),
                   points: event.daily,
                 ),
               ],

@@ -1,3 +1,5 @@
+import '../presentation/funnel_language.dart';
+import 'vocabulary_scope.dart';
 import 'package:analytic_shared/analytic_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -65,7 +67,9 @@ class FunnelStepTable extends StatelessWidget {
               color: tokens.bad.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(999),
             ),
-            child: Text(text, style: TextStyle(color: tokens.bad, fontWeight: FontWeight.w600)),
+            child: Text(text,
+                style:
+                    TextStyle(color: tokens.bad, fontWeight: FontWeight.w600)),
           ),
         );
       }
@@ -101,7 +105,9 @@ class FunnelStepTable extends StatelessWidget {
             const StudioColumn('From first', width: 100, numeric: true),
             const StudioColumn('Dropped', width: 90, numeric: true),
             StudioColumn(
-              order == FunnelOrder.any ? 'Median time from step 1' : 'Median time',
+              order == FunnelOrder.any
+                  ? 'Median time from step 1'
+                  : 'Median time',
               width: 140,
               numeric: true,
             ),
@@ -110,10 +116,11 @@ class FunnelStepTable extends StatelessWidget {
             for (final s in result.steps)
               StudioRow([
                 StudioTextCell('${s.index + 1}', numeric: true),
-                StudioTextCell(s.text),
+                StudioTextCell(resultLanguage(s, VocabularyScope.of(context))),
                 s.index >= 1 && onSelectStep != null
                     ? InkWell(
-                        onTap: () => onSelectStep!(s.index + 1, FunnelPlayerOutcome.converted),
+                        onTap: () => onSelectStep!(
+                            s.index + 1, FunnelPlayerOutcome.converted),
                         child: StudioTextCell('${s.players}', numeric: true),
                       )
                     : StudioTextCell('${s.players}', numeric: true),
