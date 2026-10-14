@@ -10,6 +10,7 @@ import '../widgets/stage_table.dart';
 import '../widgets/studio_async_panel.dart';
 import '../widgets/studio_layout.dart';
 
+import '../state/event_vocabulary.dart';
 import '../state/navigation.dart';
 import '../state/refresh.dart';
 
@@ -20,6 +21,7 @@ class ProgressionPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final f = ref.watch(filtersProvider);
     final baseUrl = ref.watch(baseUrlProvider);
+    final vocabulary = ref.watch(effectiveVocabularyProvider);
 
     return ActiveRequestScope(
       page: AppPage.progression,
@@ -42,18 +44,18 @@ class ProgressionPage extends ConsumerWidget {
           if (d.stages.isEmpty) {
             return ListView(
               padding: const EdgeInsets.all(16),
-              children: const [
-                StudioHeading(
+              children: [
+                const StudioHeading(
                   title: 'Progression',
                   subtitle: 'Player reach and difficulty, stage by stage',
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Card(
                   child: Padding(
-                    padding: EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(24),
                     child: Center(
                       child: Text(
-                        'No stage events yet — builds using stg_start/stg_cmp/stg_fail will appear here.',
+                        'No stage events yet — builds using ${[for (final id in const ['stg_start', 'stg_cmp', 'stg_fail']) vocabulary.eventLabel(id)].join(', ')} will appear here.',
                         textAlign: TextAlign.center,
                       ),
                     ),

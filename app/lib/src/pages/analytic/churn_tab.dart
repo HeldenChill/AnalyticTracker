@@ -19,10 +19,6 @@ import '../../widgets/studio_table.dart';
 /// Groups smaller than this get a "small sample" badge (spec §1 honesty rule).
 const smallSample = 10;
 
-/// Feature key as shown to people: `ev:pet_buy` → `pet_buy`.
-String featureName(String key) =>
-    key.startsWith('ev:') ? key.substring(3) : key;
-
 class ChurnTab extends ConsumerWidget {
   const ChurnTab({super.key});
 

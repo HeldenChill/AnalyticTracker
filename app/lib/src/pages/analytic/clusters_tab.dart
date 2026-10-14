@@ -16,10 +16,6 @@ import '../../widgets/studio_table.dart';
 /// Groups smaller than this get a "small sample" badge (spec §1 honesty rule).
 const smallSample = 10;
 
-/// Feature key as shown to people: `ev:pet_buy` → `pet_buy`.
-String featureName(String key) =>
-    key.startsWith('ev:') ? key.substring(3) : key;
-
 /// Silhouette in words (spec §4): < 0.25 weak, < 0.5 ok, else strong.
 String separationWord(double s) =>
     s < 0.25 ? 'weak' : (s < 0.5 ? 'ok' : 'strong');

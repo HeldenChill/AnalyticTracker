@@ -280,4 +280,46 @@ void main() {
     expect(ChartMotion.of(t.element(builder)).running, isTrue);
     await t.pumpAndSettle();
   });
+  testWidgets('one-sheet import keeps FTU and tutorial meanings; picker stays server-driven',
+      (t) async {
+    final repo = MemoryVocabularyRepository();
+    final c = ProviderContainer(overrides: [
+      apiClientProvider.overrideWithValue(ApiClient('http://fixture',
+          client: MockClient((r) async => http.Response(
+              jsonEncode(r.url.path == '/events/names' ? ['sup_buy'] : []),
+              200)))),
+      vocabularyRepositoryProvider.overrideWithValue(repo)
+    ]);
+    addTearDown(c.dispose);
+    final scope = c.read(currentVocabularyScopeProvider),
+        controller = c.read(vocabularyProvider(scope).notifier);
+    await controller.loaded;
+    final ftu = c.read(effectiveVocabularyProvider).eventLabel('ftu_stg_start');
+    expect(
+        await controller.apply(previewVocabulary(
+            files: [
+              csvFile('one.csv',
+                  'Event,Abbreviated Event,Display Name,Description\nsupport_buy,sup_buy,Support item bought,A player buys support during a stage.\nnew_reward,new_rwd,New reward collected,A player collects the new reward.')
+            ],
+            current: c.read(effectiveVocabularyProvider),
+            scope: scope,
+            baseRevision: 0)),
+        ApplyResult.applied);
+    final v = c.read(effectiveVocabularyProvider);
+    expect(v.eventLabel('sup_buy'), 'Support item bought');
+    expect(v.eventLabel('new_rwd'), 'New reward collected');
+    expect(v.eventLabel('ftu_stg_start'), ftu);
+    expect(v.meaning('tut')!.tutorials.length, 24);
+    await t.pumpWidget(UncontrolledProviderScope(
+        container: c,
+        child: MaterialApp(
+            home: Scaffold(
+                body: VocabularyHost(
+                    child: EventPicker(value: null, onChanged: (_) {}))))));
+    await t.pumpAndSettle();
+    await t.tap(find.byType(EventPicker));
+    await t.pumpAndSettle();
+    expect(find.text('Support item bought'), findsWidgets);
+    expect(find.text('New reward collected'), findsNothing);
+  });
 }
