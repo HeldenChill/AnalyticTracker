@@ -832,16 +832,56 @@ void main() {
     }
   });
 
+  testWidgets('sparse grouped bar with two series and missing bucket aligns at width 320 scale 1.5', (t) async {
+    const series = [
+      ChartSeries(id: 's0', label: 'S0', points: [
+        ChartPoint(0, 10, label: 'first'),
+        ChartPoint(1, null, label: 'middle'),
+        ChartPoint(2, 20, label: 'last'),
+      ]),
+      ChartSeries(id: 's1', label: 'S1', points: [
+        ChartPoint(0, 15, label: 'first'),
+        ChartPoint(1, null, label: 'middle'),
+        ChartPoint(2, 25, label: 'last'),
+      ]),
+    ];
+    await t.pumpWidget(MaterialApp(
+      home: MediaQuery(
+        data: const MediaQueryData(disableAnimations: true, textScaler: TextScaler.linear(1.5)),
+        child: const Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 320,
+              child: SingleChildScrollView(
+                child: TimeSeriesChart(series: series, unit: 'events', kind: TimeChartKind.bars),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+    final leafFinder = find.byType(BarChartLeaf);
+    final leaf = t.widget<BarChartLeaf>(leafFinder);
+    final rect = t.getRect(leafFinder);
+    final centers = leaf.targetData.calculateGroupsX(rect.width);
+    final labelFirst = t.getRect(find.byKey(const ValueKey('chart-x-tick:0.0')));
+    expect(labelFirst.center.dx, closeTo(rect.left + centers[0], .5));
+    final labelLast = t.getRect(find.byKey(const ValueKey('chart-x-tick:2.0')));
+    expect(labelLast.center.dx, closeTo(rect.left + centers[2], .5));
+  });
+
   testWidgets('bar selection clears on measured data revision', (t) async {
     Future<void> render(double n) => pumpRepairChart(t, TimeSeriesChart(
+      key: const ValueKey('retained-bar-chart'),
       unit: 'events',
       kind: TimeChartKind.bars,
       series: [ChartSeries(id: 'primary', label: 'P', points: [ChartPoint(0, n, label: 'day')])],
     ), reduced: true);
     await render(10);
-    final leaf = t.widget<BarChartLeaf>(find.byType(BarChartLeaf));
-    final group = leaf.targetData.barGroups.first;
-    final rod = group.barRods.first;
+    var leaf = t.widget<BarChartLeaf>(find.byType(BarChartLeaf));
+    var group = leaf.targetData.barGroups.first;
+    var rod = group.barRods.first;
     expect(leaf.targetData.barTouchData.handleBuiltInTouches, isFalse);
     expect(leaf.targetData.barTouchData.touchCallback, isNotNull);
     leaf.targetData.barTouchData.touchCallback!(
@@ -856,16 +896,32 @@ void main() {
     expect(t.widget<BarChartLeaf>(find.byType(BarChartLeaf)).targetData.barGroups.first.showingTooltipIndicators, [0]);
     await render(20);
     expect(t.widget<BarChartLeaf>(find.byType(BarChartLeaf)).targetData.barGroups.first.showingTooltipIndicators, isEmpty);
+    // Mouse re-entry selects current 20
+    leaf = t.widget<BarChartLeaf>(find.byType(BarChartLeaf));
+    group = leaf.targetData.barGroups.first;
+    rod = group.barRods.first;
+    expect(rod.toY, 20);
+    leaf.targetData.barTouchData.touchCallback!(
+      FlTapDownEvent(TapDownDetails(localPosition: const Offset(100, 100))),
+      BarTouchResponse(
+        touchLocation: const Offset(100, 100),
+        touchChartCoordinate: const Offset(0, 20),
+        spot: BarTouchedSpot(group, 0, rod, 0, null, -1, const FlSpot(0, 20), const Offset(100, 100)),
+      ),
+    );
+    await t.pump();
+    expect(t.widget<BarChartLeaf>(find.byType(BarChartLeaf)).targetData.barGroups.first.showingTooltipIndicators, [0]);
   });
 
   testWidgets('line tooltip cannot anchor to previous measured y after refresh', (t) async {
     Future<void> render(double n) => pumpRepairChart(t, TimeSeriesChart(
+      key: const ValueKey('retained-line-chart'),
       unit: 'events',
       series: [ChartSeries(id: 'primary', label: 'P', points: [ChartPoint(0, n, label: 'day')])],
     ), reduced: true);
     await render(10);
-    final initial = t.widget<LineChartLeaf>(find.byType(LineChartLeaf));
-    final bar = initial.targetData.lineBarsData.first;
+    var initial = t.widget<LineChartLeaf>(find.byType(LineChartLeaf));
+    var bar = initial.targetData.lineBarsData.first;
     expect(initial.targetData.lineTouchData.handleBuiltInTouches, isFalse);
     expect(initial.targetData.lineTouchData.touchCallback, isNotNull);
     initial.targetData.lineTouchData.touchCallback!(
@@ -879,9 +935,22 @@ void main() {
     await t.pump();
     expect(t.widget<LineChartLeaf>(find.byType(LineChartLeaf)).targetData.showingTooltipIndicators, isNotEmpty);
     await render(20);
-    final current = t.widget<LineChartLeaf>(find.byType(LineChartLeaf)).targetData;
+    var current = t.widget<LineChartLeaf>(find.byType(LineChartLeaf)).targetData;
     expect(current.lineBarsData.first.spots.first.y, 20);
     expect(current.showingTooltipIndicators, isEmpty);
+    // Mouse re-entry selects current 20
+    var refreshedLeaf = t.widget<LineChartLeaf>(find.byType(LineChartLeaf));
+    var refreshedBar = refreshedLeaf.targetData.lineBarsData.first;
+    refreshedLeaf.targetData.lineTouchData.touchCallback!(
+      FlTapDownEvent(TapDownDetails(localPosition: const Offset(100, 100))),
+      LineTouchResponse(
+        touchLocation: const Offset(100, 100),
+        touchChartCoordinate: const Offset(0, 20),
+        lineBarSpots: [TouchLineBarSpot(refreshedBar, 0, refreshedBar.spots.first, 0)],
+      ),
+    );
+    await t.pump();
+    expect(t.widget<LineChartLeaf>(find.byType(LineChartLeaf)).targetData.showingTooltipIndicators, isNotEmpty);
   });
 
   testWidgets('pointer exit and tap cancel event clear bar and line selections', (t) async {

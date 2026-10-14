@@ -190,5 +190,38 @@ void main() {
       expectCompleteSingleLine(t, find.text('123456789012'));
       expect(t.takeException(), isNull);
     });
+
+    for (final width in [320.0, 720.0]) {
+      testWidgets('numeric paragraph and wrapped headings fit ${style.name} at width $width scale 1.5 bold on', (t) async {
+        const label = 'Median time from step 1';
+        await pumpStudio(t, Builder(builder: (context) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(boldText: true),
+          child: const StudioTable(
+            columns: [
+              StudioColumn('An unusually long descriptive event title', width: 220),
+              StudioColumn(label, width: 140, numeric: true),
+              StudioColumn('Players', width: 80, numeric: true),
+            ],
+            rows: [
+              StudioRow([
+                StudioTextCell('Event_completion_alpha_test'),
+                StudioTextCell('40s', numeric: true),
+                StudioTextCell('123456789012', numeric: true,
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+              ]),
+            ],
+          ),
+        )), width: width, style: style, textScale: 1.5);
+        expect(t.takeException(), isNull);
+        if (width < 440) {
+          // Scroll horizontally to ensure final column is rendered and visible
+          await t.drag(find.byType(StudioTable), const Offset(-300, 0));
+          await t.pumpAndSettle();
+        }
+        expectCompleteSingleLine(t, find.text('123456789012'));
+        expectCompleteWrappedText(t, find.text(label));
+        expect(t.takeException(), isNull);
+      });
+    }
   }
 }
