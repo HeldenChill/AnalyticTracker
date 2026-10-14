@@ -14,11 +14,13 @@ EventMeaning event(String id, String full, String label,
 void main() {
   test('contextual id and unknown values remain distinct', () {
     final c = EventCatalog({
-      'skl_pick': event('skl_pick', 'skill_pick', 'Skill selected', parameters: {
+      'skl_pick': event(
+          'skl_pick', 'skill_pick', 'Skill selected', parameters: {
         'id': const ParameterMeaning(fullName: 'skill_id', label: 'Skill ID')
       }),
       'trn_use': event('trn_use', 'terrain_use', 'Terrain used', parameters: {
-        'id': const ParameterMeaning(fullName: 'terrain_id', label: 'Terrain ID')
+        'id':
+            const ParameterMeaning(fullName: 'terrain_id', label: 'Terrain ID')
       }),
     });
     expect(c.parameterLabel('skl_pick', 'id'), 'Skill ID');
@@ -81,7 +83,8 @@ void main() {
   test('JSON round-trip rejects malformed types', () {
     expect(
       () => EventMeaning.fromJson({'rawId': 42, 'fullName': 'x', 'label': 'x'}),
-      throwsA(anyOf(isA<TypeError>(), isA<ArgumentError>(), isA<FormatException>())),
+      throwsA(anyOf(
+          isA<TypeError>(), isA<ArgumentError>(), isA<FormatException>())),
     );
   });
 
@@ -172,4 +175,3 @@ void main() {
     expect(restored.meaning('open_app')!.description, 'User opened app');
   });
 }
-
