@@ -2,8 +2,8 @@
 
 **ID:** `mem-lessons-gemini-plan-review-workflow`
 **Parent:** `mem-project-index`
-**Last updated:** 2026-10-13
-**Used for:** v1-v6 Gemini planning/review; Analytics Studio Waves0–6 cumulative repairs and completed implementation review. Latest product status and evidence live in mem-studio-waves0-6-session-handoff.md; this file stores reusable workflow lessons.
+**Last updated:** 2026-10-19
+**Used for:** v1-v6 Gemini planning/review, Analytics Studio repairs and research-document pilots. Latest session status lives in mem-game-analytics-research-session-handoff.md; this file stores reusable workflow lessons, with detailed research lessons in mem-lessons-analytics-research-and-document-review.md.
 
 ## Loop
 
@@ -141,6 +141,20 @@
 - Report process existence separately from progress. A alive runner with tiny CPU and unchanged output may be waiting; without step markers or a stack, do not present a specific stalled await/root cause as confirmed. Keep a focused bounded run/log, stop only positively identified authorized test processes, and recheck before calling the current code stuck.
 - File handoffs are not direct agent messages. If UI/connector access cannot address Gemini's chat, say so and save the actual instruction/results for the owner; never claim successful delivery merely because the file exists.
 - Completion needs task/evidence log and runtime criteria, not only final commits and a green suite. Preserve old report history, append current evidence, and keep baseline Windows observations pending when not observed.
+
+## Research document pilot and review lessons — 2026-10-19
+
+- Research plans need exact chapter contracts, stable method/variant IDs, independent synthetic inputs, expected-value reasoning, evidence registers and an explicit owner reading gate. Scope the first family before scaling the writing format to all methods.
+- Correct arithmetic does not establish scientific correctness. Review definitions, eligibility, causal wording, evidence quality and implementation claims independently. This pilot passed its fixed examples while teaching several wrong general conclusions.
+- Check source authorship/title/publisher and actual accessed sections. Plausible citations and metadata-only pages are not inspected books. Replace blanket High Verified with claim-specific support and disclosed uncertainty.
+- Independently enumerate player eligibility and event order. Add counterexamples for missing interior dates, future-defined cohorts, tied timestamps, untagged text and event-subset engagement rather than only recalculating known fractions.
+- Count actual gates: Gemini reported20 assertions and11 diagrams; fresh inventory found23 and22. Its static Mermaid compliance claim missed forbidden arrow text inside labels. Presence, order, substantive content, static safety and actual rendering are separate evidence tiers.
+- Verify current working files directly when outputs are untracked. Main/baseline unchanged application files do not imply a clean working tree or prove that a historical scratch command ran.
+- Documentation-only acceptance uses source, semantic, arithmetic, path/anchor and formatting gates. Do not apply this playbook's software build/runtime checklist mechanically to research writing.
+- Preserve original review findings and add dated repair follow-up. Embed reproducible small checkers in the delivered verification artifact when temporary scripts live in ignored build directories.
+- A server JSON schema cannot establish Unity client telemetry absence; missing dedicated tables cannot establish a mandatory migration. Label readiness conditionally and keep data validation separate from storage capacity.
+- Newly noticed product defects stay in the bug ledger and a separate scope. Owner authorization to repair research did not authorize app retention code changes or the next research family.
+- See `mem-lessons-analytics-research-and-document-review.md` for the full methodological and editing playbook from this pilot.
 
 ## Gemini habits observed
 
